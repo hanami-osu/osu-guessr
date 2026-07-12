@@ -14,6 +14,9 @@ import GameHeader from "../components/Header";
 import { ReportDialog } from "@/components/ReportDialog";
 import { AdSlider } from "@/components/Ads";
 import { useTranslationsContext } from "@/context/translations-provider";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { getDeathEndReason } from "@/lib/game/result";
 
 interface GameScreenProps {
     onExit(): void;
@@ -47,6 +50,8 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     const [countdown, setCountdown] = useState<number>(AUTO_ADVANCE_DELAY_MS / 1000);
     const [showStats, setShowStats] = useState(false);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+    const [startupError, setStartupError] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     const gameClient = useRef<GameClient | null>(null);
 
@@ -55,12 +60,17 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
             setIsLoading(true);
             setShowStats(false);
             setGuess("");
+            setGameState(null);
+            setStartupError(null);
+            setActionError(null);
+            gameClient.current?.dispose();
 
             gameClient.current = new GameClient(
                 {
                     onStateUpdate: setGameState,
                     onError: (error) => {
                         console.error("Game error:", error);
+                        setActionError(error.message);
                     },
                     onRetry: (attempt, maxRetries) => {
                         console.log(`Retrying... (${attempt}/${maxRetries})`);
@@ -85,12 +95,14 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
             }
 
             setCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
+            setActionError(null);
         } catch (error) {
             console.error("Failed to restart game:", error);
+            setStartupError(error instanceof Error ? error.message : t.errors.game.unknown);
         } finally {
             setIsLoading(false);
         }
-    }, [gameMode, gameVariant]);
+    }, [gameMode, gameVariant, t.errors.game.unknown]);
 
     useEffect(() => {
         handleStartGame();
@@ -105,16 +117,18 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
             if (isLoading) return;
 
             setIsLoading(true);
+            setActionError(null);
             try {
                 await action();
                 setGuess("");
             } catch (error) {
                 console.error("Action failed:", error);
+                setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
             } finally {
                 setIsLoading(false);
             }
         },
-        [isLoading]
+        [isLoading, t.errors.game.unknown]
     );
 
     const handleGameComplete = useCallback(async () => {
@@ -168,6 +182,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 return true;
             } catch (error) {
                 console.error("Failed to end game:", error);
+                setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
                 return false;
             }
         } else {
@@ -180,10 +195,11 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 return true;
             } catch (error) {
                 console.error("Failed to end game:", error);
+                setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
                 return false;
             }
         }
-    }, [gameState, onExit, gameVariant]);
+    }, [gameState, onExit, gameVariant, t.errors.game.unknown]);
 
     useEffect(() => {
         if (!gameClient.current || !gameState) return;
@@ -232,6 +248,23 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         }
     }, [gameState?.currentBeatmap.revealed, handleNextRound, isReportDialogOpen]);
 
+    if (!gameState && startupError) {
+        return (
+            <div className="container mx-auto flex min-h-[420px] items-center justify-center px-4 py-10">
+                <Alert variant="destructive" className="max-w-lg">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{t.game.errors.startFailed}</AlertTitle>
+                    <AlertDescription className="mt-2 space-y-4">
+                        <p>{startupError}</p>
+                        <Button type="button" variant="outline" onClick={handleStartGame}>
+                            {t.game.actions.retry}
+                        </Button>
+                    </AlertDescription>
+                </Alert>
+            </div>
+        );
+    }
+
     if (!gameState) return <LoadingScreen />;
 
     if (showStats && gameState) {
@@ -244,6 +277,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 averageTime={gameState.rounds.totalTimeUsed / gameState.rounds.current}
                 onPlayAgain={handleStartGame}
                 gameVariant={gameVariant}
+                gameEndReason={gameVariant === "death" ? getDeathEndReason(gameState) : undefined}
             />
         );
     }
@@ -274,6 +308,13 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                     {isLoading && <LoadingScreen />}
                 </div>
                 <div className="flex flex-col gap-6">
+                    {actionError && (
+                        <Alert variant="destructive" role="alert">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>{t.game.errors.actionFailed}</AlertTitle>
+                            <AlertDescription>{actionError}</AlertDescription>
+                        </Alert>
+                    )}
                     <GuessInput guess={guess} setGuess={setGuess} isRevealed={gameState.currentBeatmap.revealed} onGuess={handleGuess} onSkip={handleSkip} gameClient={gameClient.current!} />
 
                     <div className="bg-card p-6 rounded-lg border border-border/60">
@@ -294,7 +335,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                     <Button variant="outline" onClick={handleExit} disabled={isLoading}>
                         {gameVariant === "death" ? t.game.actions.endRun : t.game.actions.exitGame}
                     </Button>
-                    {gameState.currentBeatmap.revealed && gameState.currentBeatmap.mapsetId && (
+                    {gameMode !== GameMode.Skin && gameState.currentBeatmap.revealed && gameState.currentBeatmap.mapsetId && (
                         <ReportDialog mapsetId={gameState.currentBeatmap.mapsetId} mapsetTitle={gameState.currentBeatmap.title || "Unknown"} onOpenChange={setIsReportDialogOpen} />
                     )}
                 </div>

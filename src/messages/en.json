@@ -454,7 +454,12 @@
             "exitGame": "Exit Game",
             "nextRound": "Next Round",
             "nextRoundTime": "Next Round ({seconds}s)",
-            "viewResults": "View Results"
+            "viewResults": "View Results",
+            "retry": "Try Again"
+        },
+        "errors": {
+            "startFailed": "The game could not be started",
+            "actionFailed": "The game action could not be completed"
         },
         "shortcuts": {
             "title": "Some shortcuts you should know:",
@@ -482,7 +487,9 @@
         },
         "audio": {
             "instructions": "Listen to the audio and try to guess the song title!",
-            "browserNotSupported": "Your browser does not support the audio element."
+            "browserNotSupported": "Your browser does not support the audio element.",
+            "loadFailed": "The audio could not be loaded or played.",
+            "retry": "Retry audio"
         }
     },
     "leaderboard": {
@@ -574,7 +581,8 @@
                 "delete": "Delete Key",
                 "viewDocs": "View API Documentation",
                 "copy": "Copy Key",
-                "close": "Close"
+                "close": "Close",
+                "retry": "Try Again"
             },
             "dialog": {
                 "create": {
@@ -612,6 +620,7 @@
                 "createFailed": "Failed to create API key",
                 "deleteFailed": "Failed to delete API key",
                 "loadFailed": "Failed to load API keys",
+                "copyFailed": "Failed to copy the API key",
                 "maxKeysReached": "Maximum number of API keys (5) reached"
             }
         }

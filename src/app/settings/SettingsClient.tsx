@@ -26,14 +26,19 @@ export default function SettingsClient() {
     });
     const [newKeyName, setNewKeyName] = useState("");
     const [copied, setCopied] = useState(false);
+    const [keyLoadError, setKeyLoadError] = useState<string | null>(null);
+    const [operationError, setOperationError] = useState<string | null>(null);
+    const [copyError, setCopyError] = useState<string | null>(null);
 
     const loadApiKeys = useCallback(async () => {
         setLoading((prev) => ({ ...prev, keys: true }));
+        setKeyLoadError(null);
         try {
             const keys = await listApiKeysAction();
             setApiKeys(keys);
         } catch (error) {
             console.error(t.settings.apiKeys.errors.loadFailed, error);
+            setKeyLoadError(t.settings.apiKeys.errors.loadFailed);
         } finally {
             setLoading((prev) => ({ ...prev, keys: false }));
         }
@@ -48,6 +53,7 @@ export default function SettingsClient() {
         if (!newKeyName.trim()) return;
 
         setLoading((prev) => ({ ...prev, creation: true }));
+        setOperationError(null);
         try {
             const keyValue = await createApiKeyAction(newKeyName);
             await loadApiKeys();
@@ -55,6 +61,7 @@ export default function SettingsClient() {
             setDialogs((prev) => ({ ...prev, create: false, newKey: keyValue }));
         } catch (error) {
             console.error(t.settings.apiKeys.errors.createFailed, error);
+            setOperationError(t.settings.apiKeys.errors.createFailed);
         } finally {
             setLoading((prev) => ({ ...prev, creation: false }));
         }
@@ -64,12 +71,14 @@ export default function SettingsClient() {
         if (!dialogs.delete) return;
 
         setLoading((prev) => ({ ...prev, deletion: true }));
+        setOperationError(null);
         try {
             await deleteApiKeyAction(dialogs.delete.id);
             setApiKeys((prev) => prev.filter((key) => key.id !== dialogs.delete?.id));
             setDialogs((prev) => ({ ...prev, delete: null }));
         } catch (error) {
             console.error(t.settings.apiKeys.errors.deleteFailed, error);
+            setOperationError(t.settings.apiKeys.errors.deleteFailed);
         } finally {
             setLoading((prev) => ({ ...prev, deletion: false }));
         }
@@ -77,12 +86,14 @@ export default function SettingsClient() {
 
     async function copyKey(keyValue: string | null) {
         if (!keyValue) return;
+        setCopyError(null);
         try {
             await navigator.clipboard.writeText(keyValue);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch (error) {
             console.error("Failed to copy key", error);
+            setCopyError(t.settings.apiKeys.errors.copyFailed);
         }
     }
 
@@ -105,6 +116,20 @@ export default function SettingsClient() {
             );
         }
 
+        if (keyLoadError) {
+            return (
+                <Alert variant="destructive" role="alert">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{keyLoadError}</AlertTitle>
+                    <AlertDescription className="mt-3">
+                        <Button type="button" size="sm" variant="outline" onClick={loadApiKeys}>
+                            {t.settings.apiKeys.actions.retry}
+                        </Button>
+                    </AlertDescription>
+                </Alert>
+            );
+        }
+
         if (apiKeys.length === 0) {
             return <p className="text-center py-4 text-foreground/70">{t.settings.apiKeys.keyInfo.noKeys}</p>;
         }
@@ -121,7 +146,14 @@ export default function SettingsClient() {
                             <p className="text-sm text-foreground/70">{t.settings.apiKeys.keyInfo.neverUsed}</p>
                         )}
                     </div>
-                    <Button variant="destructive" onClick={() => setDialogs((prev) => ({ ...prev, delete: key }))} className="w-full sm:w-auto">
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            setOperationError(null);
+                            setDialogs((prev) => ({ ...prev, delete: key }));
+                        }}
+                        className="w-full sm:w-auto"
+                    >
                         {t.settings.apiKeys.actions.delete}
                     </Button>
                 </div>
@@ -161,7 +193,14 @@ export default function SettingsClient() {
                                 </AlertDescription>
                             </Alert>
 
-                            <Button onClick={() => setDialogs((prev) => ({ ...prev, create: true }))} disabled={apiKeys.length >= 5} className="w-full sm:w-auto">
+                            <Button
+                                onClick={() => {
+                                    setOperationError(null);
+                                    setDialogs((prev) => ({ ...prev, create: true }));
+                                }}
+                                disabled={apiKeys.length >= 5}
+                                className="w-full sm:w-auto"
+                            >
                                 {t.settings.apiKeys.actions.create}
                             </Button>
                         </div>
@@ -190,6 +229,12 @@ export default function SettingsClient() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
+                        {operationError && (
+                            <Alert variant="destructive" role="alert" className="mb-4">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>{operationError}</AlertTitle>
+                            </Alert>
+                        )}
                         <Input value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} placeholder={t.settings.apiKeys.dialog.create.placeholder} className="w-full" />
                     </div>
                     <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -217,6 +262,12 @@ export default function SettingsClient() {
                             </div>
                         </DialogDescription>
                     </DialogHeader>
+                    {operationError && (
+                        <Alert variant="destructive" role="alert">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>{operationError}</AlertTitle>
+                        </Alert>
+                    )}
                     <DialogFooter className="flex-col sm:flex-row gap-2">
                         <Button variant="outline" onClick={() => setDialogs((prev) => ({ ...prev, delete: null }))}>
                             {t.settings.apiKeys.actions.close}
@@ -248,6 +299,7 @@ export default function SettingsClient() {
                                             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                         </Button>
                                     </div>
+                                    {copyError && <p role="alert" className="mt-2 text-sm text-destructive">{copyError}</p>}
                                 </div>
                             </div>
                         </DialogDescription>

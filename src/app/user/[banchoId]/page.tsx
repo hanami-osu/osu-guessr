@@ -1,7 +1,6 @@
 import { Metadata } from "next";
-import { GameVariant } from "@/app/games/config";
 import UserProfileClient from "./client";
-import { GameMode } from "@/actions/types";
+import { parseProfileFilters } from "@/lib/profile-params";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +18,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function UserProfile({ params, searchParams }: Props) {
     const { banchoId } = await params;
-    const { mode = "background", variant = "classic" } = await searchParams;
-    const currentMode = mode as GameMode;
-    const currentVariant = variant as GameVariant;
+    const { mode, variant } = await searchParams;
+    const { mode: currentMode, variant: currentVariant } = parseProfileFilters(mode, variant);
 
     return <UserProfileClient currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} />;
 }
