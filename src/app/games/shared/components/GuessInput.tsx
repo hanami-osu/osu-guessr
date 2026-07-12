@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import { GameClient } from "@/lib/game/client";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { soundManager } from "@/lib/game/sounds";
@@ -18,6 +18,8 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [announcement, setAnnouncement] = useState("");
+    const listboxId = useId();
 
     const clickingRef = useRef(false);
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -49,6 +51,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                 setSuggestions(newSuggestions);
                 setShowSuggestions(true);
                 setSelectedIndex(newSuggestions.length > 0 ? 0 : -1);
+                setAnnouncement(t.game.input.suggestionsAvailable.replace("{count}", newSuggestions.length.toString()));
             }, 100);
         }
 
@@ -57,7 +60,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                 clearTimeout(debounceTimeoutRef.current);
             }
         };
-    }, [guess, gameClient, isRevealed]);
+    }, [guess, gameClient, isRevealed, t.game.input.suggestionsAvailable]);
 
     useEffect(() => {
         setSuggestions([]);
@@ -73,6 +76,12 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
             setSelectedIndex(-1);
         }
     }, [suggestions]);
+
+    useEffect(() => {
+        if (showSuggestions && selectedIndex >= 0 && suggestions[selectedIndex]) {
+            setAnnouncement(t.game.input.suggestionSelected.replace("{suggestion}", suggestions[selectedIndex]));
+        }
+    }, [selectedIndex, showSuggestions, suggestions, t.game.input.suggestionSelected]);
 
     const handleSubmit = () => {
         soundManager.play("click");
@@ -91,6 +100,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
         setGuess(suggestion);
         setShowSuggestions(false);
         setSuggestions([]);
+        setAnnouncement(t.game.input.suggestionSelected.replace("{suggestion}", suggestion));
         setTimeout(() => {
             isSelectingRef.current = false;
         }, 100);
@@ -165,14 +175,23 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                     className="w-full p-3 rounded-lg bg-secondary text-foreground border border-border/50 transition-[border-color,box-shadow,background-color,opacity] duration-150 ease-[var(--ease-out-smooth)] focus:outline-none focus:border-primary/55 focus:ring-2 focus:ring-primary focus:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)] disabled:opacity-60"
                     placeholder={t.game.input.placeholder}
                     disabled={isRevealed}
+                    role="combobox"
+                    aria-label={t.game.input.title}
+                    aria-autocomplete="list"
+                    aria-expanded={showSuggestions && suggestions.length > 0}
+                    aria-controls={showSuggestions && suggestions.length > 0 ? listboxId : undefined}
+                    aria-activedescendant={showSuggestions && selectedIndex >= 0 ? `${listboxId}-option-${selectedIndex}` : undefined}
                 />
 
                 {showSuggestions && suggestions.length > 0 && (
-                    <div className="motion-scale-in absolute w-full mt-1 bg-card border border-border/50 rounded-lg shadow-lg overflow-hidden z-50 origin-top">
+                    <div id={listboxId} role="listbox" aria-label={t.game.input.suggestions} className="motion-scale-in absolute w-full mt-1 bg-card border border-border/50 rounded-lg shadow-lg overflow-hidden z-50 origin-top">
                         <div className="max-h-[300px] overflow-y-auto backdrop-blur-sm">
                             {suggestions.map((suggestion, index) => (
                                 <div
                                     key={suggestion}
+                                    id={`${listboxId}-option-${index}`}
+                                    role="option"
+                                    aria-selected={index === selectedIndex}
                                     className={`px-4 py-2 cursor-pointer transition-[background-color,color] duration-150 ease-[var(--ease-out-smooth)]
                                                ${index === selectedIndex ? "bg-primary/10 text-primary font-medium" : "hover:bg-secondary/50"}`}
                                     onMouseDown={() => {
@@ -191,6 +210,9 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                     </div>
                 )}
             </div>
+            <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                {announcement}
+            </span>
             <div className="flex gap-4 mt-4">
                 <Button className="flex-1" onClick={onGuess} disabled={!guess || isRevealed}>
                     {t.game.input.submit}

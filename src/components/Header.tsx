@@ -14,6 +14,7 @@ import { SupportPageLink } from "./SupportDialogWrapper";
 import { OWNER_ID } from "@/lib";
 
 const NAV_ITEMS = ["leaderboard", "about", "announcements"] as const;
+const MOBILE_NAV_ID = "mobile-navigation";
 
 export default function Header() {
     const { data: session } = useSession();
@@ -32,9 +33,9 @@ export default function Header() {
 
     return (
         <header className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-50 shadow-sm">
-            <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-                <div className="flex items-center space-x-8">
-                    <Link href="/" className="text-2xl font-bold text-primary hover:text-primary/80 transition-[color,opacity] duration-150 ease-[var(--ease-out-smooth)]">
+            <div className="container mx-auto flex items-center justify-between gap-2 px-2 py-3 sm:px-4">
+                <div className="flex min-w-0 items-center space-x-8">
+                    <Link href="/" className="whitespace-nowrap text-xl font-bold text-primary transition-[color,opacity] duration-150 ease-[var(--ease-out-smooth)] hover:text-primary/80 sm:text-2xl">
                         osu!guessr
                     </Link>
                     <nav className="hidden md:block">
@@ -53,20 +54,28 @@ export default function Header() {
                     </nav>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex shrink-0 items-center gap-1 sm:gap-4">
                     <LanguageSwitcher />
                     <div className="hidden md:block">
                         <SupportPageLink />
                     </div>
 
-                    <Button variant="ghost" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-expanded={isMenuOpen}>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="md:hidden"
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        aria-label={isMenuOpen ? t.components.header.accessibility.closeMenu : t.components.header.accessibility.openMenu}
+                        aria-expanded={isMenuOpen}
+                        aria-controls={MOBILE_NAV_ID}
+                    >
                         <Menu className="h-6 w-6" />
                     </Button>
 
                     {session ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 active:!transform-none">
+                                <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 active:!transform-none" aria-label={t.components.header.accessibility.profileMenu}>
                                     <Image src={session.user?.image || "/default-avatar.png"} alt="Avatar" className="rounded-full" fill style={{ objectFit: "cover" }} />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -97,37 +106,37 @@ export default function Header() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <Button onClick={() => signIn("osu")}>{t.components.header.nav.signIn}</Button>
+                        <Button onClick={() => signIn("osu")} className="px-2 text-xs sm:px-4 sm:text-sm">
+                            {t.components.header.nav.signIn}
+                        </Button>
                     )}
                 </div>
 
-                <nav
-                    className={`${
-                        isMenuOpen ? "max-h-[500px] opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-2"
-                    } md:hidden overflow-hidden transition-all duration-200 ease-[var(--ease-out-smooth)] absolute top-full left-0 w-full bg-background shadow-md`}
-                >
-                    <ul className="flex flex-col space-y-4 items-center py-4">
-                        <li className="w-full px-4">
-                            <UserSearch />
-                        </li>
-                        {NAV_ITEMS.map((item) => (
-                            <li className="flex items-center w-full" key={item}>
-                                <Link
-                                    href={`/${item}`}
-                                    className="text-foreground/80 hover:text-primary transition-colors duration-200 font-medium w-full text-center px-4 py-2"
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    {getNavLabel(item)}
-                                </Link>
+                {isMenuOpen && (
+                    <nav id={MOBILE_NAV_ID} aria-label={t.components.header.accessibility.mobileNavigation} className="absolute left-0 top-full w-full bg-background shadow-md md:hidden">
+                        <ul className="flex flex-col items-center space-y-4 py-4">
+                            <li className="w-full px-4">
+                                <UserSearch />
                             </li>
-                        ))}
-                        <li className="flex items-center w-full">
-                            <div className="w-full text-center px-4 py-2" onClick={() => setIsMenuOpen(false)}>
-                                <SupportPageLink />
-                            </div>
-                        </li>
-                    </ul>
-                </nav>
+                            {NAV_ITEMS.map((item) => (
+                                <li className="flex w-full items-center" key={item}>
+                                    <Link
+                                        href={`/${item}`}
+                                        className="w-full px-4 py-2 text-center font-medium text-foreground/80 transition-colors duration-200 hover:text-primary"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        {getNavLabel(item)}
+                                    </Link>
+                                </li>
+                            ))}
+                            <li className="flex w-full items-center">
+                                <div className="w-full px-4 py-2 text-center" onClick={() => setIsMenuOpen(false)}>
+                                    <SupportPageLink />
+                                </div>
+                            </li>
+                        </ul>
+                    </nav>
+                )}
             </div>
         </header>
     );

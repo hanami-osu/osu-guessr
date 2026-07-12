@@ -85,22 +85,36 @@ export default function LeaderboardClient() {
             </div>
 
             <div className="bg-card rounded-lg border border-border/60 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-secondary/50">
+                {isLoading ? (
+                    <div className="p-8 text-center" role="status">
+                        {t.common.loading}
+                    </div>
+                ) : error ? (
+                    <div className="p-8 text-center text-destructive" role="alert">
+                        {error}
+                    </div>
+                ) : leaderboardData.length === 0 ? (
+                    <div className="p-8 text-center text-foreground/70" role="status">
+                        {t.leaderboard.empty}
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full table-fixed sm:table-auto">
+                            <caption className="sr-only">{t.leaderboard.title}</caption>
+                            <thead className="bg-secondary/50">
                             <tr>
-                                <th className="px-6 py-4 text-left">{t.leaderboard.table.rank}</th>
-                                <th className="px-6 py-4 text-left">{t.leaderboard.table.player}</th>
+                                <th scope="col" className="w-14 px-3 py-3 text-left sm:w-auto sm:px-6 sm:py-4">{t.leaderboard.table.rank}</th>
+                                <th scope="col" className="px-2 py-3 text-left sm:px-6 sm:py-4">{t.leaderboard.table.player}</th>
                                 {selectedVariant === "classic" && (
-                                    <th className="px-6 py-4 text-right">
+                                    <th scope="col" className="hidden px-3 py-3 text-right sm:table-cell sm:px-6 sm:py-4">
                                         <Button variant="ghost" size="sm" onClick={() => setOrderMetric("total")} className="h-auto p-0 font-semibold hover:bg-transparent">
                                             {t.leaderboard.table.totalScore}
                                             {orderMetric === "total" && <ChevronDownIcon className="ml-1 h-3 w-3" />}
                                         </Button>
                                     </th>
                                 )}
-                                <th className="px-6 py-4 text-right">{t.leaderboard.table.gamesPlayed}</th>
-                                <th className="px-6 py-4 text-right">
+                                <th scope="col" className="hidden px-6 py-4 text-right md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
+                                <th scope="col" className="w-20 px-3 py-3 text-right text-xs sm:w-auto sm:px-6 sm:py-4 sm:text-base">
                                     {selectedVariant === "classic" ? (
                                         <Button variant="ghost" size="sm" onClick={() => setOrderMetric("highest")} className="h-auto p-0 font-semibold hover:bg-transparent">
                                             {t.leaderboard.table.hiScore}
@@ -111,24 +125,11 @@ export default function LeaderboardClient() {
                                     )}
                                 </th>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/50">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={selectedVariant === "classic" ? 5 : 4} className="p-8 text-center">
-                                        {t.common.loading}
-                                    </td>
-                                </tr>
-                            ) : error ? (
-                                <tr>
-                                    <td colSpan={selectedVariant === "classic" ? 5 : 4} className="p-8 text-center text-destructive">
-                                        <p>{error}</p>
-                                    </td>
-                                </tr>
-                            ) : leaderboardData.length > 0 ? (
-                                leaderboardData.map((player, index) => (
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {leaderboardData.map((player, index) => (
                                     <tr key={player.bancho_id} className={`hover:bg-secondary/20 transition-colors ${session?.user?.name === player.username ? "bg-primary/10" : ""}`}>
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-3 sm:px-6 sm:py-4">
                                             {index + 1 <= 3 && page === 1 ? (
                                                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-foreground font-bold text-sm ring-1 ring-border/70">
                                                     {(page - 1) * pageSize + index + 1}
@@ -137,23 +138,23 @@ export default function LeaderboardClient() {
                                                 <span className="text-muted-foreground font-mono">{(page - 1) * pageSize + index + 1}</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <Link href={`/user/${player.bancho_id}`} className="flex items-center gap-3 hover:text-primary transition-colors group">
+                                        <td className="min-w-0 px-2 py-3 sm:px-6 sm:py-4">
+                                            <Link href={`/user/${player.bancho_id}`} className="group flex min-w-0 items-center gap-2 transition-colors hover:text-primary sm:gap-3">
                                                 <Image
                                                     src={player.avatar_url || "/placeholder.svg"}
-                                                    alt={player.username}
+                                                    alt=""
                                                     width={32}
                                                     height={32}
                                                     className="rounded-full ring-2 ring-transparent group-hover:ring-primary/20 transition-all"
                                                 />
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-medium">{player.username}</span>
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <span className="truncate font-medium">{player.username}</span>
                                                     {player.badges &&
                                                         player.badges.map((badge, badgeIndex) => (
                                                             <Badge
                                                                 key={badgeIndex}
                                                                 variant="secondary"
-                                                                className="text-xs"
+                                                                className="hidden text-xs lg:inline-flex"
                                                                 style={{
                                                                     backgroundColor: `${badge.color}15`,
                                                                     color: badge.color,
@@ -166,21 +167,15 @@ export default function LeaderboardClient() {
                                                 </div>
                                             </Link>
                                         </td>
-                                        {selectedVariant === "classic" && <td className="px-6 py-4 text-right font-mono text-sm">{BigInt(player.total_score).toLocaleString()}</td>}
-                                        <td className="px-6 py-4 text-right font-mono text-sm text-muted-foreground">{player.games_played}</td>
-                                        <td className="px-6 py-4 text-right font-mono text-sm font-semibold">{selectedVariant === "classic" ? player.highest_score : player.highest_streak}</td>
+                                        {selectedVariant === "classic" && <td className="hidden px-6 py-4 text-right font-mono text-sm sm:table-cell">{BigInt(player.total_score).toLocaleString()}</td>}
+                                        <td className="hidden px-6 py-4 text-right font-mono text-sm text-muted-foreground md:table-cell">{player.games_played}</td>
+                                        <td className="px-3 py-3 text-right font-mono text-sm font-semibold sm:px-6 sm:py-4">{selectedVariant === "classic" ? player.highest_score : player.highest_streak}</td>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={selectedVariant === "classic" ? 5 : 4} className="p-8 text-center text-foreground/70">
-                                        <p>{t.leaderboard.empty}</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-4 mt-4">
