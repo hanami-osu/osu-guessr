@@ -6,6 +6,7 @@ import { authenticatedAction } from "./server";
 import { OWNER_ID } from "@/lib";
 import { GameVariant } from "@/app/games/config";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserWithStats, UserRanks, UserBadge } from "./types";
+import { hasPlayedGame } from "@/lib/user-stats";
 
 export type { UserRanks };
 
@@ -148,8 +149,8 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
         )) as [{ rank: number }];
 
         modeRanks[mode] = {
-            classic: classicRank[0].rank + 1,
-            death: deathRank[0].rank + 1,
+            classic: hasPlayedGame(achievements, "classic", mode) ? classicRank[0].rank + 1 : undefined,
+            death: hasPlayedGame(achievements, "death", mode) ? deathRank[0].rank + 1 : undefined,
         };
     }
 
@@ -159,8 +160,8 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
         achievements,
         ranks: {
             globalRank: {
-                classic: globalClassicRankResult[0].globalRank + 1,
-                death: globalDeathRankResult[0].globalRank + 1,
+                classic: hasPlayedGame(achievements, "classic") ? globalClassicRankResult[0].globalRank + 1 : undefined,
+                death: hasPlayedGame(achievements, "death") ? globalDeathRankResult[0].globalRank + 1 : undefined,
             },
             modeRanks,
         },

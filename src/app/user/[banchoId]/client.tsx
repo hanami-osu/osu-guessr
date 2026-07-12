@@ -8,6 +8,7 @@ import Link from "next/link";
 import { GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import UserNotFound from "./NotFound";
+import { getHighestScore } from "@/lib/user-stats";
 
 interface GameStats {
     game_mode: GameMode;
@@ -188,7 +189,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                        <StatBox label={t.user.profile.stats.hiScore} value={Math.max(...(achievements?.map((a) => a.highest_score) ?? [0])).toLocaleString()} />
+                        <StatBox label={t.user.profile.stats.hiScore} value={getHighestScore(achievements).toLocaleString()} />
                         <StatBox label={t.user.profile.stats.totalGames} value={achievements?.reduce((sum, a) => sum + a.games_played, 0).toLocaleString() ?? "0"} />
                         <StatBox
                             label={t.user.profile.stats.globalRank}

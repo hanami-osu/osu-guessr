@@ -5,10 +5,12 @@ import { useRef, useEffect, useState } from "react";
 import { ResultMessage } from "../../shared/components/Result";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { GameMediaProps } from "@/lib/game/interfaces";
+import { Button } from "@/components/ui/button";
 
 export default function GameAudio({ mediaUrl, isRevealed, result, songInfo, onVolumeChange, initialVolume }: GameMediaProps) {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [mediaError, setMediaError] = useState<string | null>(null);
     const { t } = useTranslationsContext();
 
     useEffect(() => {
@@ -16,30 +18,51 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo, onVo
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
             setIsLoading(true);
+            setMediaError(null);
 
             const handleCanPlay = () => {
+                window.clearTimeout(loadTimeout);
                 setIsLoading(false);
                 if (!isRevealed) {
                     const playPromise = audioRef.current!.play();
                     if (playPromise !== undefined) {
-                        playPromise.catch((error) => {
+                        playPromise.catch((error: unknown) => {
                             console.log("Audio playback failed:", error);
+                            setIsLoading(false);
+                            setMediaError(t.game.audio.loadFailed);
                         });
                     }
                 }
             };
 
+            const handleError = () => {
+                window.clearTimeout(loadTimeout);
+                setIsLoading(false);
+                setMediaError(t.game.audio.loadFailed);
+            };
+
+            const loadTimeout = window.setTimeout(handleError, 15000);
+
             const audio = audioRef.current; // Copy ref to variable
             audio.addEventListener("canplay", handleCanPlay);
+            audio.addEventListener("error", handleError);
             audio.load();
 
             return () => {
                 audio.removeEventListener("canplay", handleCanPlay);
+                audio.removeEventListener("error", handleError);
+                window.clearTimeout(loadTimeout);
                 audio.pause();
                 audio.currentTime = 0;
             };
         }
-    }, [mediaUrl, isRevealed]);
+    }, [mediaUrl, isRevealed, t.game.audio.loadFailed]);
+
+    const retryAudio = () => {
+        setMediaError(null);
+        setIsLoading(true);
+        audioRef.current?.load();
+    };
 
     useEffect(() => {
         if (audioRef.current && initialVolume !== undefined) {
@@ -76,7 +99,15 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo, onVo
                         <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
                 )}
-                <audio ref={audioRef} controls className={`w-full mb-4 ${isLoading ? "hidden" : "block"}`}>
+                {mediaError && (
+                    <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-center">
+                        <p className="mb-3 text-sm text-destructive">{mediaError}</p>
+                        <Button type="button" size="sm" variant="outline" onClick={retryAudio}>
+                            {t.game.audio.retry}
+                        </Button>
+                    </div>
+                )}
+                <audio ref={audioRef} controls className={`w-full mb-4 ${isLoading || mediaError ? "hidden" : "block"}`}>
                     <source src={mediaUrl} type="audio/mp3" />
                     {t.game.audio.browserNotSupported}
                 </audio>
