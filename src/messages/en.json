@@ -403,7 +403,10 @@
             "placeholder": "Song title...",
             "title": "Enter your guess:",
             "submit": "Submit",
-            "skip": "Skip (-50 points)"
+            "skip": "Skip (-50 points)",
+            "suggestions": "Guess suggestions",
+            "suggestionsAvailable": "{count} suggestions available.",
+            "suggestionSelected": "Selected {suggestion}."
         },
         "header": {
             "title": "{mode} Guessr",
@@ -552,7 +555,9 @@
             "shortcut": "⌘K",
             "noResults": "No users found",
             "startTyping": "Start typing to search users",
-            "searching": "Searching..."
+            "searching": "Searching...",
+            "results": "User search results",
+            "resultsFound": "{count} users found"
         }
     },
     "settings": {
@@ -653,6 +658,13 @@
             }
         },
         "header": {
+            "accessibility": {
+                "openMenu": "Open navigation menu",
+                "closeMenu": "Close navigation menu",
+                "mobileNavigation": "Mobile navigation",
+                "changeLanguage": "Change language",
+                "profileMenu": "Open profile menu"
+            },
             "nav": {
                 "leaderboard": "Leaderboard",
                 "about": "About",

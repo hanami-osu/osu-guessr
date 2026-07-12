@@ -78,32 +78,45 @@ export default function UserSearch() {
                     <DialogTitle>{t.user.search.title}</DialogTitle>
                     <DialogDescription>{t.user.search.description}</DialogDescription>
                 </VisuallyHidden>
-                <div className="p-4 border-b">
+                <form role="search" aria-label={t.user.search.title} className="border-b p-4" onSubmit={(event) => event.preventDefault()}>
                     <div className="relative">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-foreground/50" />
-                        <Input autoFocus type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.user.search.placeholder} className="pl-9 pr-4" />
+                        <Input
+                            autoFocus
+                            type="search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={t.user.search.placeholder}
+                            aria-label={t.user.search.placeholder}
+                            className="pl-9 pr-4"
+                        />
                     </div>
-                </div>
+                </form>
 
-                <div className="max-h-[60vh] overflow-y-auto">
+                <span className="sr-only" role="status" aria-live="polite">
+                    {isSearching ? t.user.search.searching : results.length > 0 ? t.user.search.resultsFound.replace("{count}", results.length.toString()) : ""}
+                </span>
+
+                <div className="max-h-[60vh] overflow-y-auto" aria-busy={isSearching}>
                     {isSearching ? (
                         <div className="p-8 text-center text-foreground/70">
                             <span className="soft-loading-dot inline-block">{t.user.search.searching}</span>
                         </div>
                     ) : results.length > 0 ? (
-                        <div className="py-2">
+                        <ul className="py-2" aria-label={t.user.search.results}>
                             {results.map((user) => (
-                                <Link
-                                    key={user.bancho_id.toString()}
-                                    href={`/user/${user.bancho_id.toString()}`}
-                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-[background-color,color] duration-150 ease-[var(--ease-out-smooth)]"
-                                    onClick={() => handleSelect()}
-                                >
-                                    <Image src={user.avatar_url || "/placeholder.svg"} alt={user.username} width={40} height={40} className="rounded-full" />
-                                    <span className="font-medium">{user.username}</span>
-                                </Link>
+                                <li key={user.bancho_id.toString()}>
+                                    <Link
+                                        href={`/user/${user.bancho_id.toString()}`}
+                                        className="flex w-full items-center gap-3 px-4 py-3 transition-[background-color,color] duration-150 ease-[var(--ease-out-smooth)] hover:bg-accent/50"
+                                        onClick={() => handleSelect()}
+                                    >
+                                        <Image src={user.avatar_url || "/placeholder.svg"} alt="" width={40} height={40} className="rounded-full" />
+                                        <span className="font-medium">{user.username}</span>
+                                    </Link>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     ) : query.length >= 2 ? (
                         <div className="p-8 text-center text-foreground/70">{t.user.search.noResults}</div>
                     ) : (

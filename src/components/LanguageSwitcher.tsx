@@ -3,15 +3,16 @@
 import { Button } from "./ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Globe } from "lucide-react";
-import { useTranslations, languages, Locale } from "@/hooks/use-translations";
+import { languages, Locale } from "@/hooks/use-translations";
+import { useTranslationsContext } from "@/context/translations-provider";
 
 export function LanguageSwitcher() {
-    const { locale, setLanguage } = useTranslations();
+    const { locale, setLanguage, t } = useTranslationsContext();
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label={t.components.header.accessibility.changeLanguage}>
                     <Globe className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>

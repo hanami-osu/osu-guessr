@@ -244,7 +244,13 @@ export default function SettingsClient() {
                                 <div className="mt-4">
                                     <div className="flex items-center gap-2 p-2 bg-background rounded border border-border/50">
                                         <code className="font-mono text-sm flex-1 break-all px-2">{dialogs.newKey}</code>
-                                        <Button size="icon" variant="ghost" onClick={() => copyKey(dialogs.newKey)} className="flex-shrink-0">
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => copyKey(dialogs.newKey)}
+                                            className="flex-shrink-0"
+                                            aria-label={copied ? t.settings.apiKeys.dialog.created.copied : t.settings.apiKeys.actions.copy}
+                                        >
                                             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                         </Button>
                                     </div>
