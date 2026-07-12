@@ -12,7 +12,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { requireOwner } from "@/actions/require-owner";
-import { selectAudioImportFile, type AudioImportCandidate } from "@/lib/importer-validation";
+import { isMp3File, selectAudioImportFile, type AudioImportCandidate } from "@/lib/importer-validation";
 
 const DIRECTORIES = {
     audio: path.join(process.cwd(), "mapsets", "audio"),
@@ -266,7 +266,11 @@ async function findLargestAudioFile(mapsetDir: string): Promise<string> {
 
         const stats = await fs.stat(path.join(mapsetDir, file));
         if (stats.isFile()) {
-            candidates.push({ name: file, size: stats.size });
+            candidates.push({
+                name: file,
+                size: stats.size,
+                isValidMp3: path.extname(file).toLowerCase() === ".mp3" && (await isMp3File(path.join(mapsetDir, file))),
+            });
         }
     }
 
