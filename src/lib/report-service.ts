@@ -13,7 +13,10 @@ interface ReportDependencies {
     webhookUrl?: string;
     fetchImpl?: FetchFunction;
     logError?: (message: string) => void;
+    webhookTimeoutMs?: number;
 }
+
+export const REPORT_WEBHOOK_TIMEOUT_MS = 5_000;
 
 export class ReportMapsetNotFoundError extends Error {
     constructor() {
@@ -59,21 +62,37 @@ Mapset Link: https://osu.ppy.sh/s/${report.mapsetId}
 `;
 
     try {
-        const response = await (dependencies.fetchImpl ?? fetch)(dependencies.webhookUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                content: reportMessage,
-                allowed_mentions: { parse: [] },
-            }),
-        });
+        const controller = new AbortController();
+        let timeout: ReturnType<typeof setTimeout> | undefined;
 
-        if (!response.ok) {
-            dependencies.logError?.(`Report webhook delivery failed with status ${response.status}`);
+        try {
+            const delivery = (dependencies.fetchImpl ?? fetch)(dependencies.webhookUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    content: reportMessage,
+                    allowed_mentions: { parse: [] },
+                }),
+                signal: controller.signal,
+            });
+            const deadline = new Promise<never>((_, reject) => {
+                timeout = setTimeout(() => {
+                    controller.abort();
+                    reject(new Error("Report webhook delivery timed out"));
+                }, dependencies.webhookTimeoutMs ?? REPORT_WEBHOOK_TIMEOUT_MS);
+            });
+
+            const response = await Promise.race([delivery, deadline]);
+
+            if (!response.ok) {
+                dependencies.logError?.(`Report webhook delivery failed with status ${response.status}`);
+            }
+        } finally {
+            if (timeout) clearTimeout(timeout);
         }
-    } catch {
-        dependencies.logError?.("Report webhook delivery failed");
+    } catch (error) {
+        dependencies.logError?.(error instanceof Error && error.message === "Report webhook delivery timed out" ? error.message : "Report webhook delivery failed");
     }
 }

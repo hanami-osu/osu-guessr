@@ -51,6 +51,32 @@ describe("createReportRecord", () => {
         expect(loggedErrors.join(" ")).not.toContain(webhookUrl);
     });
 
+    test("bounds webhook delivery and aborts it without failing the stored report", async () => {
+        let stored = false;
+        let deliverySignal: AbortSignal | null | undefined;
+        const loggedErrors: string[] = [];
+
+        await createReportRecord(validReport, {
+            query: async (sql) => {
+                if (sql.startsWith("SELECT")) return [{ title: "Title", artist: "Artist" }];
+                stored = true;
+                return [];
+            },
+            webhookUrl: "https://discord.example/private-webhook",
+            webhookTimeoutMs: 5,
+            fetchImpl: async (_input, init) => {
+                expect(stored).toBe(true);
+                deliverySignal = init?.signal;
+                return new Promise<Response>(() => {});
+            },
+            logError: (message) => loggedErrors.push(message),
+        });
+
+        expect(stored).toBe(true);
+        expect(deliverySignal?.aborted).toBe(true);
+        expect(loggedErrors).toEqual(["Report webhook delivery timed out"]);
+    });
+
     test("returns a controlled error when the mapset does not exist", async () => {
         let inserted = false;
 
