@@ -133,7 +133,7 @@ export default function AboutClient() {
                             <h3 className="text-xl font-medium mb-2 text-primary">{t.about.documentation.api.title}</h3>
                             <p className="text-foreground/80 mb-4">{t.about.documentation.api.description}</p>
                             <a
-                                href="https://github.com/yorunoken/osu-guessr/blob/main/docs/API.md"
+                                href="https://github.com/hanami-osu/osu-guessr/blob/main/docs/API.md"
                                 className="text-primary hover:underline inline-flex items-center gap-2"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -145,7 +145,7 @@ export default function AboutClient() {
                             <h3 className="text-xl font-medium mb-2 text-primary">{t.about.documentation.technical.title}</h3>
                             <p className="text-foreground/80 mb-4">{t.about.documentation.technical.description}</p>
                             <a
-                                href="https://github.com/yorunoken/osu-guessr/blob/main/docs/game-flow.md"
+                                href="https://github.com/hanami-osu/osu-guessr#readme"
                                 className="text-primary hover:underline inline-flex items-center gap-2"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -214,7 +214,7 @@ export default function AboutClient() {
                             <div className="space-y-2">
                                 <p className="text-foreground/80">
                                     • GitHub:{" "}
-                                    <a href="https://github.com/yorunoken/osu-guessr" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                    <a href="https://github.com/hanami-osu/osu-guessr" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
                                         osu-guessr
                                     </a>
                                 </p>
@@ -236,7 +236,7 @@ export default function AboutClient() {
                                 <p className="text-foreground/80">{t.about.contact.contribute.items.bugs}</p>
                                 <p className="text-foreground/80">{t.about.contact.contribute.items.code}</p>
                                 <p className="text-foreground/80">{t.about.contact.contribute.items.docs}</p>
-                                <a href="https://github.com/yorunoken/osu-guessr" className="text-primary hover:underline inline-flex items-center gap-2 mt-2" target="_blank" rel="noopener noreferrer">
+                                <a href="https://github.com/hanami-osu/osu-guessr" className="text-primary hover:underline inline-flex items-center gap-2 mt-2" target="_blank" rel="noopener noreferrer">
                                     {t.common.viewMore} →
                                 </a>
                             </div>

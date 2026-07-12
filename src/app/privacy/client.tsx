@@ -88,7 +88,7 @@ export default function PrivacyPolicy() {
                             <li>{t.privacy.sections.contact.items.discord}</li>
                             <li>
                                 {t.privacy.sections.contact.items.github}{" "}
-                                <a href="https://github.com/yorunoken/osu-guessr" className="text-primary hover:underline">
+                                <a href="https://github.com/hanami-osu/osu-guessr" className="text-primary hover:underline">
                                     osu-guessr
                                 </a>
                             </li>

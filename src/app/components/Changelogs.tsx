@@ -32,7 +32,7 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
                                         <div className="space-x-2 text-sm">
                                             {change.commit && (
                                                 <a
-                                                    href={`https://github.com/yorunoken/osu-guessr/commit/${change.commit}`}
+                                                    href={`https://github.com/hanami-osu/osu-guessr/commit/${change.commit}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="text-primary hover:underline inline-block"
@@ -42,7 +42,7 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
                                             )}
                                             {change.pr && (
                                                 <a
-                                                    href={`https://github.com/yorunoken/osu-guessr/pull/${change.pr}`}
+                                                    href={`https://github.com/hanami-osu/osu-guessr/pull/${change.pr}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="text-primary hover:underline inline-block"

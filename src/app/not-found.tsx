@@ -26,8 +26,8 @@ export default function NotFound() {
                     <div className="mt-8 pt-6 border-t border-border/50">
                         <p className="text-sm text-foreground/50">
                             {t.errors["404"].reportIssue}{" "}
-                            <Link href="https://github.com/yorunoken/osu-guessr/issues" className="text-primary hover:underline">
-                                https://github.com/yorunoken/osu-guessr/issues
+                            <Link href="https://github.com/hanami-osu/osu-guessr/issues" className="text-primary hover:underline">
+                                https://github.com/hanami-osu/osu-guessr/issues
                             </Link>
                             .
                         </p>
