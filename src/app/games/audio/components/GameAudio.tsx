@@ -108,7 +108,7 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo, onVo
                     </div>
                 )}
                 <audio ref={audioRef} controls className={`w-full mb-4 ${isLoading || mediaError ? "hidden" : "block"}`}>
-                    <source src={mediaUrl} type="audio/mp3" />
+                    <source src={mediaUrl} />
                     {t.game.audio.browserNotSupported}
                 </audio>
                 {!isRevealed && <p className="text-center text-muted-foreground">{t.game.audio.instructions}</p>}
