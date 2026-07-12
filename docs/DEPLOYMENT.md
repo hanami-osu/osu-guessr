@@ -4,6 +4,8 @@
 
 `GET /api/health` checks both Redis and MariaDB with short timeouts. It returns `200` only when both required dependencies are available and `503` otherwise. The response includes the deployment ID and simple per-dependency `ok` or `unavailable` states; it does not include credentials, connection strings, or internal exception messages.
 
+The response stops waiting for either dependency after two seconds. This bounds the health request, but it does not cancel an underlying Redis or MariaDB operation that ignores or does not support cancellation; that operation may settle later in the background.
+
 The container health check calls this endpoint, so an unavailable database or Redis instance makes the container unhealthy.
 
 ## Runtime directories
@@ -31,4 +33,4 @@ Create host bind-mount directories with appropriate ownership and permissions be
 
 ## Publishing checks
 
-The Docker publishing workflow runs `bun run check`, `bun test`, and `bun run build` before the Docker job. Image login, build, and push steps do not run when the quality job fails.
+The Docker publishing workflow runs `bun run check`, `bun test`, and `bun run build` before the Docker job. The check command generates Prisma Client before linting and type-checking, so it also works from a clean checkout. Image login, build, and push steps do not run when the quality job fails.
