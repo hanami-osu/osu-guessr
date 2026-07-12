@@ -41,6 +41,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+RUN mkdir -p /app/mapsets/audio /app/mapsets/backgrounds /app/mapsets/skins /app/tmp \
+    && chown -R nextjs:nodejs /app/mapsets /app/tmp
+
 USER nextjs
 
 EXPOSE 3000
