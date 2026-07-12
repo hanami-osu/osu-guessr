@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Game, GameMode, UserAchievement, UserWithStats, UserRanks } from "@/actions/types";
 import { getUserByIdAction, getUserStatsAction, getUserLatestGamesAction, getUserTopGamesAction } from "@/actions/user-server";
 import Image from "next/image";
@@ -9,6 +9,7 @@ import { GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import UserNotFound from "./NotFound";
 import { getHighestScore } from "@/lib/user-stats";
+import { createLatestRequestGate } from "@/lib/latest-request";
 
 interface GameStats {
     game_mode: GameMode;
@@ -36,8 +37,11 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
     const [topPlays, setTopPlays] = useState<Game[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const requestGate = useRef(createLatestRequestGate());
 
     useEffect(() => {
+        const request = requestGate.current.begin();
+
         const fetchUserData = async () => {
             try {
                 setIsLoading(true);
@@ -47,11 +51,12 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                 const userData = await getUserByIdAction(Number(banchoId));
 
                 if (!userData) {
-                    setError("User not found");
+                    if (request.isCurrent()) {
+                        setUser(null);
+                        setError("User not found");
+                    }
                     return;
                 }
-
-                setUser(userData);
 
                 // Then fetch all other data in parallel
                 const [statsData, gamesData, topPlaysData] = await Promise.all([
@@ -60,23 +65,30 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                     getUserTopGamesAction(Number(banchoId), undefined, currentVariant),
                 ]);
 
-                setUserStats(statsData);
-
                 const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
                 const filteredGames = gamesData.filter((x) => new Date(x.ended_at) > twentyFourHoursAgo);
-                setUserGames(filteredGames);
 
-                setTopPlays(topPlaysData);
+                if (request.isCurrent()) {
+                    setUser(userData);
+                    setUserStats(statsData);
+                    setUserGames(filteredGames);
+                    setTopPlays(topPlaysData);
+                }
             } catch (err) {
-                console.error("Failed to fetch user data:", err);
-                setError(err instanceof Error ? err.message : "Failed to load user data");
+                if (request.isCurrent()) {
+                    console.error("Failed to fetch user data:", err);
+                    setError(err instanceof Error ? err.message : "Failed to load user data");
+                }
             } finally {
-                setIsLoading(false);
+                if (request.isCurrent()) {
+                    setIsLoading(false);
+                }
             }
         };
 
-        fetchUserData();
-    }, [banchoId, currentVariant]);
+        void fetchUserData();
+        return () => request.cancel();
+    }, [banchoId, currentMode, currentVariant]);
 
     if (isLoading) {
         return <UserProfileSkeleton currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} />;

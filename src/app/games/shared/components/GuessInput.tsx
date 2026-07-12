@@ -3,6 +3,7 @@ import { useState, useEffect, useId, useRef } from "react";
 import { GameClient } from "@/lib/game/client";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { soundManager } from "@/lib/game/sounds";
+import { createLatestRequestGate } from "@/lib/latest-request";
 
 interface GuessInputProps {
     guess: string;
@@ -25,6 +26,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isSelectingRef = useRef(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const requestGate = useRef(createLatestRequestGate());
 
     useEffect(() => {
         if (!isRevealed && inputRef.current) {
@@ -41,17 +43,31 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
     }, [guess]);
 
     useEffect(() => {
+        const request = requestGate.current.begin();
+
         if (!isSelectingRef.current && guess.trim() && !isRevealed) {
             if (debounceTimeoutRef.current) {
                 clearTimeout(debounceTimeoutRef.current);
             }
 
             debounceTimeoutRef.current = setTimeout(async () => {
-                const newSuggestions = await gameClient.getSuggestions(guess);
-                setSuggestions(newSuggestions);
-                setShowSuggestions(true);
-                setSelectedIndex(newSuggestions.length > 0 ? 0 : -1);
-                setAnnouncement(t.game.input.suggestionsAvailable.replace("{count}", newSuggestions.length.toString()));
+                try {
+                    const newSuggestions = await gameClient.getSuggestions(guess);
+                    if (request.isCurrent()) {
+                        setSuggestions(newSuggestions);
+                        setShowSuggestions(newSuggestions.length > 0);
+                        setSelectedIndex(newSuggestions.length > 0 ? 0 : -1);
+                        setAnnouncement(t.game.input.suggestionsAvailable.replace("{count}", newSuggestions.length.toString()));
+                    }
+                } catch (error) {
+                    if (request.isCurrent()) {
+                        console.error("Failed to load suggestions:", error);
+                        setSuggestions([]);
+                        setShowSuggestions(false);
+                        setSelectedIndex(-1);
+                        setAnnouncement("");
+                    }
+                }
             }, 100);
         }
 
@@ -59,6 +75,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
             if (debounceTimeoutRef.current) {
                 clearTimeout(debounceTimeoutRef.current);
             }
+            request.cancel();
         };
     }, [guess, gameClient, isRevealed, t.game.input.suggestionsAvailable]);
 

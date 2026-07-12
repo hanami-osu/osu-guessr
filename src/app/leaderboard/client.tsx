@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { GameMode, type TopPlayer } from "@/actions/types";
 import type { GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { AdSlider } from "@/components/Ads";
+import { createLatestRequestGate } from "@/lib/latest-request";
 
 export default function LeaderboardClient() {
     const { t } = useTranslationsContext();
@@ -25,10 +26,13 @@ export default function LeaderboardClient() {
     const [orderMetric, setOrderMetric] = useState<"total" | "highest">("highest");
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
+    const requestGate = useRef(createLatestRequestGate());
 
     const errorMessage = t.notifications.error;
 
     useEffect(() => {
+        const request = requestGate.current.begin();
+
         async function fetchLeaderboard() {
             setIsLoading(true);
             setError(null);
@@ -36,16 +40,23 @@ export default function LeaderboardClient() {
             try {
                 const offset = (page - 1) * pageSize;
                 const data = await getTopPlayersAction(selectedMode, selectedVariant, pageSize, orderMetric, offset);
-                setLeaderboardData(data);
+                if (request.isCurrent()) {
+                    setLeaderboardData(data);
+                }
             } catch (error) {
-                console.error("Failed to fetch leaderboard:", error);
-                setError(error instanceof Error ? error.message : errorMessage);
+                if (request.isCurrent()) {
+                    console.error("Failed to fetch leaderboard:", error);
+                    setError(error instanceof Error ? error.message : errorMessage);
+                }
             } finally {
-                setIsLoading(false);
+                if (request.isCurrent()) {
+                    setIsLoading(false);
+                }
             }
         }
 
-        fetchLeaderboard();
+        void fetchLeaderboard();
+        return () => request.cancel();
     }, [selectedMode, selectedVariant, orderMetric, page, pageSize, errorMessage]);
 
     const gameModes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin];
@@ -57,7 +68,13 @@ export default function LeaderboardClient() {
             <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center gap-4 mb-8 p-4 bg-card rounded-lg border border-border/60">
                 <div className="flex items-center justify-between gap-2 md:justify-start">
                     <span className="text-sm font-medium text-muted-foreground">Mode:</span>
-                    <Select value={selectedMode} onValueChange={(value: GameMode) => setSelectedMode(value)}>
+                    <Select
+                        value={selectedMode}
+                        onValueChange={(value: GameMode) => {
+                            setSelectedMode(value);
+                            setPage(1);
+                        }}
+                    >
                         <SelectTrigger className="w-32">
                             <SelectValue />
                         </SelectTrigger>
@@ -74,10 +91,26 @@ export default function LeaderboardClient() {
                 <div className="flex items-center justify-between gap-2 md:justify-start">
                     <span className="text-sm font-medium text-muted-foreground">Variant:</span>
                     <div className="flex rounded-md border border-border/60">
-                        <Button variant={selectedVariant === "classic" ? "default" : "ghost"} size="sm" onClick={() => setSelectedVariant("classic")} className="rounded-r-none border-r">
+                        <Button
+                            variant={selectedVariant === "classic" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => {
+                                setSelectedVariant("classic");
+                                setPage(1);
+                            }}
+                            className="rounded-r-none border-r"
+                        >
                             {t.leaderboard.filters.variant.classic}
                         </Button>
-                        <Button variant={selectedVariant === "death" ? "destructive" : "ghost"} size="sm" onClick={() => setSelectedVariant("death")} className="rounded-l-none">
+                        <Button
+                            variant={selectedVariant === "death" ? "destructive" : "ghost"}
+                            size="sm"
+                            onClick={() => {
+                                setSelectedVariant("death");
+                                setPage(1);
+                            }}
+                            className="rounded-l-none"
+                        >
                             {t.leaderboard.filters.variant.death}
                         </Button>
                     </div>
@@ -107,7 +140,15 @@ export default function LeaderboardClient() {
                                 <th scope="col" className="px-2 py-3 text-left sm:px-6 sm:py-4">{t.leaderboard.table.player}</th>
                                 {selectedVariant === "classic" && (
                                     <th scope="col" className="hidden px-3 py-3 text-right sm:table-cell sm:px-6 sm:py-4">
-                                        <Button variant="ghost" size="sm" onClick={() => setOrderMetric("total")} className="h-auto p-0 font-semibold hover:bg-transparent">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                setOrderMetric("total");
+                                                setPage(1);
+                                            }}
+                                            className="h-auto p-0 font-semibold hover:bg-transparent"
+                                        >
                                             {t.leaderboard.table.totalScore}
                                             {orderMetric === "total" && <ChevronDownIcon className="ml-1 h-3 w-3" />}
                                         </Button>
@@ -116,7 +157,15 @@ export default function LeaderboardClient() {
                                 <th scope="col" className="hidden px-6 py-4 text-right md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
                                 <th scope="col" className="w-20 px-3 py-3 text-right text-xs sm:w-auto sm:px-6 sm:py-4 sm:text-base">
                                     {selectedVariant === "classic" ? (
-                                        <Button variant="ghost" size="sm" onClick={() => setOrderMetric("highest")} className="h-auto p-0 font-semibold hover:bg-transparent">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                setOrderMetric("highest");
+                                                setPage(1);
+                                            }}
+                                            className="h-auto p-0 font-semibold hover:bg-transparent"
+                                        >
                                             {t.leaderboard.table.hiScore}
                                             {orderMetric === "highest" && <ChevronDownIcon className="ml-1 h-3 w-3" />}
                                         </Button>

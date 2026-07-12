@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } 
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { searchUsersAction } from "@/actions/user-server";
 import { useTranslationsContext } from "@/context/translations-provider";
+import { createLatestRequestGate } from "@/lib/latest-request";
 
 interface SearchResult {
     bancho_id: number;
@@ -23,6 +24,7 @@ export default function UserSearch() {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const requestGate = useRef(createLatestRequestGate());
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -37,24 +39,40 @@ export default function UserSearch() {
     }, []);
 
     useEffect(() => {
+        const request = requestGate.current.begin();
+
+        if (query.length < 2) {
+            setResults([]);
+            setIsSearching(false);
+            return () => request.cancel();
+        }
+
         const delayDebounceFn = setTimeout(async () => {
-            if (query.length >= 2) {
+            if (request.isCurrent()) {
                 setIsSearching(true);
-                try {
-                    const searchResults = await searchUsersAction(query);
+            }
+
+            try {
+                const searchResults = await searchUsersAction(query);
+                if (request.isCurrent()) {
                     setResults(searchResults);
-                } catch (error) {
+                }
+            } catch (error) {
+                if (request.isCurrent()) {
                     console.error("Search failed:", error);
                     setResults([]);
-                } finally {
+                }
+            } finally {
+                if (request.isCurrent()) {
                     setIsSearching(false);
                 }
-            } else {
-                setResults([]);
             }
         }, 300);
 
-        return () => clearTimeout(delayDebounceFn);
+        return () => {
+            clearTimeout(delayDebounceFn);
+            request.cancel();
+        };
     }, [query]);
 
     const handleSelect = () => {
