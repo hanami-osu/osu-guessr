@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { validateApiKey } from "@/actions/api-keys-server";
 import { getHighestStatsAction } from "@/actions/user-server";
 import { z } from "zod";
+import { apiErrorResponse } from "@/lib/api/errors";
 
 const querySchema = z.object({
     variant: z.enum(["classic", "death"]).default("classic"),
@@ -13,14 +14,9 @@ export async function GET(request: Request) {
 
     try {
         await validateApiKey(apiKey);
-    } catch {
-        return NextResponse.json({ success: false, error: "Invalid API key" }, { status: 403 });
-    }
-
-    try {
         const { searchParams } = new URL(request.url);
         const query = querySchema.parse({
-            variant: searchParams.get("variant") || "classic",
+            variant: searchParams.get("variant") ?? undefined,
         });
 
         const stats = await getHighestStatsAction(query.variant);
@@ -30,7 +26,6 @@ export async function GET(request: Request) {
             data: stats,
         });
     } catch (error) {
-        console.error("Stats error:", error);
-        return NextResponse.json({ success: false, error: "Failed to fetch stats" }, { status: 500 });
+        return apiErrorResponse(error, "Failed to fetch stats", "Stats error");
     }
 }

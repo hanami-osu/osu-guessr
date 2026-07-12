@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { validateApiKey } from "@/actions/api-keys-server";
 import { getUserByIdAction } from "@/actions/user-server";
+import { z } from "zod";
+import { apiErrorResponse } from "@/lib/api/errors";
+
+const userIdSchema = z.coerce.number().int().positive();
 
 export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
     const headers = new Headers(request.headers);
@@ -8,13 +12,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
 
     try {
         await validateApiKey(apiKey);
-    } catch {
-        return NextResponse.json({ success: false, error: "Invalid API key" }, { status: 403 });
-    }
-
-    try {
         const { userId } = await params;
-        const user = await getUserByIdAction(Number(userId));
+        const user = await getUserByIdAction(userIdSchema.parse(userId));
 
         if (!user) {
             return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
@@ -25,7 +24,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
             data: user,
         });
     } catch (error) {
-        console.error("User fetch error:", error);
-        return NextResponse.json({ success: false, error: "Failed to fetch user" }, { status: 500 });
+        return apiErrorResponse(error, "Failed to fetch user", "User fetch error");
     }
 }
