@@ -159,7 +159,7 @@ export default function AdminMenu() {
             } else if (res?.success) {
                 appendOutput("Mapset added successfully");
             } else {
-                appendOutput(`Mapset add returned unexpected response: ${JSON.stringify(res)}`);
+                appendOutput(`Error: ${res?.error ?? "Mapset import failed"}`);
             }
         } catch (error) {
             appendOutput(`Error: ${error}`);
