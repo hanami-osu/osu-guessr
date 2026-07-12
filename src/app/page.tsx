@@ -22,6 +22,8 @@ async function HomeAnnouncements() {
 
 async function HomeChangelogs() {
     const changelogs = await readChangelogs();
+    if (changelogs.length === 0) return null;
+
     return (
         <section className="py-12">
             <ChangelogsSection changelogs={changelogs} />

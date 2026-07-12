@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title description">
+  <title id="title">Media unavailable</title>
+  <desc id="description">A neutral osu!guessr media placeholder</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17151f"/>
+      <stop offset="1" stop-color="#23202f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#background)"/>
+  <circle cx="600" cy="305" r="112" fill="none" stroke="#8870ff" stroke-width="18" opacity=".45"/>
+  <circle cx="600" cy="305" r="62" fill="#8870ff" opacity=".12"/>
+  <text x="600" y="500" fill="#d4cee8" font-family="system-ui, sans-serif" font-size="34" text-anchor="middle">Media unavailable</text>
+</svg>

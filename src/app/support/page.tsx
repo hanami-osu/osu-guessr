@@ -3,7 +3,7 @@ import { SupportPageContent } from "./client";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-    title: "Support osu!guessr",
+    title: "Support",
     description: "Support the development of osu!guessr and help keep the servers running",
 };
 

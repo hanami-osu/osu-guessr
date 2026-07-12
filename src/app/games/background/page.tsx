@@ -10,7 +10,7 @@ import { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-    title: "Background Guessr | osu!guessr",
+    title: "Background Guessr",
     description: "Test your knowledge by guessing songs from their beatmap backgrounds.",
 };
 

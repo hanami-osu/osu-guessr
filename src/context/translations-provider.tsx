@@ -1,12 +1,12 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { useTranslations } from "@/hooks/use-translations";
+import { Locale, useTranslations } from "@/hooks/use-translations";
 
 const TranslationsContext = createContext<ReturnType<typeof useTranslations> | null>(null);
 
-export function TranslationsProvider({ children }: { children: React.ReactNode }) {
-    const translations = useTranslations();
+export function TranslationsProvider({ children, initialLocale, migrateStoredLocale = false }: { children: React.ReactNode; initialLocale: Locale; migrateStoredLocale?: boolean }) {
+    const translations = useTranslations(initialLocale, migrateStoredLocale);
 
     return <TranslationsContext.Provider value={translations}>{children}</TranslationsContext.Provider>;
 }

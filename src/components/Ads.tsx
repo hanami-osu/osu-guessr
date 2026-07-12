@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Translations, useTranslations } from "@/hooks/use-translations";
+import type { Translations } from "@/lib/translations";
+import { useTranslationsContext } from "@/context/translations-provider";
 
 interface Promo {
     id: string;
@@ -43,7 +44,7 @@ const createPromos = (t: Translations): Array<Promo> => [
 ];
 
 export function AdSlider() {
-    const { t } = useTranslations();
+    const { t } = useTranslationsContext();
     const promos = createPromos(t);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [sequence, setSequence] = useState(() => shuffle([...Array(promos.length).keys()]));

@@ -6,7 +6,7 @@ import SettingsClient from "./SettingsClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-    title: "Settings | osu!guessr",
+    title: "Settings",
     description: "Manage your API keys and account settings",
 };
 

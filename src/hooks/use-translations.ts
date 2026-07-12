@@ -1,80 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import en from "@/messages/en.json";
-import tr from "@/messages/tr.json";
-import cs from "@/messages/cs.json";
-import es from "@/messages/es.json";
-import pl from "@/messages/pl.json";
-import ru from "@/messages/ru.json";
+import { getTranslations, isLocale, Locale } from "@/lib/translations";
 
-export const languages = {
-    en: "English",
-    tr: "Türkçe",
-    cs: "Čeština",
-    es: "Español",
-    pl: "Polski",
-    ru: "Русский",
-} as const;
+export { languages } from "@/lib/translations";
+export type { Locale, Translations } from "@/lib/translations";
 
-const messages = { en, tr, cs, es, pl, ru } as const;
-export type Locale = keyof typeof messages;
-export type Translations = typeof en;
-
-export function useTranslations() {
-    const [locale, setLocale] = useState<Locale>("en");
+export function useTranslations(initialLocale: Locale = "en", migrateStoredLocale = false) {
+    const [locale, setLocale] = useState<Locale>(initialLocale);
 
     useEffect(() => {
-        const stored = localStorage.getItem("locale") as Locale;
-        if (stored && stored in messages) {
-            setLocale(stored);
+        const stored = localStorage.getItem("locale");
+        if (migrateStoredLocale && isLocale(stored)) {
+            document.cookie = `locale=${stored}; path=/; max-age=31536000; samesite=lax`;
+            document.documentElement.lang = stored;
+
+            if (stored !== locale) {
+                setLocale(stored);
+                return;
+            }
         }
-    }, []);
+
+        document.documentElement.lang = locale;
+    }, [locale, migrateStoredLocale]);
 
     const setLanguage = (newLocale: Locale) => {
         localStorage.setItem("locale", newLocale);
+        document.cookie = `locale=${newLocale}; path=/; max-age=31536000; samesite=lax`;
+        document.documentElement.lang = newLocale;
         setLocale(newLocale);
-        window.location.reload();
-    };
-
-    const processMessage = (message: string) => {
-        return message
-            .replace(/\{osu_guessr\}/g, "osu!guessr")
-            .replace(/\{osu_base\}/g, "osu!")
-            .replace(/\{artist_name\}/g, "Triantafyllia");
-    };
-
-    /* eslint-disable  @typescript-eslint/no-explicit-any */
-    const processTranslations = (obj: any, fallback: any = messages.en): any => {
-        return new Proxy(
-            {},
-            {
-                get(_, prop) {
-                    const value = obj[prop] ?? fallback[prop];
-
-                    if (typeof value === "string") {
-                        return processMessage(value);
-                    }
-                    if (typeof value === "object" && value !== null) {
-                        return processTranslations(obj[prop] || {}, fallback[prop]);
-                    }
-                    return value;
-                },
-                ownKeys() {
-                    return [...new Set([...Object.keys(obj), ...Object.keys(fallback)])];
-                },
-                getOwnPropertyDescriptor() {
-                    return {
-                        enumerable: true,
-                        configurable: true,
-                    };
-                },
-            }
-        );
     };
 
     return {
-        t: processTranslations(messages[locale]) as Translations,
+        t: getTranslations(locale),
         locale,
         setLanguage,
     };
