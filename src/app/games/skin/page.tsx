@@ -9,7 +9,7 @@ import { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-    title: "Skin Guessr | osu!guessr",
+    title: "Skin Guessr",
     description: "Test your knowledge of osu! skins by identifying them from screenshots.",
 };
 

@@ -1,4 +1,0 @@
-User-agent: *
-Disallow:
-
-Sitemap: https://osuguessr.com/sitemap.xml

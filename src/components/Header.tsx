@@ -76,7 +76,7 @@ export default function Header() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 active:!transform-none" aria-label={t.components.header.accessibility.profileMenu}>
-                                    <Image src={session.user?.image || "/default-avatar.png"} alt="Avatar" className="rounded-full" fill style={{ objectFit: "cover" }} />
+                                    <Image src={session.user?.image || "/default-avatar.svg"} alt="" className="rounded-full" fill style={{ objectFit: "cover" }} />
                                 </Button>
                             </DropdownMenuTrigger>
 
@@ -84,7 +84,7 @@ export default function Header() {
                                 <DropdownMenuItem className="cursor-pointer" asChild>
                                     <Link href={`/user/${session.user.banchoId}`} className="flex items-center">
                                         <div className="relative h-8 w-8 rounded-full mr-2">
-                                            <Image src={session.user?.image || "/default-avatar.png"} alt="Avatar" className="rounded-full" fill style={{ objectFit: "cover" }} />
+                                            <Image src={session.user?.image || "/default-avatar.svg"} alt="" className="rounded-full" fill style={{ objectFit: "cover" }} />
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="font-medium">{session.user.name}</span>
@@ -94,7 +94,7 @@ export default function Header() {
                                 </DropdownMenuItem>
                                 {session.user.banchoId === OWNER_ID && (
                                     <DropdownMenuItem className="cursor-pointer" asChild>
-                                        <Link href="/admin">Admin</Link>
+                                        <Link href="/admin">{t.components.header.nav.admin}</Link>
                                     </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem className="cursor-pointer" asChild>

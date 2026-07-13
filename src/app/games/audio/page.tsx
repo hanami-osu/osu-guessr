@@ -9,7 +9,7 @@ import { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-    title: "Audio Guessr | osu!guessr",
+    title: "Audio Guessr",
     description: "Challenge yourself by identifying songs from short audio clips.",
 };
 

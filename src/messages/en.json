@@ -178,6 +178,11 @@
             "funFact": "Did you know? I didn't either!"
         }
     },
+    "lockdown": {
+        "title": "Website Locked",
+        "until": "The site is temporarily locked until {date}.",
+        "description": "Access is restricted. Only the owner can access the site while it is locked. Sorry for the inconvenience."
+    },
     "about": {
         "title": "About {osu_guessr}",
         "whatIs": {
@@ -680,7 +685,8 @@
                 "settings": "Settings",
                 "signIn": "Sign In",
                 "signOut": "Sign out",
-                "viewProfile": "View Profile"
+                "viewProfile": "View Profile",
+                "admin": "Admin"
             }
         },
         "footer": {

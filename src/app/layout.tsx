@@ -11,13 +11,20 @@ import { TranslationsProvider } from "@/context/translations-provider";
 import { auth } from "@/lib/auth";
 import { getLockInfo } from "@/lib/lockdown";
 import { OWNER_ID } from "@/lib";
+import { cookies } from "next/headers";
+import { env } from "@/lib/env";
+import { normalizePublicOrigin } from "@/lib/public-url";
+import { getTranslations, isLocale } from "@/lib/translations";
 
 const publicSans = Public_Sans({
     subsets: ["latin"],
     variable: "--public-sans",
 });
 
+const publicOrigin = normalizePublicOrigin(env.NEXT_PUBLIC_APP_URL);
+
 export const metadata: Metadata = {
+    metadataBase: new URL(publicOrigin),
     title: {
         default: "osu!guessr",
         template: "%s | osu!guessr",
@@ -34,9 +41,9 @@ export const metadata: Metadata = {
     openGraph: {
         title: "osu!guessr",
         description: "Guess osu! beatmaps from audio clips and screenshots. Free web game for osu! fans.",
-        url: "https://osuguessr.com",
+        url: publicOrigin,
         siteName: "osu!guessr",
-        images: [{ url: "https://osuguessr.com/main_bg.webp", width: 1200, height: 630 }],
+        images: [{ url: `${publicOrigin}/main_bg.webp`, width: 1200, height: 630 }],
         type: "website",
     },
 };
@@ -57,18 +64,21 @@ export default async function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const lock = await getLockInfo();
-    const session = await auth();
+    const [lock, session, cookieStore] = await Promise.all([getLockInfo(), auth(), cookies()]);
+    const localeCookie = cookieStore.get("locale")?.value;
+    const hasValidLocaleCookie = isLocale(localeCookie);
+    const initialLocale = hasValidLocaleCookie ? localeCookie : "en";
+    const t = getTranslations(initialLocale);
 
     if (lock && session?.user?.banchoId !== OWNER_ID) {
         return (
-            <html lang="en">
+            <html lang={initialLocale}>
                 <body className={`${publicSans.variable} antialiased`}>
                     <div className="flex items-center justify-center min-h-screen bg-background">
                         <div className="max-w-xl mx-auto p-8 bg-card rounded-lg border border-border">
-                            <h1 className="text-2xl font-bold mb-4">Website Locked</h1>
-                            <p className="mb-4">The site is temporarily locked until {new Date(lock.until).toLocaleString()}.</p>
-                            <p className="text-sm text-muted-foreground">Access is restricted. Only the owner can access the site while it&apos;s locked. Sorry for the inconvenience.</p>
+                            <h1 className="text-2xl font-bold mb-4">{t.lockdown.title}</h1>
+                            <p className="mb-4">{t.lockdown.until.replace("{date}", new Date(lock.until).toLocaleString(initialLocale))}</p>
+                            <p className="text-sm text-muted-foreground">{t.lockdown.description}</p>
                         </div>
                     </div>
                     <AnalyticsScripts />
@@ -78,7 +88,7 @@ export default async function RootLayout({
     }
 
     return (
-        <html lang="en">
+        <html lang={initialLocale}>
             <head>
                 {/* JSON-LD structured data for Site */}
                 <script
@@ -88,18 +98,13 @@ export default async function RootLayout({
                             "@context": "https://schema.org",
                             "@type": "WebSite",
                             name: "osu!guessr",
-                            url: "https://osuguessr.com",
-                            potentialAction: {
-                                "@type": "SearchAction",
-                                target: "https://osuguessr.com/search?q={search_term_string}",
-                                "query-input": "required name=search_term_string",
-                            },
+                            url: publicOrigin,
                         }),
                     }}
                 />
             </head>
             <body className={`${publicSans.variable} antialiased`}>
-                <TranslationsProvider>
+                <TranslationsProvider initialLocale={initialLocale} migrateStoredLocale={!hasValidLocaleCookie}>
                     <SessionWrapper>
                         <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
                             <div className="flex min-h-screen flex-col bg-background text-foreground">
