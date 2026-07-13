@@ -6,7 +6,7 @@
         "dev": "dotenv -e .env -- next dev",
         "build": "prisma generate && IS_DOCKER_BUILD=true next build",
         "start": "dotenv -e .env -- next start",
-        "check": "eslint src && tsc --noEmit",
+        "check": "prisma generate && eslint src && tsc --noEmit",
         "test": "bun test",
         "sync": "bun scripts/sync-translations",
         "prisma:generate": "prisma generate",
