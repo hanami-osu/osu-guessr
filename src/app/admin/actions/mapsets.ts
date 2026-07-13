@@ -12,6 +12,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { requireOwner } from "@/actions/require-owner";
+import { isMp3File, selectAudioImportFile, type AudioImportCandidate } from "@/lib/importer-validation";
 
 const DIRECTORIES = {
     audio: path.join(process.cwd(), "mapsets", "audio"),
@@ -35,6 +36,12 @@ export interface Mapset {
     mapper: string;
     image_filename: string;
     audio_filename: string;
+}
+
+interface AddMapsetResult {
+    success: boolean;
+    note?: "already_exists";
+    error?: string;
 }
 
 interface BeatmapData {
@@ -249,54 +256,36 @@ async function extractBackground(mapsetId: number): Promise<string | null> {
 }
 
 // Audio Processing
-async function findLargestAudioFile(mapsetDir: string): Promise<string | null> {
-    try {
-        const files = await fs.readdir(mapsetDir);
-        const audioExtensions = [".mp3", ".ogg", ".wav"];
+async function findLargestAudioFile(mapsetDir: string): Promise<string> {
+    const files = await fs.readdir(mapsetDir);
+    const audioExtensions = new Set([".mp3", ".ogg", ".wav"]);
+    const candidates: AudioImportCandidate[] = [];
 
-        let largestAudio: string | null = null;
-        let largestSize = 0;
+    for (const file of files) {
+        if (!audioExtensions.has(path.extname(file).toLowerCase())) continue;
 
-        for (const file of files) {
-            const hasAudioExtension = audioExtensions.some((ext) => file.toLowerCase().endsWith(ext));
-
-            if (hasAudioExtension) {
-                const filePath = path.join(mapsetDir, file);
-                const stats = await fs.stat(filePath);
-
-                if (stats.size > largestSize) {
-                    largestSize = stats.size;
-                    largestAudio = file;
-                }
-            }
+        const stats = await fs.stat(path.join(mapsetDir, file));
+        if (stats.isFile()) {
+            candidates.push({
+                name: file,
+                size: stats.size,
+                isValidMp3: path.extname(file).toLowerCase() === ".mp3" && (await isMp3File(path.join(mapsetDir, file))),
+            });
         }
-
-        return largestAudio;
-    } catch (error) {
-        console.error("Error finding audio files:", error);
-        return null;
     }
+
+    return selectAudioImportFile(candidates);
 }
 
-async function extractAudio(mapsetId: number, mapsetDir: string): Promise<string | null> {
-    try {
-        const largestAudio = await findLargestAudioFile(mapsetDir);
-        if (!largestAudio) {
-            throw new Error("No audio files found");
-        }
+async function extractAudio(mapsetId: number, mapsetDir: string): Promise<string> {
+    const largestAudio = await findLargestAudioFile(mapsetDir);
+    const srcPath = path.join(mapsetDir, largestAudio);
+    const audioFilename = `${mapsetId}.mp3`;
+    const destPath = path.join(DIRECTORIES.audio, audioFilename);
 
-        const srcPath = path.join(mapsetDir, largestAudio);
-        const audioFilename = `${mapsetId}.mp3`;
-        const destPath = path.join(DIRECTORIES.audio, audioFilename);
+    await fs.copyFile(srcPath, destPath);
 
-        // For now, just copy the file - you can add ffmpeg processing later
-        await fs.copyFile(srcPath, destPath);
-
-        return audioFilename;
-    } catch (error) {
-        console.error(`Error processing audio for mapset ${mapsetId}:`, error);
-        return null;
-    }
+    return audioFilename;
 }
 
 async function saveMapsetToDatabase(mapsetId: number, beatmapData: BeatmapData, imageFilename: string, audioFilename: string): Promise<void> {
@@ -338,7 +327,7 @@ async function removeMapsetFromDatabase(mapsetId: number): Promise<void> {
     await query("DELETE FROM mapset_data WHERE mapset_id = ?", [mapsetId]);
 }
 
-export async function addMapset(rawMapsetId: number): Promise<{ success: boolean; note?: string }> {
+export async function addMapset(rawMapsetId: number): Promise<AddMapsetResult> {
     await requireOwner();
     const mapsetId = z.coerce.number().min(1).parse(rawMapsetId);
     console.log(`Processing mapset ID: ${mapsetId}`);
@@ -379,8 +368,9 @@ export async function addMapset(rawMapsetId: number): Promise<{ success: boolean
         console.log(`Successfully added mapset ${mapsetId}`);
         return { success: true };
     } catch (error) {
-        console.error(`Error adding mapset ${mapsetId}:`, error);
-        throw error;
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.error(`Error adding mapset ${mapsetId}:`, errorMessage);
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -419,9 +409,14 @@ export async function addMapsetFromList(fileContent: string) {
                 results.push({ id: mapsetId, success: true, note: "already_exists" });
                 console.log(`→ Mapset ${mapsetId}: Already exists in database. Skipping.`);
             } else {
-                await addMapset(mapsetId);
-                results.push({ id: mapsetId, success: true });
-                console.log(`✓ Mapset ${mapsetId}: Successfully added`);
+                const result = await addMapset(mapsetId);
+                if (result.success) {
+                    results.push({ id: mapsetId, success: true, note: result.note });
+                    console.log(`✓ Mapset ${mapsetId}: Successfully added`);
+                } else {
+                    results.push({ id: mapsetId, success: false, error: result.error });
+                    console.log(`✗ Mapset ${mapsetId}: Failed - ${result.error}`);
+                }
             }
         } catch (error) {
             results.push({ id: mapsetId, success: false, error: String(error) });

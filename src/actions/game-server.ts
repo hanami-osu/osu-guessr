@@ -9,6 +9,7 @@ import { getRandomAudioAction, getRandomBackgroundAction, getRandomSkinAction } 
 import { GameMode, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type SkinData } from "./types";
 import { getMediaData } from "./media";
 import { checkGuess, GuessDifficulty } from "@/lib/guess-checker";
+import { isNoGameContentError } from "@/lib/game/content-errors";
 
 const GRACE_PERIOD = 1;
 const SESSION_LOCK_TTL_MS = 5000;
@@ -208,7 +209,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         const currentMedia: { backgroundData?: string; audioData?: string; skinData?: string } = {};
         if (gameState.game_mode === GameMode.Background) {
             currentMedia.backgroundData = await getMediaData(GameMode.Background, gameState.image_filename);
-        } else if (gameState.game_mode === GameMode.Audio && gameState.audio_filename) {
+        } else if (gameState.game_mode === GameMode.Audio) {
             currentMedia.audioData = await getMediaData(GameMode.Audio, gameState.audio_filename);
         } else if (gameState.game_mode === GameMode.Skin) {
             currentMedia.skinData = await getMediaData(GameMode.Skin, gameState.image_filename);
@@ -229,7 +230,9 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
                 } else if (gameState.game_mode === GameMode.Skin) {
                     await getRandomSkinAction(validated.sessionId);
                 }
-            } catch {
+            } catch (error) {
+                if (!isNoGameContentError(error)) throw error;
+
                 // No more beatmaps: end game and return finished state
                 const newStreak = gameState.current_streak + 1;
                 const newHighest = Math.max(gameState.highest_streak, newStreak);
@@ -355,7 +358,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
                     };
                 }
             } catch (error) {
-                if (!isDeathMode) throw error;
+                if (!isDeathMode || !isNoGameContentError(error)) throw error;
                 await endGameAction(sessionId);
                 return {
                     sessionId,
@@ -489,7 +492,7 @@ export async function getGameStateAction(sessionId: string): Promise<GameState> 
         let mediaData: string | undefined;
         if (gameState.game_mode === GameMode.Background) {
             mediaData = await getMediaData(GameMode.Background, gameState.image_filename);
-        } else if (gameState.game_mode === GameMode.Audio && gameState.audio_filename) {
+        } else if (gameState.game_mode === GameMode.Audio) {
             mediaData = await getMediaData(GameMode.Audio, gameState.audio_filename);
         } else if (gameState.game_mode === GameMode.Skin) {
             mediaData = await getMediaData(GameMode.Skin, gameState.image_filename);

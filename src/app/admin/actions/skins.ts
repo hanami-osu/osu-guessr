@@ -2,13 +2,12 @@
 
 import { query } from "@/lib/database";
 import fs from "fs/promises";
-import fsSync from "fs";
 import path from "path";
-import { pipeline } from "stream/promises";
-import { Readable } from "stream";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { requireOwner } from "@/actions/require-owner";
+import { parseSkinApiResponse, type SkinImportData } from "@/lib/skin-import";
+import sharp from "sharp";
 
 const DIRECTORIES = {
     skins: path.join(process.cwd(), "mapsets", "skins"),
@@ -18,30 +17,6 @@ const DIRECTORIES = {
 const OSUCK_API_KEY = env.OSUCK_API_KEY;
 const OSUCK_API_BASE_URL = env.OSUCK_API_BASE;
 const MAX_BULK_SKINS = 50;
-
-interface SkinData {
-    _nsfw: boolean;
-    id: number;
-    name: string;
-    gamemodes: number[];
-    screenshots: Array<{
-        // 2 = song select
-        // 6 = gameplay
-        // 10 = pause screen
-        // 12 = result screen
-        category: number;
-        gamemode: number;
-        large: string;
-        medium: string;
-        small: string;
-    }>;
-    link_to_skin: string;
-}
-
-interface ApiResponse {
-    status: "success" | "failed";
-    message: "rate limited" | "no api key" | "invalid api key" | SkinData;
-}
 
 interface SkinProcessResult {
     success: boolean;
@@ -62,17 +37,9 @@ async function ensureDirectories(): Promise<void> {
     await Promise.all(directories.map((dir) => fs.mkdir(dir, { recursive: true })));
 }
 
-async function cleanupDirectory(dirPath: string): Promise<void> {
-    try {
-        await fs.rm(dirPath, { recursive: true, force: true });
-    } catch (error) {
-        console.warn(`Failed to cleanup directory ${dirPath}:`, error);
-    }
-}
-
-async function fetchSkinMetadata(skinId: number): Promise<SkinData | null> {
-    if (!OSUCK_API_KEY) {
-        throw new Error("OSUCK_API_KEY environment variable is not set");
+async function fetchSkinMetadata(skinId: number): Promise<SkinImportData> {
+    if (!OSUCK_API_KEY || !OSUCK_API_BASE_URL) {
+        throw new Error("The osu!ck API integration is not configured");
     }
 
     try {
@@ -90,22 +57,14 @@ async function fetchSkinMetadata(skinId: number): Promise<SkinData | null> {
             throw new Error(`API request failed: ${response.status}`);
         }
 
-        const data = (await response.json()) as ApiResponse;
-
-        if (data.status === "failed") {
-            const errorMessage = typeof data.message === "string" ? data.message : "Unknown API error";
-            throw new Error(`API error: ${errorMessage}`);
-        }
-
-        const msg = data.message as SkinData;
-        return msg;
+        return parseSkinApiResponse(await response.json(), skinId);
     } catch (error) {
         console.error(`Failed to fetch skin metadata for ${skinId} :`, error);
-        return null;
+        throw error;
     }
 }
 
-async function downloadSkin(skinData: SkinData): Promise<string | null> {
+async function downloadSkin(skinData: SkinImportData): Promise<string> {
     const gameplayCategory = skinData.screenshots.find((screenshot) => screenshot.category === 6); // 6 is for the gameplay category of the skin
     if (!gameplayCategory) {
         throw new Error("No gameplay screenshot found for this skin");
@@ -121,22 +80,17 @@ async function downloadSkin(skinData: SkinData): Promise<string | null> {
             throw new Error(`Failed to download screenshot: ${response.status}`);
         }
 
-        if (!response.body) {
-            throw new Error("No response body for screenshot download");
-        }
-
-        // @ts-expect-error idk why
-        const nodeStream = Readable.fromWeb(response.body);
-        await pipeline(nodeStream, fsSync.createWriteStream(imagePath));
+        const downloadedImage = Buffer.from(await response.arrayBuffer());
+        await sharp(downloadedImage).webp({ quality: 80 }).toFile(imagePath);
 
         return fileName;
     } catch (error) {
         console.error(`Error downloading screenshot for skin ${skinData.id}:`, error);
-        return null;
+        throw error;
     }
 }
 
-async function saveSkinToDatabase(skinData: SkinData, imageFilename: string): Promise<void> {
+async function saveSkinToDatabase(skinData: SkinImportData, imageFilename: string): Promise<void> {
     await query(
         `INSERT INTO skins (id, name, image_filename)
      VALUES (?, ?, ?)`,
@@ -156,18 +110,10 @@ export async function addSkinById(rawSkinId: number): Promise<SkinProcessResult>
     try {
         await ensureDirectories();
         const skinData = await fetchSkinMetadata(skinId);
-        if (!skinData) {
-            throw new Error("Could not fetch skin metadata from API");
-        }
 
         const skinFileName = await downloadSkin(skinData);
-        if (!skinFileName) {
-            throw new Error("Failed to download and extract skin");
-        }
 
         await saveSkinToDatabase(skinData, skinFileName);
-
-        await cleanupDirectory(skinFileName);
 
         return {
             success: true,
@@ -189,20 +135,15 @@ export async function addSkinsFromList(rawIds: number[]): Promise<Array<{ id: nu
     await requireOwner();
     const ids = z.array(z.coerce.number().min(1)).max(MAX_BULK_SKINS).parse(rawIds);
     const results: Array<{ id: number; success: boolean; error?: string; image?: string }> = [];
+    await ensureDirectories();
 
     for (const [index, id] of ids.entries()) {
         console.log(`Processing skin ${index + 1}/${ids.length}: ${id}`);
 
         try {
             const skinData = await fetchSkinMetadata(id);
-            if (!skinData) {
-                throw new Error("Could not fetch skin metadata from API");
-            }
 
             const image = await downloadSkin(skinData);
-            if (!image) {
-                throw new Error("Failed to download image");
-            }
 
             await saveSkinToDatabase(skinData, image);
 
