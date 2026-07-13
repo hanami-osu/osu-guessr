@@ -3,6 +3,7 @@
 import { query } from "@/lib/database";
 import { Report } from "@/actions/types";
 import { requireOwner } from "@/actions/require-owner";
+import { reportStatusUpdateSchema } from "@/lib/report-validation";
 
 export async function listReports(): Promise<Report[]> {
     try {
@@ -31,8 +32,9 @@ export async function listReports(): Promise<Report[]> {
 export async function updateReportStatus(reportId: number, status: string): Promise<void> {
     try {
         await requireOwner();
-        await query(`UPDATE reports SET status = ? WHERE id = ?`, [status, reportId]);
-        console.log(`Report ${reportId} status updated to ${status}`);
+        const validated = reportStatusUpdateSchema.parse({ reportId, status });
+        await query(`UPDATE reports SET status = ? WHERE id = ?`, [validated.status, validated.reportId]);
+        console.log(`Report ${validated.reportId} status updated to ${validated.status}`);
     } catch (error) {
         console.error(`Error updating report ${reportId}:`, error);
         throw error;

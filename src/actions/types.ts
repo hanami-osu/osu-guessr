@@ -5,7 +5,7 @@ export enum GameMode {
 }
 export type GameVariant = "classic" | "death";
 export type ReportType = "incorrect_title" | "inappropriate_content" | "wrong_audio" | "wrong_background" | "other";
-type ReportStatus = "pending" | "investigating" | "resolved" | "rejected";
+export type ReportStatus = "pending" | "investigating" | "resolved" | "rejected";
 
 export interface ApiKey {
     id: string;
