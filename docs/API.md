@@ -1,225 +1,212 @@
-# osu!guessr API Documentation
+# osu!guessr API
 
-This documentation describes the available endpoints for the osu!guessr API.
+The public API returns JSON and requires an API key in the `X-API-Key` header. Signed-in users can create API keys from the settings page.
 
-All requests require an API key provided in the `X-API-Key` header. You can obtain an API key from your account settings.
+```http
+X-API-Key: your_api_key
+```
 
-------------------------------------------------------------------------------------------
+User IDs are positive osu! user IDs. Unless noted otherwise, timestamps are ISO 8601 strings and database aggregate values are serialized as JSON numbers.
 
 ## Endpoints
 
-### Get User
+### Get a user
+
 ```http
 GET /api/users/{userId}
 ```
 
-Retrieves information about a specific user.
-
-**Response Data:**
 ```typescript
 {
-    success: true,
+    success: true;
     data: {
         bancho_id: number;
         username: string;
         avatar_url: string;
+        created_at: string;
         badges: Array<{
             name: string;
             color: string;
-            assigned_at: Date;
+            assigned_at: string;
         }>;
-        created_at: Date;
-        achievements?: Array<{
+        achievements: Array<{
             user_id: number;
             game_mode: "background" | "audio" | "skin";
             variant: "classic" | "death";
-            total_score: bigint;
+            total_score: number;
             games_played: number;
             highest_streak: number;
             highest_score: number;
-            last_played: Date;
+            last_played: string;
         }>;
-        ranks?: {
+        ranks: {
             globalRank?: {
                 classic?: number;
                 death?: number;
             };
             modeRanks: {
-                background: {
-                    classic?: number;
-                    death?: number;
-                };
-                audio: {
-                    classic?: number;
-                    death?: number;
-                };
-                skin: {
-                    classic?: number;
-                    death?: number;
-                };
+                background: { classic?: number; death?: number };
+                audio: { classic?: number; death?: number };
+                skin: { classic?: number; death?: number };
             };
         };
-    }
+    };
 }
 ```
 
-### Get User's Games
+Returns `404` when the user does not exist. Rank fields can be absent when the user is unranked.
+
+### Get a user's games
+
 ```http
 GET /api/users/{userId}/games
 ```
 
-Retrieves a list of games played by a specific user.
+Query parameters:
 
-Query Parameters:
-- `mode` (optional): Filter by game mode ("background" | "audio" | "skin")
-- `limit` (optional): Number of results to return (default: 20, max: 100)
-- `offset` (optional): Number of results to skip (default: 0)
+- `mode` (optional): `background`, `audio`, or `skin`.
+- `variant` (optional): `classic` or `death`; defaults to `classic`.
+- `limit` (optional): integer from 1 to 100; defaults to 20.
+- `offset` (optional): non-negative integer; defaults to 0.
 
-**Response Data:**
 ```typescript
 {
-    success: true,
+    success: true;
     data: Array<{
         user_id: number;
         game_mode: "background" | "audio" | "skin";
         points: number;
         streak: number;
         variant: "classic" | "death";
-        ended_at: Date;
-    }>,
+        ended_at: string;
+    }>;
     meta: {
         total: number;
         offset: number;
-        limit: number
-    }
+        limit: number;
+    };
 }
 ```
 
-### Get User's Stats
+### Get a user's statistics
+
 ```http
 GET /api/users/{userId}/stats
 ```
 
-Retrieves statistics for a specific user.
+Query parameters:
 
-Query Parameters:
-- `mode` (optional): Filter by game mode ("background" | "audio" | "skin")
+- `mode` (optional): `background`, `audio`, or `skin`.
 
-**Response Data:**
 ```typescript
 {
-    success: true,
-    data: {
+    success: true;
+    data: Array<{
         user_id: number;
         game_mode: "background" | "audio" | "skin";
-        variant: "classic" | "death";
-        total_score: bigint;
+        total_score: number;
         games_played: number;
         highest_streak: number;
         highest_score: number;
-        last_played: Date;
-    }
+        last_played: string;
+    }>;
 }
 ```
 
-### Search Users
+This route currently returns one array entry per stored user-achievement row. The current query does not include a `variant` field.
+
+### Search users
+
 ```http
-GET /api/users/search
+GET /api/users/search?query=player
 ```
 
-Search for users by username.
+Query parameters:
 
-Query Parameters:
-- `query`: Search term (min length: 2, max length: 250)
-- `limit` (optional): Number of results to return (default: 20, max: 100)
+- `query` (required): 2 to 250 characters.
+- `limit` (optional): integer from 1 to 100; defaults to 20.
 
-**Response Data:**
 ```typescript
 {
-    success: true,
+    success: true;
     data: Array<{
         bancho_id: number;
         username: string;
         avatar_url: string;
-        badges: Array<{
-            name: string;
-            color: string;
-            assigned_at: Date;
-        }>;
-        created_at: Date;
-    }>
+        created_at: string;
+    }>;
 }
 ```
 
-### Get Leaderboard
+### Get the leaderboard
+
 ```http
 GET /api/games/leaderboard
 ```
 
-Retrieves the global leaderboard.
+Query parameters:
 
-Query Parameters:
-- `mode`: Game mode ("background" | "audio" | "skin")
-- `variant`: Game variant ("classic" | "death")
-- `limit` (optional): Number of results to return (default: 100, max: 100)
+- `mode` (optional): `background`, `audio`, or `skin`; defaults to `background`.
+- `variant` (optional): `classic` or `death`; defaults to `classic`.
+- `limit` (optional): integer from 1 to 100; defaults to 100.
 
-**Response Data:**
 ```typescript
 {
-    success: true,
+    success: true;
     data: Array<{
         bancho_id: number;
         username: string;
         avatar_url: string;
-        total_score: bigint;
+        created_at: string;
+        total_score: number;
         games_played: number;
         highest_streak: number;
         highest_score: number;
-        variant: "classic" | "death";
+        earliest_ended_at: string;
         badges: Array<{
             name: string;
             color: string;
-            assigned_at: Date;
         }>;
-    }>
+    }>;
 }
 ```
 
-### Get Global Stats
+The selected variant determines the calculation but is not currently repeated as a property on each leaderboard row.
+
+### Get global statistics
+
 ```http
 GET /api/stats
 ```
 
-Retrieves global game statistics.
+Query parameters:
 
-Query Parameters:
-- `variant`: Game variant ("classic" | "death")
+- `variant` (optional): `classic` or `death`; defaults to `classic`.
 
-**Response Data:**
 ```typescript
 {
-    success: true,
+    success: true;
     data: {
         highest_points: number;
         total_games: number;
         total_users: number;
-    }
+    };
 }
 ```
 
-## Response Format
+## Response format
 
-All API responses follow this general structure:
+Successful responses use:
 
-**Success Response:**
 ```json
 {
     "success": true,
-    "data": {...}
+    "data": {}
 }
 ```
 
-**Error Response:**
+Errors use:
+
 ```json
 {
     "success": false,
@@ -227,21 +214,21 @@ All API responses follow this general structure:
 }
 ```
 
-Common HTTP status codes:
-- 200: Success
-- 400: Bad Request
-- 403: Invalid API key
-- 404: Resource not found
-- 500: Internal Server Error
+HTTP statuses:
 
-------------------------------------------------------------------------------------------
+- `200`: success.
+- `400`: malformed path or query parameters.
+- `401`: API key missing.
+- `403`: API key invalid.
+- `404`: requested resource not found.
+- `429`: API key rate limit exceeded.
+- `500`: unexpected internal failure.
+- `503`: API-key validation dependency unavailable.
 
-## Rate Limits
+## Rate limits
 
-No rate limits currently. Don't fuck it with it.
+Each API key is limited to 120 requests per 60-second fixed window. Requests above that limit return `429`. Rate limiting requires Redis; a Redis or database failure during API-key validation returns an internal-service error rather than an invalid-key response.
 
 ## Support
 
-If you need help or have questions about the API, you can:
-- Open an issue on our [GitHub repository](https://github.com/yorunoken/osu-guessr)
-- Contact us on Discord: @yorunoken
+Open questions and bug reports in the [canonical GitHub repository](https://github.com/hanami-osu/osu-guessr/issues).

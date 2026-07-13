@@ -185,7 +185,7 @@ export default function SettingsClient() {
                                             ))}
                                         </ul>
                                         <div className="mt-2">
-                                            <Link href="https://github.com/yorunoken/osu-guessr/blob/main/docs/API.md" target="_blank" className="inline-block text-primary hover:underline">
+                                            <Link href="https://github.com/hanami-osu/osu-guessr/blob/main/docs/API.md" target="_blank" className="inline-block text-primary hover:underline">
                                                 {t.settings.apiKeys.actions.viewDocs} →
                                             </Link>
                                         </div>

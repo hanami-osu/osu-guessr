@@ -12,7 +12,9 @@ osu!guessr uses JSON-based translation files located in `src/messages/`. Each la
    - Use the standard two-letter language code (e.g., `fr.json` for French)
    - Copy the content from `en.json` as a starting point
 
-3. Make sure to maintain the same structure as the English file, only changing the text values
+2. Import the file and register its code and display name in the translation registry used by `src/hooks/use-translations.ts`.
+
+3. Maintain the same structure as the English file, changing only text values.
 
 ## Translation Guidelines
 
@@ -55,6 +57,10 @@ osu!guessr uses JSON-based translation files located in `src/messages/`. Each la
 Currently supported languages:
 - English (en)
 - Turkish (tr)
+- Czech (cs)
+- Spanish (es)
+- Polish (pl)
+- Russian (ru)
 
 ## Need Help?
 
