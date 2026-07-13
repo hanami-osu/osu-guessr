@@ -58,7 +58,7 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
 
     Register an osu! OAuth application at [osu! account settings](https://osu.ppy.sh/home/account/edit#oauth). Generate independent secrets for `AUTH_SECRET` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`; do not reuse the placeholders in production.
 
-    `DISCORD_WEBHOOK` is optional for the application. Storing reports without sending a Discord notification depends on open PR [#39](https://github.com/hanami-osu/osu-guessr/pull/39); configure a webhook until that change is merged if report submission must work on the current `main` branch.
+    `DISCORD_WEBHOOK` is optional. Reports are stored even when it is unset; the variable only enables Discord notifications.
 
 4. Prepare a database.
 
