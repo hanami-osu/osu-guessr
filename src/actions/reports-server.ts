@@ -27,16 +27,16 @@ async function enforceReportRateLimit(userId: number) {
 }
 
 export async function createReportAction(mapsetId: number, reportType: ReportType, description: string): Promise<void> {
-    return authenticatedAction(async (session) => {
+    return authenticatedAction(async ({ guessrUser }) => {
         const validated = reportSchema.parse({
             mapsetId,
             reportType,
             description,
         });
-        await enforceReportRateLimit(session.user.banchoId);
+        await enforceReportRateLimit(guessrUser.banchoId);
 
         await createReportRecord(
-            { ...validated, userId: session.user.banchoId },
+            { ...validated, userId: guessrUser.banchoId },
             {
                 query: (sql, values) => query(sql, values),
                 webhookUrl: env.DISCORD_WEBHOOK,
@@ -47,7 +47,7 @@ export async function createReportAction(mapsetId: number, reportType: ReportTyp
 }
 
 export async function getUserReportsAction(): Promise<Report[]> {
-    return authenticatedAction(async (session) => {
-        return query(`SELECT * FROM reports WHERE user_id = ? ORDER BY created_at DESC`, [session.user.banchoId]);
+    return authenticatedAction(async ({ guessrUser }) => {
+        return query(`SELECT * FROM reports WHERE user_id = ? ORDER BY created_at DESC`, [guessrUser.banchoId]);
     });
 }

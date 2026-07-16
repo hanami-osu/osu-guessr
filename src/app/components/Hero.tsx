@@ -6,8 +6,9 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { useMemo } from "react";
+import type { InteractiveAuthProvider } from "@/lib/auth-provider";
 
-export default function Hero() {
+export default function Hero({ authProvider }: { authProvider: InteractiveAuthProvider }) {
     const { data: session } = useSession();
     const { t } = useTranslationsContext();
 
@@ -37,13 +38,13 @@ export default function Hero() {
                     <p className="motion-fade-up motion-delay-1 text-lg md:text-2xl text-foreground/85 mb-10 leading-relaxed">{t.home.hero.subtitle}</p>
 
                     <div className="motion-fade-up motion-delay-2 flex flex-col sm:flex-row gap-4 justify-center">
-                        {session ? (
+                        {session?.user?.banchoId && (authProvider === "osu" || session.user.hanamiUserId) ? (
                             <Button size="lg" onClick={scrollToGamemodes} className="text-base sm:text-lg px-8 w-full sm:w-auto">
                                 {t.home.hero.startPlaying}
                             </Button>
                         ) : (
-                            <Button size="lg" onClick={() => signIn("osu")} className="text-base sm:text-lg px-8 w-full sm:w-auto">
-                                {t.home.hero.signIn}
+                            <Button size="lg" onClick={() => signIn(authProvider)} className="text-base sm:text-lg px-8 w-full sm:w-auto">
+                                {authProvider === "hanami" ? "Continue with Hanami" : t.home.hero.signIn}
                             </Button>
                         )}
                         <Link href="/about" className="w-full sm:w-auto">

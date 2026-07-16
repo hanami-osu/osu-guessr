@@ -34,10 +34,11 @@ enum ReportStatus {
 }
 
 model User {
-  banchoId  Int      @id @map("bancho_id")
-  username  String   @db.VarChar(255)
-  avatarUrl String   @map("avatar_url") @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  banchoId    Int      @id @map("bancho_id")
+  hanamiUserId String?  @unique(map: "users_hanami_user_id_key") @map("hanami_user_id") @db.VarChar(255)
+  username    String   @db.VarChar(255)
+  avatarUrl   String   @map("avatar_url") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@index([username], map: "idx_username")
   @@map("users")

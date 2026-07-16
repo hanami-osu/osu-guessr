@@ -12,11 +12,12 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { SupportPageLink } from "./SupportDialogWrapper";
 import { OWNER_ID } from "@/lib";
+import type { InteractiveAuthProvider } from "@/lib/auth-provider";
 
 const NAV_ITEMS = ["leaderboard", "about", "announcements"] as const;
 const MOBILE_NAV_ID = "mobile-navigation";
 
-export default function Header() {
+export default function Header({ authProvider }: { authProvider: InteractiveAuthProvider }) {
     const { data: session } = useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { t } = useTranslationsContext();
@@ -72,7 +73,7 @@ export default function Header() {
                         <Menu className="h-6 w-6" />
                     </Button>
 
-                    {session ? (
+                    {session?.user?.banchoId && (authProvider === "osu" || session.user.hanamiUserId) ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 active:!transform-none" aria-label={t.components.header.accessibility.profileMenu}>
@@ -106,7 +107,7 @@ export default function Header() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <Button onClick={() => signIn("osu")} className="px-2 text-xs sm:px-4 sm:text-sm">
+                        <Button onClick={() => signIn(authProvider)} className="px-2 text-xs sm:px-4 sm:text-sm">
                             {t.components.header.nav.signIn}
                         </Button>
                     )}

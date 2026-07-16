@@ -4,8 +4,8 @@ import { requireOwner } from "@/actions/require-owner";
 import { setLock, unlock, getLockInfo } from "@/lib/lockdown";
 
 export async function adminSetLock(minutes: number) {
-    const session = await requireOwner();
-    const info = await setLock(minutes, session.user.banchoId);
+    const { guessrUser } = await requireOwner();
+    const info = await setLock(minutes, guessrUser.banchoId);
     return info;
 }
 

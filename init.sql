@@ -17,9 +17,11 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE IF NOT EXISTS users (
     bancho_id INT PRIMARY KEY,
+    hanami_user_id VARCHAR(255) NULL,
     username VARCHAR(255) NOT NULL,
     avatar_url TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY users_hanami_user_id_key (hanami_user_id)
 );
 
 CREATE TABLE IF NOT EXISTS badges (

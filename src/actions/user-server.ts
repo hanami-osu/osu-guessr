@@ -3,10 +3,10 @@
 import { query } from "@/lib/database";
 import { z } from "zod";
 import { authenticatedAction } from "./server";
-import { OWNER_ID } from "@/lib";
 import { GameVariant } from "@/app/games/config";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserWithStats, UserRanks, UserBadge } from "./types";
 import { hasPlayedGame } from "@/lib/user-stats";
+import { writeIdentityAuditEvent } from "@/lib/identity/audit";
 
 export type { UserRanks };
 
@@ -18,32 +18,21 @@ const searchSchema = z.object({
 });
 
 // Server actions
-export async function createUserAction(banchoId: number, username: string, avatar_url: string) {
-    return query(
-        `INSERT INTO users (bancho_id, username, avatar_url)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-            username = VALUES(username),
-            avatar_url = VALUES(avatar_url)`,
-        [banchoId, username, avatar_url]
-    );
-}
-
-export async function deleteUserAction(banchoId: number) {
-    return authenticatedAction(async (session) => {
-        const targetBanchoId = z.coerce.number().int().min(1).parse(banchoId);
-
-        if (session.user.banchoId !== targetBanchoId && session.user.banchoId !== OWNER_ID) {
-            throw new Error("Forbidden");
-        }
-
-        await query("DELETE FROM users WHERE bancho_id = ?", [targetBanchoId]);
+export async function deleteUserAction() {
+    return authenticatedAction(async ({ guessrUser, hanamiUserId }) => {
+        await query("DELETE FROM users WHERE bancho_id = ?", [guessrUser.banchoId]);
+        writeIdentityAuditEvent({
+            eventType: "guessr_account_deletion",
+            outcome: "success",
+            hanamiUserId: hanamiUserId ?? undefined,
+            externalId: guessrUser.banchoId.toString(),
+        });
         return { success: true };
     });
 }
 
 export async function getUserByIdAction(banchoId: number): Promise<UserWithStats | null> {
-    const userResult = (await query(`SELECT * FROM users WHERE bancho_id = ?`, [banchoId])) as User[];
+    const userResult = (await query(`SELECT bancho_id, username, avatar_url, created_at FROM users WHERE bancho_id = ?`, [banchoId])) as User[];
 
     if (!userResult[0]) return null;
     const user = userResult[0];
@@ -245,7 +234,7 @@ export async function getTopPlayersAction(gamemode: GameMode, variant: GameVaria
     let query_string: string;
 
     if (variant === "death") {
-        query_string = `SELECT u.*,
+        query_string = `SELECT u.bancho_id, u.username, u.avatar_url, u.created_at,
                 COUNT(*) as games_played,
                 MAX(g.streak) as highest_streak,
                 0 as highest_score,
@@ -262,7 +251,7 @@ export async function getTopPlayersAction(gamemode: GameMode, variant: GameVaria
          LIMIT ? OFFSET ?`;
     } else {
         const orderColumn = orderMetric === "highest" ? "highest_score" : "total_score";
-        query_string = `SELECT u.*,
+        query_string = `SELECT u.bancho_id, u.username, u.avatar_url, u.created_at,
                 COUNT(*) as games_played,
                 MAX(g.streak) as highest_streak,
                 MAX(g.points) as highest_score,

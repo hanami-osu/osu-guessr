@@ -1,14 +1,14 @@
 "use server";
 
-import { getAuthSession } from "@/actions/server";
+import { requireGuessrUser } from "@/actions/server";
 import { OWNER_ID } from "@/lib";
 
 export async function requireOwner() {
-    const session = await getAuthSession();
+    const context = await requireGuessrUser();
 
-    if (session.user.banchoId !== OWNER_ID) {
+    if (context.guessrUser.banchoId !== OWNER_ID) {
         throw new Error("Forbidden");
     }
 
-    return session;
+    return context;
 }

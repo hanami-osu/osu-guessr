@@ -34,3 +34,11 @@ Create host bind-mount directories with appropriate ownership and permissions be
 ## Publishing checks
 
 The Docker publishing workflow runs `bun run check`, `bun test`, and `bun run build` before the Docker job. The check command generates Prisma Client before linting and type-checking, so it also works from a clean checkout. Image login, build, and push steps do not run when the quality job fails.
+
+The quality job also creates a disposable legacy `users` table in MariaDB, applies the production identity migration, and verifies that `hanami_user_id` is nullable, 255 characters, and uniquely indexed. The guard script refuses non-local database hosts or database names that do not end in `_migration_test`.
+
+## Hanami SSO rollout
+
+Deploy `prisma/migrations/20260717000000_add_hanami_user_id/migration.sql` while `GUESSR_HANAMI_SSO_ENABLED=false`. Register the confidential Hanami Web client and exact `/api/auth/callback/hanami` redirect before enabling the flag. Enable all application replicas together so legacy sessions are consistently rejected.
+
+See [Hanami SSO integration](./HANAMI_SSO.md) for claims, environment variables, staged rollout, session cutover, and rollback behavior.

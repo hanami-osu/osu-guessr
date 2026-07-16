@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { auth, getInteractiveAuthProvider } from "@/lib/auth";
 import SignInPrompt from "../games/shared/SignInPrompt";
 import SettingsClient from "./SettingsClient";
 
@@ -14,7 +14,7 @@ export default async function SettingsPage() {
     const session = await auth();
 
     if (!session?.user?.banchoId) {
-        return <SignInPrompt />;
+        return <SignInPrompt authProvider={getInteractiveAuthProvider()} />;
     }
 
     return <SettingsClient />;

@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { TranslationsProvider } from "@/context/translations-provider";
-import { auth } from "@/lib/auth";
+import { auth, getInteractiveAuthProvider } from "@/lib/auth";
 import { getLockInfo } from "@/lib/lockdown";
 import { OWNER_ID } from "@/lib";
 import { cookies } from "next/headers";
@@ -108,7 +108,7 @@ export default async function RootLayout({
                     <SessionWrapper>
                         <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
                             <div className="flex min-h-screen flex-col bg-background text-foreground">
-                                <Header />
+                                <Header authProvider={getInteractiveAuthProvider()} />
                                 <main className="flex-grow">{children}</main>
                                 <Footer />
                             </div>

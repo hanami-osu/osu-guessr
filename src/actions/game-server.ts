@@ -1,6 +1,6 @@
 "use server";
 
-import { getAuthSession } from "./server";
+import { requireGuessrUser } from "./server";
 import { query } from "@/lib/database";
 import redisClient from "@/lib/redis";
 import { z } from "zod";
@@ -77,7 +77,7 @@ async function validateGameSession(sessionId: string, userId: number): Promise<D
 }
 
 export async function startGameAction(gameMode: GameMode, variant: GameVariant = "classic"): Promise<GameState> {
-    const authSession = await getAuthSession();
+    const { guessrUser } = await requireGuessrUser();
     const sessionId = crypto.randomUUID();
 
     try {
@@ -97,7 +97,7 @@ export async function startGameAction(gameMode: GameMode, variant: GameVariant =
             sessKey,
             JSON.stringify({
                 id: sessionId,
-                user_id: authSession.user.banchoId,
+                user_id: guessrUser.banchoId,
                 game_mode: gameMode,
                 total_points: 0,
                 current_streak: 0,
@@ -155,7 +155,7 @@ export async function startGameAction(gameMode: GameMode, variant: GameVariant =
 }
 
 export async function submitGuessAction(sessionId: string, guess?: string | null): Promise<GameState> {
-    const authSession = await getAuthSession();
+    const { guessrUser } = await requireGuessrUser();
     const validated = gameSchema.parse({ sessionId, guess });
     const lock = await acquireSessionLock(validated.sessionId);
 
@@ -164,7 +164,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
     }
 
     try {
-        const gameState = await validateGameSession(validated.sessionId, authSession.user.banchoId);
+        const gameState = await validateGameSession(validated.sessionId, guessrUser.banchoId);
 
         if (guess !== undefined && gameState.has_guessed_current_round) {
             throw new Error("Already submitted a guess for this round");
@@ -475,10 +475,10 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
 }
 
 export async function getGameStateAction(sessionId: string): Promise<GameState> {
-    const authSession = await getAuthSession();
+    const { guessrUser } = await requireGuessrUser();
 
     try {
-        const gameState = await validateGameSession(sessionId, authSession.user.banchoId);
+        const gameState = await validateGameSession(sessionId, guessrUser.banchoId);
 
         const timeElapsed = Math.floor((Date.now() - new Date(gameState.last_action_at).getTime()) / 1000);
         const timeLeft = Math.max(0, gameState.time_left - timeElapsed);
@@ -539,7 +539,7 @@ export async function getGameStateAction(sessionId: string): Promise<GameState> 
 
 export async function endGameAction(sessionId: string): Promise<void> {
     console.log("Ending game for:", sessionId);
-    const authSession = await getAuthSession();
+    const { guessrUser } = await requireGuessrUser();
 
     try {
         const cacheKey = `game_session:${sessionId}`;
@@ -550,7 +550,7 @@ export async function endGameAction(sessionId: string): Promise<void> {
         }
 
         const gameState = JSON.parse(cached) as DatabaseGameSession;
-        if (gameState.user_id !== authSession.user.banchoId) {
+        if (gameState.user_id !== guessrUser.banchoId) {
             throw new Error("Game session not found or expired");
         }
 
@@ -572,7 +572,7 @@ export async function endGameAction(sessionId: string): Promise<void> {
         await query(
             `INSERT INTO games (user_id, game_mode, points, streak, variant)
                 VALUES (?, ?, ?, ?, ?)`,
-            [authSession.user.banchoId, gameState.game_mode, points, gameState.highest_streak, gameState.variant],
+            [guessrUser.banchoId, gameState.game_mode, points, gameState.highest_streak, gameState.variant],
         );
 
         if (gameState.variant === "classic") {
@@ -586,7 +586,7 @@ export async function endGameAction(sessionId: string): Promise<void> {
                    highest_streak = GREATEST(highest_streak, VALUES(highest_streak)),
                    highest_score = GREATEST(highest_score, VALUES(highest_score)),
                    last_played = CURRENT_TIMESTAMP`,
-                [authSession.user.banchoId, gameState.game_mode, points, gameState.highest_streak, points],
+                [guessrUser.banchoId, gameState.game_mode, points, gameState.highest_streak, points],
             );
         } else {
             await query(
@@ -597,7 +597,7 @@ export async function endGameAction(sessionId: string): Promise<void> {
                    games_played = games_played + 1,
                    highest_streak = GREATEST(highest_streak, VALUES(highest_streak)),
                    last_played = CURRENT_TIMESTAMP`,
-                [authSession.user.banchoId, gameState.game_mode, gameState.highest_streak],
+                [guessrUser.banchoId, gameState.game_mode, gameState.highest_streak],
             );
         }
     } catch (error) {

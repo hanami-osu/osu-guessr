@@ -13,6 +13,7 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
 ## Documentation
 
 - [API documentation](./docs/API.md)
+- [Hanami SSO integration](./docs/HANAMI_SSO.md)
 - [Translation guide](./docs/TRANSLATING.md)
 
 ## Requirements
@@ -20,7 +21,8 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
 - [Bun](https://bun.sh/) 1.3 or newer
 - MariaDB or MySQL
 - Redis
-- An osu! OAuth application and legacy API key
+- A Hanami Web OIDC client (or an osu! OAuth application while the compatibility flag is disabled)
+- A legacy osu! API key for beatmap metadata
 
 ## Local development
 
@@ -47,6 +49,11 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
     OSU_CLIENT_SECRET="your_client_secret"
     OSU_API_KEY="your_api_key"
 
+    GUESSR_HANAMI_SSO_ENABLED="false"
+    HANAMI_ISSUER="https://your-hanami-web-domain.example"
+    HANAMI_CLIENT_ID="osu-guessr"
+    HANAMI_CLIENT_SECRET="your_hanami_client_secret"
+
     NEXTAUTH_URL="http://localhost:3000"
     NEXT_PUBLIC_APP_URL="http://localhost:3000"
     AUTH_SECRET="a_random_secret"
@@ -56,7 +63,7 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
     REDIS_URL="redis://127.0.0.1:6379"
     ```
 
-    Register an osu! OAuth application at [osu! account settings](https://osu.ppy.sh/home/account/edit#oauth). Generate independent secrets for `AUTH_SECRET` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`; do not reuse the placeholders in production.
+    Register an osu! OAuth application at [osu! account settings](https://osu.ppy.sh/home/account/edit#oauth) only while the compatibility login remains disabled. Before enabling Hanami SSO, register the exact `/api/auth/callback/hanami` redirect URI in Hanami Web. Generate independent secrets for `AUTH_SECRET`, `HANAMI_CLIENT_SECRET`, and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`; do not reuse the placeholders in production.
 
     `DISCORD_WEBHOOK` is optional. Reports are stored even when it is unset; the variable only enables Discord notifications.
 
@@ -72,7 +79,15 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
     bun run prisma:generate
     ```
 
-    Existing environments must use their established schema-management process. `bun run db:introspect` reads an existing database into `prisma/schema.prisma`; it is not a migration command.
+    Existing environments must use the additive migration path:
+
+    ```bash
+    bun run prisma:validate
+    bun run db:migrate:deploy
+    bun run prisma:generate
+    ```
+
+    `bun run db:introspect` reads an existing database into `prisma/schema.prisma`; it is not a migration command.
 
 5. Start the development server:
 
@@ -94,6 +109,8 @@ bun run build
 
 - Use production-specific secrets and HTTPS URLs.
 - Keep `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across replicas and deployments.
+- Deploy the additive identity migration before enabling `GUESSR_HANAMI_SSO_ENABLED`.
+- Keep `HANAMI_CLIENT_SECRET` server-only and use the exact HTTPS Hanami issuer in production.
 - Back MariaDB, Redis, and imported media with appropriate persistent storage.
 - Do not use `init.sql` to update an existing deployment.
 
