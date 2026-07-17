@@ -1,13 +1,7 @@
-import { Metadata } from "next";
-import TosPolicy from "./client";
+import { permanentRedirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-    title: "Terms of Service",
-    description: "Read our terms of service and understand the rules and guidelines for using osu!guessr.",
-};
+const TERMS_OF_SERVICE_URL = "https://hanami.yorunoken.com/legal/terms";
 
 export default function TosPage() {
-    return <TosPolicy />;
+    permanentRedirect(TERMS_OF_SERVICE_URL);
 }
