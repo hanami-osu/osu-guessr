@@ -1,13 +1,7 @@
-import { Metadata } from "next";
-import PrivacyPolicy from "./client";
+import { permanentRedirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-    title: "Privacy Policy",
-    description: "Learn about how we handle your data and privacy on osu!guessr.",
-};
+const PRIVACY_POLICY_URL = "https://hanami.yorunoken.com/legal/privacy";
 
 export default function PrivacyPolicyPage() {
-    return <PrivacyPolicy />;
+    permanentRedirect(PRIVACY_POLICY_URL);
 }

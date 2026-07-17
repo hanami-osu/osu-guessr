@@ -51,12 +51,7 @@ export const metadata: Metadata = {
 function AnalyticsScripts() {
     if (process.env.NODE_ENV !== "production") return null;
 
-    return (
-        <>
-            <Script src="https://umami.yorunoken.com/script.js" data-website-id="43244628-cb56-43d3-936e-0edbc45d4790" strategy="afterInteractive" />
-            <Script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3511683752810096" crossOrigin="anonymous" strategy="afterInteractive" />
-        </>
-    );
+    return <Script src="https://umami.yorunoken.com/script.js" data-website-id="43244628-cb56-43d3-936e-0edbc45d4790" strategy="afterInteractive" />;
 }
 
 export default async function RootLayout({
