@@ -1,5 +1,7 @@
 import { Metadata } from "next";
 import { auth, getInteractiveAuthProvider } from "@/lib/auth";
+import { env } from "@/lib/env";
+import { getHanamiProfileUrl } from "@/lib/hanami-profile";
 import SignInPrompt from "../games/shared/SignInPrompt";
 import SettingsClient from "./SettingsClient";
 
@@ -17,5 +19,5 @@ export default async function SettingsPage() {
         return <SignInPrompt authProvider={getInteractiveAuthProvider()} />;
     }
 
-    return <SettingsClient />;
+    return <SettingsClient hanamiProfileUrl={getHanamiProfileUrl(env.HANAMI_WEB_URL)} />;
 }

@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createApiKeyAction, deleteApiKeyAction, ApiKey, listApiKeysAction } from "@/actions/api-keys-server";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, AlertCircle, Loader2, Check, Copy } from "lucide-react";
+import { AlertTriangle, AlertCircle, Loader2, Check, Copy, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { useTranslationsContext } from "@/context/translations-provider";
 
-export default function SettingsClient() {
+export default function SettingsClient({ hanamiProfileUrl }: { hanamiProfileUrl: string | null }) {
     const { t } = useTranslationsContext();
 
     const [apiKeys, setApiKeys] = useState<Array<ApiKey>>([]);
@@ -166,6 +166,21 @@ export default function SettingsClient() {
             <div className="max-w-3xl mx-auto">
                 <h1 className="text-3xl md:text-4xl font-bold mb-8">{t.settings.title}</h1>
 
+                {hanamiProfileUrl && (
+                    <section className="mb-8 flex flex-col gap-4 border-b border-border/60 pb-8 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 className="text-xl font-semibold">Hanami account</h2>
+                            <p className="mt-1 text-sm text-foreground/70">Open Hanami Web to sign in with osu! and manage Discord and osu! as login methods for one account.</p>
+                        </div>
+                        <Button asChild variant="outline" className="w-full shrink-0 sm:w-auto">
+                            <a href={hanamiProfileUrl} target="_blank" rel="noreferrer">
+                                Manage Hanami account
+                                <ExternalLink className="ml-2 h-4 w-4" aria-hidden="true" />
+                            </a>
+                        </Button>
+                    </section>
+                )}
+
                 <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                         <h2 className="text-2xl font-bold">{t.settings.apiKeys.title}</h2>
@@ -305,7 +320,11 @@ export default function SettingsClient() {
                                             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                         </Button>
                                     </div>
-                                    {copyError && <p role="alert" className="mt-2 text-sm text-destructive">{copyError}</p>}
+                                    {copyError && (
+                                        <p role="alert" className="mt-2 text-sm text-destructive">
+                                            {copyError}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </DialogDescription>

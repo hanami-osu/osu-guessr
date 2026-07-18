@@ -1,64 +1,67 @@
 import { z } from "zod";
 
-const optionalUrl = (message: string) =>
-    z.preprocess((value) => (value === "" ? undefined : value), z.string().url(message).optional());
+const optionalUrl = (message: string) => z.preprocess((value) => (value === "" ? undefined : value), z.string().url(message).optional());
 
 const optionalString = z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1).optional());
-const booleanFlag = z.enum(["true", "false"]).default("false").transform((value) => value === "true");
+const booleanFlag = z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true");
 
-const envSchema = z.object({
-    // Database
-    DATABASE_URL: optionalUrl("DATABASE_URL must be a valid database URL"),
-    DB_HOST: z.string().optional().default("127.0.0.1"),
+const envSchema = z
+    .object({
+        // Database
+        DATABASE_URL: optionalUrl("DATABASE_URL must be a valid database URL"),
+        DB_HOST: z.string().optional().default("127.0.0.1"),
 
-    // Redis
-    REDIS_URL: z.string().url("REDIS_URL must be a valid URL"),
-    IS_DOCKER_BUILD: z.string().optional(),
+        // Redis
+        REDIS_URL: z.string().url("REDIS_URL must be a valid URL"),
+        IS_DOCKER_BUILD: z.string().optional(),
 
-    // Auth
-    AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
-    OSU_CLIENT_ID: optionalString,
-    OSU_CLIENT_SECRET: optionalString,
-    NEXTAUTH_URL: optionalUrl("NEXTAUTH_URL must be a valid URL"),
-    HANAMI_ISSUER: optionalUrl("HANAMI_ISSUER must be a valid URL"),
-    HANAMI_CLIENT_ID: optionalString,
-    HANAMI_CLIENT_SECRET: optionalString,
-    GUESSR_HANAMI_SSO_ENABLED: booleanFlag,
+        // Auth
+        AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
+        OSU_CLIENT_ID: optionalString,
+        OSU_CLIENT_SECRET: optionalString,
+        NEXTAUTH_URL: optionalUrl("NEXTAUTH_URL must be a valid URL"),
+        HANAMI_ISSUER: optionalUrl("HANAMI_ISSUER must be a valid URL"),
+        HANAMI_CLIENT_ID: optionalString,
+        HANAMI_CLIENT_SECRET: optionalString,
+        GUESSR_HANAMI_SSO_ENABLED: booleanFlag,
+        HANAMI_WEB_URL: optionalUrl("HANAMI_WEB_URL must be a valid URL"),
 
-    // APIs & Integrations
-    OSU_API_KEY: z.string().min(1, "OSU_API_KEY is required"),
-    OSUCK_API_KEY: z.string().optional(),
-    OSUCK_API_BASE: z.string().optional(),
-    DISCORD_WEBHOOK: optionalUrl("DISCORD_WEBHOOK must be a valid URL"),
+        // APIs & Integrations
+        OSU_API_KEY: z.string().min(1, "OSU_API_KEY is required"),
+        OSUCK_API_KEY: z.string().optional(),
+        OSUCK_API_BASE: z.string().optional(),
+        DISCORD_WEBHOOK: optionalUrl("DISCORD_WEBHOOK must be a valid URL"),
 
-    // Public
-    NEXT_PUBLIC_API_URL: z.string().optional(),
-    NEXT_PUBLIC_APP_URL: optionalUrl("NEXT_PUBLIC_APP_URL must be a valid URL").default("http://localhost:3000"),
-    NEXT_PUBLIC_ADSENSE_CLIENT: z.string().optional(),
-    NEXT_PUBLIC_ADSENSE_SLOT: z.string().optional(),
-}).superRefine((value, context) => {
-    const required = value.GUESSR_HANAMI_SSO_ENABLED
-        ? (["HANAMI_ISSUER", "HANAMI_CLIENT_ID", "HANAMI_CLIENT_SECRET"] as const)
-        : (["OSU_CLIENT_ID", "OSU_CLIENT_SECRET"] as const);
+        // Public
+        NEXT_PUBLIC_API_URL: z.string().optional(),
+        NEXT_PUBLIC_APP_URL: optionalUrl("NEXT_PUBLIC_APP_URL must be a valid URL").default("http://localhost:3000"),
+        NEXT_PUBLIC_ADSENSE_CLIENT: z.string().optional(),
+        NEXT_PUBLIC_ADSENSE_SLOT: z.string().optional(),
+    })
+    .superRefine((value, context) => {
+        const required = value.GUESSR_HANAMI_SSO_ENABLED ? (["HANAMI_ISSUER", "HANAMI_CLIENT_ID", "HANAMI_CLIENT_SECRET"] as const) : (["OSU_CLIENT_ID", "OSU_CLIENT_SECRET"] as const);
 
-    for (const key of required) {
-        if (!value[key]) {
+        for (const key of required) {
+            if (!value[key]) {
+                context.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: [key],
+                    message: `${key} is required for the selected authentication mode`,
+                });
+            }
+        }
+
+        if (value.GUESSR_HANAMI_SSO_ENABLED && process.env.NODE_ENV === "production" && value.HANAMI_ISSUER && new URL(value.HANAMI_ISSUER).protocol !== "https:") {
             context.addIssue({
                 code: z.ZodIssueCode.custom,
-                path: [key],
-                message: `${key} is required for the selected authentication mode`,
+                path: ["HANAMI_ISSUER"],
+                message: "HANAMI_ISSUER must use HTTPS in production",
             });
         }
-    }
-
-    if (value.GUESSR_HANAMI_SSO_ENABLED && process.env.NODE_ENV === "production" && value.HANAMI_ISSUER && new URL(value.HANAMI_ISSUER).protocol !== "https:") {
-        context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["HANAMI_ISSUER"],
-            message: "HANAMI_ISSUER must use HTTPS in production",
-        });
-    }
-});
+    });
 
 // Use this for server-side environments
 const processEnv = {
@@ -74,6 +77,7 @@ const processEnv = {
     HANAMI_CLIENT_ID: process.env.HANAMI_CLIENT_ID,
     HANAMI_CLIENT_SECRET: process.env.HANAMI_CLIENT_SECRET,
     GUESSR_HANAMI_SSO_ENABLED: process.env.GUESSR_HANAMI_SSO_ENABLED,
+    HANAMI_WEB_URL: process.env.HANAMI_WEB_URL,
     OSU_API_KEY: process.env.OSU_API_KEY,
     OSUCK_API_KEY: process.env.OSUCK_API_KEY,
     OSUCK_API_BASE: process.env.OSUCK_API_BASE,
@@ -93,4 +97,4 @@ if (!parsed.success && !isDockerBuild) {
     throw new Error("Invalid environment variables");
 }
 
-export const env: z.infer<typeof envSchema> = parsed.success ? parsed.data : (processEnv as z.infer<typeof envSchema>);
+export const env: z.infer<typeof envSchema> = parsed.success ? parsed.data : (processEnv as unknown as z.infer<typeof envSchema>);

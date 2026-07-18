@@ -1,5 +1,11 @@
 # Hanami SSO integration
 
+## Profile portal discovery
+
+The authenticated Guessr settings page includes a `Manage Hanami account` action when `HANAMI_WEB_URL` is configured. It opens the exact Hanami Web `/profile` path and passes no osu! ID, username, access token, session, or identity assertion in the URL.
+
+This portal link is discovery only. Existing Guessr users can choose `Continue with osu!` on Hanami Web so the provider identity resolves to its canonical Hanami account. A seamless cross-site session handoff without another provider prompt is a later phase; the link itself does not enable or depend on the feature-flagged OIDC migration described below.
+
 osu!guessr keeps `users.bancho_id` as its local primary key so existing games, achievements, badges, reports, API keys, leaderboard history, and profile data keep their current ownership. The nullable, unique `users.hanami_user_id` column records the canonical Hanami Web Better Auth `user.id`.
 
 ## OIDC client contract
