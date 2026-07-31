@@ -26,7 +26,7 @@ export default function Footer() {
                     ))}
                 </p>
                 <AdSlot />
-                <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-foreground/50 flex justify-center gap-4">
+                <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-foreground/50 flex flex-wrap justify-center gap-4">
                     <Link href="/about" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.about}
                     </Link>
@@ -36,6 +36,22 @@ export default function Footer() {
                     <Link href="/tos" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.tos}
                     </Link>
+                    <a
+                        href="https://github.com/hanami-osu/osu-guessr"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-foreground transition-colors duration-200"
+                    >
+                        Source
+                    </a>
+                    <a
+                        href="https://github.com/hanami-osu/osu-guessr/blob/main/LICENSE"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-foreground transition-colors duration-200"
+                    >
+                        AGPL-3.0
+                    </a>
                 </div>
             </div>
         </footer>
