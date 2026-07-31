@@ -15,8 +15,8 @@ function hashApiKey(apiKey: string): string {
 }
 
 export async function createApiKeyAction(name: string): Promise<string> {
-    return authenticatedAction(async ({ guessrUser }) => {
-        const [result] = (await query(`SELECT COUNT(*) as count FROM api_keys WHERE user_id = ?`, [guessrUser.banchoId])) as [{ count: number }];
+    return authenticatedAction(async (session) => {
+        const [result] = (await query(`SELECT COUNT(*) as count FROM api_keys WHERE user_id = ?`, [session.user.banchoId])) as [{ count: number }];
 
         if (result.count >= 5) {
             throw new Error("Maximum number of API keys (5) reached");
@@ -25,20 +25,20 @@ export async function createApiKeyAction(name: string): Promise<string> {
         const apiKey = crypto.randomBytes(32).toString("hex");
         const hashedKey = hashApiKey(apiKey);
 
-        await query(`INSERT INTO api_keys (id, user_id, name) VALUES (?, ?, ?)`, [hashedKey, guessrUser.banchoId, name]);
+        await query(`INSERT INTO api_keys (id, user_id, name) VALUES (?, ?, ?)`, [hashedKey, session.user.banchoId, name]);
 
         return apiKey;
     });
 }
 
 export async function listApiKeysAction() {
-    return authenticatedAction(async ({ guessrUser }) => {
+    return authenticatedAction(async (session) => {
         const keys: Array<ApiKey> = await query(
             `SELECT id, name, created_at, last_used
                 FROM api_keys
                 WHERE user_id = ?
                 ORDER BY created_at DESC`,
-            [guessrUser.banchoId]
+            [session.user.banchoId]
         );
 
         return keys;
@@ -46,11 +46,11 @@ export async function listApiKeysAction() {
 }
 
 export async function deleteApiKeyAction(keyId: string): Promise<void> {
-    return authenticatedAction(async ({ guessrUser }) => {
+    return authenticatedAction(async (session) => {
         await query(
             `DELETE FROM api_keys
             WHERE id = ? AND user_id = ?`,
-            [keyId, guessrUser.banchoId]
+            [keyId, session.user.banchoId]
         );
     });
 }

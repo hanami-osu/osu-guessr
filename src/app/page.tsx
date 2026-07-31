@@ -7,7 +7,6 @@ import { readChangelogs } from "@/actions/changelogs";
 import { listRecentAnnouncements } from "@/actions/announcements";
 import { SupportersSection } from "./components/Supporters";
 import { ChangelogsSection } from "./components/Changelogs";
-import { getInteractiveAuthProvider } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +34,7 @@ async function HomeChangelogs() {
 export default function Home() {
     return (
         <>
-            <Hero authProvider={getInteractiveAuthProvider()} />
+            <Hero />
             <GameModeCards />
             <Suspense fallback={null}>
                 <HomeStats />

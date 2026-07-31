@@ -6,7 +6,6 @@ import PreGameMenu from "./pages/PreGameMenu";
 import GameScreen from "./pages/GameScreen";
 
 import { Metadata } from "next";
-import { getInteractiveAuthProvider } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +18,7 @@ export default async function BackgroundGuesser() {
     const session = await auth();
 
     if (!session?.user?.banchoId) {
-        return <SignInPrompt authProvider={getInteractiveAuthProvider()} />;
+        return <SignInPrompt />;
     }
 
     return <MenuManager PreGameMenu={PreGameMenu} GameScreen={GameScreen} />;
