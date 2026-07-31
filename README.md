@@ -126,7 +126,9 @@ bun run build
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
+Copyright © 2026 Muhammed Fatih and hanami-osu contributors.
+
+This project is licensed under the GNU Affero General Public License version 3 only (`AGPL-3.0-only`). See [LICENSE](./LICENSE) and [LICENSING.md](./LICENSING.md) for the full terms, third-party material, contribution licensing, and branding policy.
 
 ## Contact
 
