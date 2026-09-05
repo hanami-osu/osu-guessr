@@ -12,6 +12,13 @@ const ACTION_RELOAD_ATTEMPTED_KEY = "osu-guessr:action-reload-attempted";
 
 export class GameClient {
     private session: GameSession | null = null;
+    private mutationPromise: Promise<void> | null = null;
+    private endGamePromise: Promise<void> | null = null;
+    private disposed = false;
+    private readonly handlePageHide = () => this.abandon();
+    private readonly handlePageShow = (event: PageTransitionEvent) => {
+        if (event.persisted) window.location.reload();
+    };
     private config: GameClientConfig;
 
     constructor(
@@ -21,6 +28,10 @@ export class GameClient {
         config: Partial<GameClientConfig> = {},
     ) {
         this.config = { ...DEFAULT_CONFIG, ...config };
+        if (typeof window !== "undefined") {
+            window.addEventListener("pagehide", this.handlePageHide);
+            window.addEventListener("pageshow", this.handlePageShow);
+        }
     }
 
     private get storageKey(): string {
@@ -82,7 +93,9 @@ export class GameClient {
     }
 
     async startGame(): Promise<void> {
+        if (this.disposed) return;
         const initialState = await this.execute(() => startGameAction(this.gameMode, this.gameVariant), "startGame", false);
+        if (this.disposed) return;
         this.session = { id: initialState.sessionId, state: initialState, timer: null, isActive: true };
         this.persistSessionId(initialState.sessionId);
         this.events.onStateUpdate(initialState);
@@ -90,11 +103,13 @@ export class GameClient {
     }
 
     async resumeStoredGame(): Promise<boolean> {
+        if (this.disposed) return false;
         const sessionId = this.getStorage()?.getItem(this.storageKey);
         if (!sessionId) return false;
 
         try {
             const state = await this.execute(() => getGameStateAction(sessionId), "resumeStoredGame");
+            if (this.disposed) return false;
             if (state.gameStatus !== "active") {
                 this.clearStoredSessionId();
                 return false;
@@ -134,21 +149,29 @@ export class GameClient {
         this.session.timer = null;
     }
 
-    private async runMutation(operationName: string, guess: string | null | undefined, restartTimer = false): Promise<void> {
-        if (!this.session?.isActive) return;
+    private runMutation(operationName: string, guess: string | null | undefined, restartTimer = false): Promise<void> {
+        if (!this.session?.isActive) return Promise.resolve();
+        if (this.mutationPromise) return this.mutationPromise;
 
-        this.stopTimer();
-        try {
-            const state = await this.execute(() => submitGuessAction(this.session!.id, guess), operationName, false);
-            this.updateState(state);
-            if (restartTimer && state.gameStatus === "active") this.startTimer();
-        } catch (error) {
-            await this.recoverState();
-            if (this.session?.isActive && this.session.state.gameStatus === "active" && !this.session.state.currentBeatmap.revealed) {
-                this.startTimer();
+        const mutationPromise = (async () => {
+            this.stopTimer();
+            try {
+                const state = await this.execute(() => submitGuessAction(this.session!.id, guess), operationName, false);
+                this.updateState(state);
+                if (restartTimer && state.gameStatus === "active") this.startTimer();
+            } catch (error) {
+                await this.recoverState();
+                if (this.session?.isActive && this.session.state.gameStatus === "active" && !this.session.state.currentBeatmap.revealed) {
+                    this.startTimer();
+                }
+                throw error;
             }
-            throw error;
-        }
+        })();
+
+        this.mutationPromise = mutationPromise.finally(() => {
+            this.mutationPromise = null;
+        });
+        return this.mutationPromise;
     }
 
     private async handleTimeout(): Promise<void> {
@@ -195,7 +218,18 @@ export class GameClient {
         }
     }
 
-    async endGame(): Promise<void> {
+    endGame(): Promise<void> {
+        if (this.endGamePromise) return this.endGamePromise;
+        if (!this.session?.isActive) return Promise.resolve();
+        this.session.isActive = false;
+        this.endGamePromise = this.finishGame().finally(() => {
+            this.endGamePromise = null;
+        });
+        return this.endGamePromise;
+    }
+
+    private async finishGame(): Promise<void> {
+        await this.mutationPromise?.catch(() => undefined);
         if (!this.session?.id) return;
 
         const session = this.session;
@@ -215,9 +249,7 @@ export class GameClient {
     }
 
     dispose(): void {
-        this.stopTimer();
-        if (this.session) this.session.isActive = false;
-        this.session = null;
+        this.cleanup();
     }
 
     async getSuggestions(query: string): Promise<string[]> {
@@ -232,7 +264,17 @@ export class GameClient {
     }
 
     private cleanup(): void {
+        this.abandon();
+        if (typeof window !== "undefined") {
+            window.removeEventListener("pagehide", this.handlePageHide);
+            window.removeEventListener("pageshow", this.handlePageShow);
+        }
+    }
+
+    private abandon(): void {
+        this.disposed = true;
         this.stopTimer();
+        if (this.session) this.session.isActive = false;
         this.session = null;
         this.clearStoredSessionId();
     }
