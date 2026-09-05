@@ -2,19 +2,19 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect, useId, useRef } from "react";
 import { GameClient } from "@/lib/game/client";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { soundManager } from "@/lib/game/sounds";
 import { createLatestRequestGate } from "@/lib/latest-request";
 
 interface GuessInputProps {
     guess: string;
     setGuess: (guess: string) => void;
     isRevealed: boolean;
+    isBusy: boolean;
     onGuess: () => void;
     onSkip: () => void;
     gameClient: GameClient;
 }
 
-export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSkip, gameClient }: GuessInputProps) {
+export default function GuessInput({ guess, setGuess, isRevealed, isBusy, onGuess, onSkip, gameClient }: GuessInputProps) {
     const { t } = useTranslationsContext();
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -29,10 +29,10 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
     const requestGate = useRef(createLatestRequestGate());
 
     useEffect(() => {
-        if (!isRevealed && inputRef.current) {
+        if (!isRevealed && !isBusy && inputRef.current) {
             inputRef.current.focus();
         }
-    }, [isRevealed]);
+    }, [isRevealed, isBusy]);
 
     useEffect(() => {
         if (!guess) {
@@ -45,7 +45,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
     useEffect(() => {
         const request = requestGate.current.begin();
 
-        if (!isSelectingRef.current && guess.trim() && !isRevealed) {
+        if (!isSelectingRef.current && guess.trim() && !isRevealed && !isBusy) {
             if (debounceTimeoutRef.current) {
                 clearTimeout(debounceTimeoutRef.current);
             }
@@ -77,14 +77,14 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
             }
             request.cancel();
         };
-    }, [guess, gameClient, isRevealed, t.game.input.suggestionsAvailable]);
+    }, [guess, gameClient, isRevealed, isBusy, t.game.input.suggestionsAvailable]);
 
     useEffect(() => {
         setSuggestions([]);
         setShowSuggestions(false);
         setSelectedIndex(-1);
         isSelectingRef.current = false;
-    }, [isRevealed]);
+    }, [isRevealed, isBusy]);
 
     useEffect(() => {
         if (suggestions.length > 0) {
@@ -100,18 +100,8 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
         }
     }, [selectedIndex, showSuggestions, suggestions, t.game.input.suggestionSelected]);
 
-    const handleSubmit = () => {
-        soundManager.play("click");
-        onGuess();
-    };
-
-    const handleSkip = () => {
-        soundManager.play("skip");
-        onSkip();
-    };
-
     const handleSuggestionSelect = (suggestion: string) => {
-        if (isRevealed) return;
+        if (isRevealed || isBusy) return;
 
         isSelectingRef.current = true;
         setGuess(suggestion);
@@ -124,11 +114,11 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (isRevealed) return;
+        if (isRevealed || isBusy) return;
 
         if (e.key.toLowerCase() === "s" && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
-            handleSkip();
+            onSkip();
             return;
         }
 
@@ -141,18 +131,11 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                 e.preventDefault();
                 setSelectedIndex((prev) => Math.max(prev - 1, -1));
                 break;
-            case "Tab":
-                if (suggestions.length > 0) {
-                    e.preventDefault();
-                    const nextIndex = e.shiftKey ? (selectedIndex <= 0 ? suggestions.length - 1 : selectedIndex - 1) : selectedIndex >= suggestions.length - 1 ? 0 : selectedIndex + 1;
-                    setSelectedIndex(nextIndex);
-                }
-                break;
             case "Enter":
                 if (selectedIndex >= 0 && suggestions[selectedIndex]) {
                     handleSuggestionSelect(suggestions[selectedIndex]);
                 } else if (!isRevealed) {
-                    handleSubmit();
+                    onGuess();
                 }
                 break;
             case "Escape":
@@ -181,7 +164,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                     value={guess}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
-                    onFocus={() => setShowSuggestions(!!guess)}
+                    onFocus={() => setShowSuggestions(!isBusy && !!guess)}
                     onBlur={() => {
                         requestAnimationFrame(() => {
                             if (!clickingRef.current) {
@@ -191,7 +174,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                     }}
                     className="w-full p-3 rounded-lg bg-secondary text-foreground border border-border/50 transition-[border-color,box-shadow,background-color,opacity] duration-150 ease-[var(--ease-out-smooth)] focus:outline-none focus:border-primary/55 focus:ring-2 focus:ring-primary focus:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)] disabled:opacity-60"
                     placeholder={t.game.input.placeholder}
-                    disabled={isRevealed}
+                    disabled={isRevealed || isBusy}
                     role="combobox"
                     aria-label={t.game.input.title}
                     aria-autocomplete="list"
@@ -231,11 +214,11 @@ export default function GuessInput({ guess, setGuess, isRevealed, onGuess, onSki
                 {announcement}
             </span>
             <div className="flex gap-4 mt-4">
-                <Button className="flex-1" onClick={onGuess} disabled={!guess || isRevealed}>
+                <Button className="flex-1" onClick={onGuess} disabled={!guess.trim() || isRevealed || isBusy}>
                     {t.game.input.submit}
                 </Button>
                 <div className="flex-1">
-                    <Button variant="outline" onClick={handleSkip} disabled={isRevealed} className="w-full hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors">
+                    <Button variant="outline" onClick={onSkip} disabled={isRevealed || isBusy} className="w-full hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors">
                         {t.game.input.skip}
                     </Button>
                 </div>

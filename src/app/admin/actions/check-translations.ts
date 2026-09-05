@@ -96,14 +96,19 @@ function getMessagesPath(languageCode: string): string {
     return targetPath;
 }
 
+function readTranslationPair(languageCode: string) {
+    const targetPath = getMessagesPath(languageCode);
+    return {
+        enJson: JSON.parse(readFileSync(path.join(process.cwd(), "src/messages/en.json"), "utf8")),
+        targetJson: JSON.parse(readFileSync(targetPath, "utf8")),
+        targetPath,
+    };
+}
+
 export async function checkTranslation(languageCode: string) {
     try {
         await requireOwner();
-        const enPath = path.join(process.cwd(), "src/messages/en.json");
-        const targetPath = getMessagesPath(languageCode);
-
-        const enJson = JSON.parse(readFileSync(enPath, "utf8"));
-        const targetJson = JSON.parse(readFileSync(targetPath, "utf8"));
+        const { enJson, targetJson } = readTranslationPair(languageCode);
 
         const enKeys = getAllKeys(enJson);
         const targetKeys = getAllKeys(targetJson);
@@ -131,11 +136,7 @@ export async function checkTranslation(languageCode: string) {
 export async function fillMissingTranslations(languageCode: string) {
     try {
         await requireOwner();
-        const enPath = path.join(process.cwd(), "src/messages/en.json");
-        const targetPath = getMessagesPath(languageCode);
-
-        const enJson = JSON.parse(readFileSync(enPath, "utf8"));
-        const targetJson = JSON.parse(readFileSync(targetPath, "utf8"));
+        const { enJson, targetJson, targetPath } = readTranslationPair(languageCode);
 
         const enKeys = getAllKeys(enJson);
         const targetKeys = getAllKeys(targetJson);

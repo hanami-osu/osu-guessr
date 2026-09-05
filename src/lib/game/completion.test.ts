@@ -1,0 +1,31 @@
+import { describe, expect, test } from "bun:test";
+import type { GameState } from "@/actions/types";
+import { canPersistGameResult, isClassicGameIncomplete } from "./completion";
+
+const finalRound: GameState = {
+    sessionId: "00000000-0000-4000-8000-000000000000",
+    currentBeatmap: { revealed: false },
+    score: { total: 0, current: 0, streak: 0, highestStreak: 0 },
+    rounds: { current: 10, total: 10, correctGuesses: 0, totalTimeUsed: 0 },
+    timeLeft: 30,
+    gameStatus: "active",
+    variant: "classic",
+};
+
+describe("classic game completion", () => {
+    test("keeps an unanswered final round incomplete", () => {
+        expect(isClassicGameIncomplete(finalRound)).toBe(true);
+    });
+
+    test("allows exit after the final round is answered", () => {
+        expect(isClassicGameIncomplete({ ...finalRound, currentBeatmap: { revealed: true } })).toBe(false);
+    });
+
+    test("does not persist an unanswered final round", () => {
+        expect(canPersistGameResult({ variant: "classic", currentRound: 10, hasGuessedCurrentRound: false }, 10)).toBe(false);
+    });
+
+    test("always persists a death run", () => {
+        expect(canPersistGameResult({ variant: "death", currentRound: 1, hasGuessedCurrentRound: false }, 10)).toBe(true);
+    });
+});

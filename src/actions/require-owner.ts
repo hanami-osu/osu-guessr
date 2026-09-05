@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { getAuthSession } from "@/actions/server";
 import { OWNER_ID } from "@/lib";

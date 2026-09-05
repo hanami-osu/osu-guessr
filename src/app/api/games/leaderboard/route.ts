@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { validateApiKey } from "@/actions/api-keys-server";
+import { validateApiKey } from "@/lib/api/validate-key";
 import { getTopPlayersAction } from "@/actions/user-server";
 import { GameMode } from "@/actions/types";
 import { z } from "zod";

@@ -105,7 +105,7 @@ export default async function RootLayout({
             </head>
             <body className={`${publicSans.variable} antialiased`}>
                 <TranslationsProvider initialLocale={initialLocale} migrateStoredLocale={!hasValidLocaleCookie}>
-                    <SessionWrapper>
+                    <SessionWrapper session={session}>
                         <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
                             <div className="flex min-h-screen flex-col bg-background text-foreground">
                                 <Header />

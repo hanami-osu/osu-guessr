@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { validateApiKey } from "@/actions/api-keys-server";
+import { validateApiKey } from "@/lib/api/validate-key";
 import { getUserByIdAction } from "@/actions/user-server";
 import { z } from "zod";
 import { apiErrorResponse } from "@/lib/api/errors";

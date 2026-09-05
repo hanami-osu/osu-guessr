@@ -2,7 +2,7 @@
 
 import { query } from "@/lib/database";
 import { authenticatedAction } from "./server";
-import { ReportType, Report } from "./types";
+import { ReportType } from "./types";
 import redisClient from "@/lib/redis";
 
 import { env } from "@/lib/env";
@@ -43,11 +43,5 @@ export async function createReportAction(mapsetId: number, reportType: ReportTyp
                 logError: (message) => console.error(message),
             }
         );
-    });
-}
-
-export async function getUserReportsAction(): Promise<Report[]> {
-    return authenticatedAction(async (session) => {
-        return query(`SELECT * FROM reports WHERE user_id = ? ORDER BY created_at DESC`, [session.user.banchoId]);
     });
 }

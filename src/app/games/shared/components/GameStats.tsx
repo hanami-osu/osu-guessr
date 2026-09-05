@@ -11,7 +11,7 @@ interface GameStatsProps {
     averageTime: number;
     onPlayAgain: () => void;
     gameVariant: GameVariant;
-    gameEndReason?: "completed" | "died";
+    gameEndReason?: "completed" | "died" | "ended";
 }
 
 export default function GameStats({ totalPoints, correctGuesses, maxStreak, totalRounds, averageTime, onPlayAgain, gameVariant, gameEndReason }: GameStatsProps) {
@@ -49,7 +49,7 @@ export default function GameStats({ totalPoints, correctGuesses, maxStreak, tota
                     ) : (
                         <>
                             <h1 className={`text-2xl sm:text-3xl font-bold mb-6 ${gameEndReason === "died" ? "text-destructive" : "text-primary"}`}>
-                                {gameEndReason === "died" ? t.game.stats.death.title.died : t.game.stats.death.title.completed}
+                                {gameEndReason === "died" ? t.game.stats.death.title.died : gameEndReason === "ended" ? t.game.stats.death.title.ended : t.game.stats.death.title.completed}
                             </h1>
 
                             <div className="grid grid-cols-1 gap-6 mb-8">
@@ -82,11 +82,11 @@ export default function GameStats({ totalPoints, correctGuesses, maxStreak, tota
                         <Button onClick={onPlayAgain} className="flex-1" variant={gameVariant === "death" ? "destructive" : "default"}>
                             {t.game.stats.actions.tryAgain}
                         </Button>
-                        <Link href="/" className="flex-1">
-                            <Button variant="outline" className="w-full">
+                        <Button asChild variant="outline" className="flex-1">
+                            <Link href="/">
                                 {t.game.stats.actions.backToHome}
-                            </Button>
-                        </Link>
+                            </Link>
+                        </Button>
                     </div>
                 </div>
             </div>

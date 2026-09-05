@@ -1,4 +1,4 @@
-export type DependencyHealth = "ok" | "unavailable";
+type DependencyHealth = "ok" | "unavailable";
 
 interface HealthDependencies {
     redisPing(): Promise<unknown>;

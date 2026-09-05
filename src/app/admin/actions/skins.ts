@@ -17,6 +17,8 @@ const DIRECTORIES = {
 const OSUCK_API_KEY = env.OSUCK_API_KEY;
 const OSUCK_API_BASE_URL = env.OSUCK_API_BASE;
 const MAX_BULK_SKINS = 50;
+const GAMEPLAY_SCREENSHOT_CATEGORY = 6;
+const IMPORT_DELAY_MS = 1000;
 
 interface SkinProcessResult {
     success: boolean;
@@ -42,52 +44,47 @@ async function fetchSkinMetadata(skinId: number): Promise<SkinImportData> {
         throw new Error("The osu!ck API integration is not configured");
     }
 
-    try {
-        const url = `${OSUCK_API_BASE_URL}?key=${OSUCK_API_KEY}`;
+    const url = `${OSUCK_API_BASE_URL}?key=${OSUCK_API_KEY}`;
 
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ skins: [skinId] }),
-        });
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ skins: [skinId] }),
+    });
 
-        if (!response.ok) {
-            throw new Error(`API request failed: ${response.status}`);
-        }
-
-        return parseSkinApiResponse(await response.json(), skinId);
-    } catch (error) {
-        console.error(`Failed to fetch skin metadata for ${skinId} :`, error);
-        throw error;
+    if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
     }
+
+    return parseSkinApiResponse(await response.json(), skinId);
 }
 
-async function downloadSkin(skinData: SkinImportData): Promise<string> {
-    const gameplayCategory = skinData.screenshots.find((screenshot) => screenshot.category === 6); // 6 is for the gameplay category of the skin
+async function downloadSkin(skinData: SkinImportData): Promise<{ fileName: string; tempPath: string }> {
+    const gameplayCategory = skinData.screenshots.find((screenshot) => screenshot.category === GAMEPLAY_SCREENSHOT_CATEGORY);
     if (!gameplayCategory) {
         throw new Error("No gameplay screenshot found for this skin");
     }
 
     const fileName = `${skinData.id}.webp`;
-    const imagePath = path.join(DIRECTORIES.skins, fileName);
+    const tempPath = path.join(DIRECTORIES.temp, `skin-${skinData.id}-${crypto.randomUUID()}.webp`);
+    const response = await fetch(gameplayCategory.large);
 
-    try {
-        const response = await fetch(gameplayCategory.large);
-
-        if (!response.ok) {
-            throw new Error(`Failed to download screenshot: ${response.status}`);
-        }
-
-        const downloadedImage = Buffer.from(await response.arrayBuffer());
-        await sharp(downloadedImage).webp({ quality: 80 }).toFile(imagePath);
-
-        return fileName;
-    } catch (error) {
-        console.error(`Error downloading screenshot for skin ${skinData.id}:`, error);
-        throw error;
+    if (!response.ok) {
+        throw new Error(`Failed to download screenshot: ${response.status}`);
     }
+
+    const downloadedImage = Buffer.from(await response.arrayBuffer());
+    await sharp(downloadedImage).webp({ quality: 80 }).toFile(tempPath);
+    return { fileName, tempPath };
+}
+
+function resolveSkinPath(filename: string): string {
+    if (!filename || path.basename(filename) !== filename || filename.includes("\\") || filename.includes("\0")) {
+        throw new Error("Invalid skin filename");
+    }
+    return path.join(DIRECTORIES.skins, filename);
 }
 
 async function saveSkinToDatabase(skinData: SkinImportData, imageFilename: string): Promise<void> {
@@ -102,6 +99,24 @@ async function removeSkinFromDatabase(id: number): Promise<void> {
     await query("DELETE FROM skins WHERE id = ?", [id]);
 }
 
+async function importSkin(id: number): Promise<{ skinId: number; image: string }> {
+    const skinData = await fetchSkinMetadata(id);
+    const { fileName, tempPath } = await downloadSkin(skinData);
+    let saved = false;
+
+    try {
+        await saveSkinToDatabase(skinData, fileName);
+        saved = true;
+        await fs.rename(tempPath, resolveSkinPath(fileName));
+        return { skinId: skinData.id, image: fileName };
+    } catch (error) {
+        if (saved) await removeSkinFromDatabase(skinData.id);
+        throw error;
+    } finally {
+        await fs.unlink(tempPath).catch(() => {});
+    }
+}
+
 export async function addSkinById(rawSkinId: number): Promise<SkinProcessResult> {
     await requireOwner();
     const skinId = z.coerce.number().min(1).parse(rawSkinId);
@@ -109,16 +124,11 @@ export async function addSkinById(rawSkinId: number): Promise<SkinProcessResult>
 
     try {
         await ensureDirectories();
-        const skinData = await fetchSkinMetadata(skinId);
-
-        const skinFileName = await downloadSkin(skinData);
-
-        await saveSkinToDatabase(skinData, skinFileName);
+        const imported = await importSkin(skinId);
 
         return {
             success: true,
-            skinId: skinData.id,
-            image: skinFileName,
+            ...imported,
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -133,7 +143,7 @@ export async function addSkinById(rawSkinId: number): Promise<SkinProcessResult>
 
 export async function addSkinsFromList(rawIds: number[]): Promise<Array<{ id: number; success: boolean; error?: string; image?: string }>> {
     await requireOwner();
-    const ids = z.array(z.coerce.number().min(1)).max(MAX_BULK_SKINS).parse(rawIds);
+    const ids = [...new Set(z.array(z.coerce.number().min(1)).max(MAX_BULK_SKINS).parse(rawIds))];
     const results: Array<{ id: number; success: boolean; error?: string; image?: string }> = [];
     await ensureDirectories();
 
@@ -141,21 +151,15 @@ export async function addSkinsFromList(rawIds: number[]): Promise<Array<{ id: nu
         console.log(`Processing skin ${index + 1}/${ids.length}: ${id}`);
 
         try {
-            const skinData = await fetchSkinMetadata(id);
-
-            const image = await downloadSkin(skinData);
-
-            await saveSkinToDatabase(skinData, image);
-
-            results.push({ id, success: true, image });
+            const imported = await importSkin(id);
+            results.push({ id, success: true, image: imported.image });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
             results.push({ id, success: false, error: errorMessage });
         }
 
-        // small delay between downloads to be polite to ck :)
         if (index < ids.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, IMPORT_DELAY_MS));
         }
     }
 
@@ -185,13 +189,14 @@ export async function removeSkin(rawId: number): Promise<{ success: boolean; err
         await requireOwner();
         const id = z.coerce.number().min(1).parse(rawId);
         const rows = (await query("SELECT image_filename FROM skins WHERE id = ?", [id])) as Array<{ image_filename?: string }>;
-
-        if (rows.length > 0 && rows[0]?.image_filename) {
-            const imagePath = path.join(DIRECTORIES.skins, rows[0].image_filename);
-            await fs.unlink(imagePath).catch(() => console.warn(`Image file ${rows[0].image_filename} not found`));
-        }
+        const imageFilename = rows[0]?.image_filename;
+        const imagePath = imageFilename ? resolveSkinPath(imageFilename) : null;
 
         await removeSkinFromDatabase(id);
+
+        if (imagePath) {
+            await fs.unlink(imagePath).catch(() => console.warn(`Image file ${imageFilename} not found`));
+        }
 
         console.log(`Successfully removed skin ${id}`);
         return { success: true };

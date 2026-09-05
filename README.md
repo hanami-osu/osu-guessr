@@ -72,7 +72,7 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
     bun run prisma:generate
     ```
 
-    Existing environments must use their established schema-management process. `bun run db:introspect` reads an existing database into `prisma/schema.prisma`; it is not a migration command.
+    Existing environments are migrated automatically when the production container starts. `bun run db:introspect` reads an existing database into `prisma/schema.prisma`; it is not a migration command.
 
 5. Start the development server:
 
@@ -86,7 +86,7 @@ Run the same quality gates used for changes:
 
 ```bash
 bun run check
-bun test
+bun run test
 bun run build
 ```
 
@@ -96,6 +96,10 @@ bun run build
 - Keep `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across replicas and deployments.
 - Back MariaDB, Redis, and imported media with appropriate persistent storage.
 - Do not use `init.sql` to update an existing deployment.
+- A production container acquires a database lock and applies missing files from `migrations/` before starting the server. If a migration fails, the server does not start.
+- Run only one app container while migrations execute. Scale it after startup if a future deployment adds replicas.
+- Conflicting legacy `mapset_tags` duplicates must be resolved manually if startup reports them. Successful migration keeps the original rows in `mapset_tags_before_20260905` for recovery.
+- Treat applied migration files as immutable. Add a new migration for later schema changes.
 
 ## Built with
 

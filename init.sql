@@ -1,18 +1,17 @@
 SET
     FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS user_badges;
+DROP TABLE IF EXISTS badges;
+DROP TABLE IF EXISTS reports;
+DROP TABLE IF EXISTS announcements;
 DROP TABLE IF EXISTS user_achievements;
-
 DROP TABLE IF EXISTS games;
-
+DROP TABLE IF EXISTS mapset_tags_before_20260905;
 DROP TABLE IF EXISTS mapset_tags;
-
 DROP TABLE IF EXISTS api_keys;
-
 DROP TABLE IF EXISTS mapset_data;
-
 DROP TABLE IF EXISTS skins;
-
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -43,7 +42,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (bancho_id),
+    FOREIGN KEY (user_id) REFERENCES users (bancho_id) ON DELETE CASCADE,
     INDEX user_id_idx (user_id)
 );
 
@@ -61,17 +60,19 @@ CREATE TABLE IF NOT EXISTS user_achievements (
 );
 
 CREATE TABLE IF NOT EXISTS games (
+    session_id CHAR(36),
     user_id INT NOT NULL,
     game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
     points INT DEFAULT 0,
     streak INT DEFAULT 0,
     variant ENUM ('classic', 'death') DEFAULT 'classic',
     ended_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_game_session (session_id),
     FOREIGN KEY (user_id) REFERENCES users (bancho_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS mapset_tags (
-    mapset_id INT NOT NULL,
+    mapset_id INT PRIMARY KEY,
     image_filename VARCHAR(255),
     audio_filename VARCHAR(255)
 );
@@ -132,8 +133,6 @@ CREATE INDEX IF NOT EXISTS idx_username ON users (username);
 CREATE INDEX IF NOT EXISTS idx_games_user_mode ON games (user_id, game_mode);
 
 CREATE INDEX IF NOT EXISTS idx_games_ended ON games (ended_at);
-
-CREATE INDEX IF NOT EXISTS idx_mapset_tags_mapset_id ON mapset_tags (mapset_id);
 
 CREATE INDEX IF NOT EXISTS idx_mapset_data_title ON mapset_data (title);
 

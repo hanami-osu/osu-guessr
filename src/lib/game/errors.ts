@@ -5,24 +5,17 @@ export class GameError extends Error {
     }
 }
 
-export class NetworkError extends GameError {
+class NetworkError extends GameError {
     constructor(message: string, cause?: Error) {
         super(message, "NETWORK_ERROR", true, cause);
         this.name = "NetworkError";
     }
 }
 
-export class SessionError extends GameError {
+class SessionError extends GameError {
     constructor(message: string, cause?: Error) {
         super(message, "SESSION_ERROR", false, cause);
         this.name = "SessionError";
-    }
-}
-
-export class TimeoutError extends GameError {
-    constructor(message: string, cause?: Error) {
-        super(message, "TIMEOUT_ERROR", true, cause);
-        this.name = "TimeoutError";
     }
 }
 

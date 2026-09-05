@@ -17,28 +17,14 @@ import { useTranslationsContext } from "@/context/translations-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { getDeathEndReason } from "@/lib/game/result";
+import type { GameMediaProps } from "@/lib/game/types";
+import { isClassicGameIncomplete } from "@/lib/game/completion";
 
 interface GameScreenProps {
     onExit(): void;
     gameVariant: GameVariant;
     gameMode: GameMode;
-    GameMedia: React.ComponentType<{
-        mediaUrl: string;
-        isRevealed: boolean;
-        result?: {
-            correct: boolean;
-            answer?: string;
-            type: "guess" | "timeout" | "skip";
-        };
-        songInfo?: {
-            title?: string;
-            artist?: string;
-            mapper?: string;
-            mapsetId?: number;
-        };
-        onVolumeChange?(volume: number): void;
-        initialVolume?: number;
-    }>;
+    GameMedia: React.ComponentType<GameMediaProps>;
 }
 
 export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }: GameScreenProps) {
@@ -72,21 +58,9 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                         console.error("Game error:", error);
                         setActionError(error.message);
                     },
-                    onRetry: (attempt, maxRetries) => {
-                        console.log(`Retrying... (${attempt}/${maxRetries})`);
-                    },
-                    onRecovery: () => {
-                        console.log("Game state recovered");
-                    },
                 },
                 gameMode,
-                gameVariant,
-                {
-                    maxRetries: 3,
-                    retryDelay: 1000,
-                    sessionTimeout: 300000,
-                    recoveryMode: "auto",
-                }
+                gameVariant
             );
 
             const resumed = await gameClient.current.resumeStoredGame();
@@ -131,12 +105,14 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         [isLoading, t.errors.game.unknown]
     );
 
-    const handleGameComplete = useCallback(async () => {
-        if (!gameState) return;
+    const handleGameComplete = useCallback(() => {
+        if (!gameState || !gameClient.current) return;
 
-        setShowStats(true);
-        await gameClient.current?.endGame();
-    }, [gameState]);
+        return handleAction(async () => {
+            await gameClient.current!.endGame();
+            setShowStats(true);
+        });
+    }, [gameState, handleAction]);
 
     const handleGuess = useCallback(() => {
         if (!gameClient.current || !guess.trim() || gameState?.currentBeatmap.revealed) return;
@@ -154,58 +130,57 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     const handleNextRound = useCallback(async () => {
         if (!gameState?.currentBeatmap.revealed) return;
 
+        if (gameVariant === "death" && gameState.lastGuess && !gameState.lastGuess.correct) {
+            await handleGameComplete();
+            return;
+        }
+
         if (gameState.rounds.current >= gameState.rounds.total) {
             await handleGameComplete();
             return;
         }
 
         return handleAction(() => gameClient.current!.goNextRound());
-    }, [gameState, handleAction, handleGameComplete]);
+    }, [gameState, gameVariant, handleAction, handleGameComplete]);
 
     const handleExit = useCallback(async (): Promise<boolean> => {
         if (!gameClient.current || !gameState) return false;
 
-        if (gameVariant === "classic") {
-            const isGameIncomplete = gameState.rounds.current < gameState.rounds.total;
+        const confirmation =
+            gameVariant === "death"
+                ? t.confirmations.exitGame.death
+                : isClassicGameIncomplete(gameState)
+                  ? t.confirmations.exitGame.classic
+                  : gameState.score.total > 0
+                    ? t.confirmations.exitGame.classicComplete
+                    : null;
 
-            if (isGameIncomplete) {
-                const confirmed = window.confirm("Are you sure you want to exit? Your score will not be counted if you leave before completing all rounds!");
-                if (!confirmed) return false;
-            } else if (gameState.score.total > 0) {
-                const confirmed = window.confirm("Are you sure you want to exit? Your score will be saved.");
-                if (!confirmed) return false;
-            }
+        if (confirmation && !window.confirm(confirmation)) return false;
 
-            try {
-                await gameClient.current.endGame();
-                onExit();
-                return true;
-            } catch (error) {
-                console.error("Failed to end game:", error);
-                setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
-                return false;
-            }
-        } else {
-            const confirmed = window.confirm("Are you sure you want to end your run? Your highest streak will be saved.");
-            if (!confirmed) return false;
-
-            try {
-                await gameClient.current.endGame();
+        setIsLoading(true);
+        setActionError(null);
+        try {
+            await gameClient.current.endGame();
+            if (gameVariant === "death") {
                 setShowStats(true);
-                return true;
-            } catch (error) {
-                console.error("Failed to end game:", error);
-                setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
-                return false;
+            } else {
+                onExit();
             }
+            return true;
+        } catch (error) {
+            console.error("Failed to end game:", error);
+            setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
+            return false;
+        } finally {
+            setIsLoading(false);
         }
-    }, [gameState, onExit, gameVariant, t.errors.game.unknown]);
+    }, [gameState, onExit, gameVariant, t.confirmations.exitGame, t.errors.game.unknown]);
 
     useEffect(() => {
         if (!gameClient.current || !gameState) return;
 
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (gameVariant === "classic" && gameState?.rounds.current < gameState.rounds.total) {
+            if (gameVariant === "classic" && isClassicGameIncomplete(gameState)) {
                 e.preventDefault();
                 e.returnValue = "";
             }
@@ -219,15 +194,21 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     }, [gameState, gameVariant]);
 
     useEffect(() => {
-        const handleKeyPress = (e: KeyboardEvent) => {
-            if (e.key === "Enter" && gameState?.currentBeatmap.revealed) {
-                handleNextRound();
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== "Enter" || event.repeat || event.defaultPrevented || event.isComposing || !gameState?.currentBeatmap.revealed || isReportDialogOpen) return;
+            if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+
+            const target = event.target;
+            if (target instanceof HTMLElement && target.closest("button, a[href], input, textarea, select, summary, [contenteditable='true'], [role='button'], [role='link'], [role='menuitem'], [role='option']")) {
+                return;
             }
+
+            void handleNextRound();
         };
 
-        window.addEventListener("keypress", handleKeyPress);
-        return () => window.removeEventListener("keypress", handleKeyPress);
-    }, [gameState?.currentBeatmap.revealed, handleNextRound]);
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [gameState?.currentBeatmap.revealed, handleNextRound, isReportDialogOpen]);
 
     useEffect(() => {
         if (gameState?.currentBeatmap.revealed && !isReportDialogOpen) {
@@ -302,8 +283,6 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                         isRevealed={gameState.currentBeatmap.revealed}
                         result={gameState.lastGuess}
                         songInfo={gameState.currentBeatmap}
-                        onVolumeChange={gameMode === "audio" ? (volume) => gameClient.current?.setVolume(volume) : undefined}
-                        initialVolume={gameMode === "audio" ? gameClient.current?.getVolume() : undefined}
                     />
                     {isLoading && <LoadingScreen />}
                 </div>
@@ -315,12 +294,11 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                             <AlertDescription>{actionError}</AlertDescription>
                         </Alert>
                     )}
-                    <GuessInput guess={guess} setGuess={setGuess} isRevealed={gameState.currentBeatmap.revealed} onGuess={handleGuess} onSkip={handleSkip} gameClient={gameClient.current!} />
+                    <GuessInput guess={guess} setGuess={setGuess} isRevealed={gameState.currentBeatmap.revealed} isBusy={isLoading} onGuess={handleGuess} onSkip={handleSkip} gameClient={gameClient.current!} />
 
                     <div className="bg-card p-6 rounded-lg border border-border/60">
                         <h3 className="font-semibold mb-2">{t.game.shortcuts.title}</h3>
                         <ul className="list-disc list-inside space-y-1 text-foreground/70">
-                            <li>{t.game.shortcuts.items.tab}</li>
                             <li>{t.game.shortcuts.items.enter}</li>
                             <li>{t.game.shortcuts.items.ctrlS}</li>
                             <li>{t.game.shortcuts.items.arrows}</li>
@@ -336,11 +314,11 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                         {gameVariant === "death" ? t.game.actions.endRun : t.game.actions.exitGame}
                     </Button>
                     {gameMode !== GameMode.Skin && gameState.currentBeatmap.revealed && gameState.currentBeatmap.mapsetId && (
-                        <ReportDialog mapsetId={gameState.currentBeatmap.mapsetId} mapsetTitle={gameState.currentBeatmap.title || "Unknown"} onOpenChange={setIsReportDialogOpen} />
+                        <ReportDialog mapsetId={gameState.currentBeatmap.mapsetId} mapsetTitle={gameState.currentBeatmap.title || t.game.media.unknown} onOpenChange={setIsReportDialogOpen} />
                     )}
                 </div>
                 {gameState.currentBeatmap.revealed && (
-                    <Button onClick={handleNextRound} className="px-8">
+                    <Button onClick={handleNextRound} className="px-8" disabled={isLoading}>
                         {gameState.rounds.current >= gameState.rounds.total
                             ? t.game.actions.viewResults
                             : isReportDialogOpen

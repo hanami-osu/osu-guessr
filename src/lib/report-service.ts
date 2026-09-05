@@ -16,7 +16,7 @@ interface ReportDependencies {
     webhookTimeoutMs?: number;
 }
 
-export const REPORT_WEBHOOK_TIMEOUT_MS = 5_000;
+const REPORT_WEBHOOK_TIMEOUT_MS = 5_000;
 
 export class ReportMapsetNotFoundError extends Error {
     constructor() {

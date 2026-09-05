@@ -24,6 +24,7 @@ export default function UserSearch() {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [searchError, setSearchError] = useState(false);
     const requestGate = useRef(createLatestRequestGate());
 
     useEffect(() => {
@@ -44,8 +45,11 @@ export default function UserSearch() {
         if (query.length < 2) {
             setResults([]);
             setIsSearching(false);
+            setSearchError(false);
             return () => request.cancel();
         }
+
+        setSearchError(false);
 
         const delayDebounceFn = setTimeout(async () => {
             if (request.isCurrent()) {
@@ -61,6 +65,7 @@ export default function UserSearch() {
                 if (request.isCurrent()) {
                     console.error("Search failed:", error);
                     setResults([]);
+                    setSearchError(true);
                 }
             } finally {
                 if (request.isCurrent()) {
@@ -120,6 +125,8 @@ export default function UserSearch() {
                         <div className="p-8 text-center text-foreground/70">
                             <span className="soft-loading-dot inline-block">{t.user.search.searching}</span>
                         </div>
+                    ) : searchError ? (
+                        <div className="p-8 text-center text-destructive">{t.user.search.failed}</div>
                     ) : results.length > 0 ? (
                         <ul className="py-2" aria-label={t.user.search.results}>
                             {results.map((user) => (

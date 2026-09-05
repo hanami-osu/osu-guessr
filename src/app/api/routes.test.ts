@@ -11,7 +11,7 @@ const getUserLatestGamesMock = mock(async () => []);
 const getUserGamesCountMock = mock(async () => 0);
 const getHighestStatsMock = mock(async () => ({}));
 
-mock.module("@/actions/api-keys-server", () => ({ validateApiKey: validateApiKeyMock }));
+mock.module("@/lib/api/validate-key", () => ({ validateApiKey: validateApiKeyMock }));
 mock.module("@/actions/user-server", () => ({
     getTopPlayersAction: getTopPlayersMock,
     searchUsersAction: searchUsersMock,
@@ -83,6 +83,12 @@ describe("API route parameter defaults", () => {
         const response = await userStatsGet(request("/api/users/123/stats"), { params: Promise.resolve({ userId: "123" }) });
         expect(response.status).toBe(200);
         expect(getUserStatsMock).toHaveBeenCalledWith(123);
+    });
+
+    test("passes the requested stats variant through", async () => {
+        const response = await userStatsGet(request("/api/users/123/stats?variant=death"), { params: Promise.resolve({ userId: "123" }) });
+        expect(response.status).toBe(200);
+        expect(getUserStatsMock).toHaveBeenCalledWith(123, "death");
     });
 });
 

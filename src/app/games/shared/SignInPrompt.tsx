@@ -23,11 +23,11 @@ export default function SignInPrompt() {
                         <Button onClick={() => signIn("osu")} className="w-full sm:w-auto">
                             {t.home.hero.signIn}
                         </Button>
-                        <Link href="/">
-                            <Button variant="outline" className="w-full sm:w-auto">
+                        <Button asChild variant="outline" className="w-full sm:w-auto">
+                            <Link href="/">
                                 {t.user.notFound.actions.home}
-                            </Button>
-                        </Link>
+                            </Link>
+                        </Button>
                     </div>
 
                     <div className="mt-8 pt-6 border-t border-border/50">

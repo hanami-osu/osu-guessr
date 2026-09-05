@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslationsContext } from "@/context/translations-provider";
-import { Changelog } from "../HomeContent";
+import type { Changelog } from "../HomeContent";
 
 interface ChangelogsProps {
     changelogs: Array<Changelog>;

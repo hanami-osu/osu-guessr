@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { query } from "@/lib/database";
 import { env } from "@/lib/env";
@@ -11,7 +11,7 @@ import { NoGameContentError } from "@/lib/game/content-errors";
 
 export async function getRandomAudioAction(sessionId?: string) {
     return authenticatedAction(async () => {
-        const audio = await getRandomAudio(sessionId);
+        const audio = await getRandomMapset("audio_filename", sessionId);
         if (!audio) {
             throw new NoGameContentError("No audio found");
         }
@@ -25,58 +25,9 @@ export async function getRandomAudioAction(sessionId?: string) {
     });
 }
 
-async function getRandomAudio(sessionId?: string): Promise<MapsetDataWithTags | null> {
-    let excludedIds: number[] = [];
-    if (sessionId) {
-        const cacheKey = `session_items:${sessionId}:mapset`;
-        const cachedRaw = await redisClient.sMembers(cacheKey);
-        const cached = Array.isArray(cachedRaw) ? cachedRaw : [];
-        if (cached.length > 0) {
-            excludedIds = cached.map((id) => Number(id)).filter(Boolean);
-        }
-    }
-
-    const tagResults: Array<MapsetTags> = await query(
-        `SELECT * FROM mapset_tags
-            WHERE audio_filename IS NOT NULL
-            AND audio_filename <> ''
-            AND mapset_id NOT IN (${excludedIds.length ? excludedIds.map(() => "?").join(",") : "0"})
-            ORDER BY RAND() LIMIT 1;`,
-        excludedIds
-    );
-
-    if (!tagResults.length) {
-        return null;
-    }
-
-    const tags = tagResults[0];
-
-    const mapsetResults: Array<MapsetData> = await query(`SELECT * FROM mapset_data WHERE mapset_id = ?`, [tags.mapset_id]);
-
-    let mapset: MapsetData;
-
-    if (mapsetResults.length > 0) {
-        mapset = mapsetResults[0];
-    } else {
-        const data = await getMapsetById(tags.mapset_id);
-        if (!data) {
-            return null;
-        }
-
-        mapset = data;
-        await query(
-            `INSERT INTO mapset_data (mapset_id, title, artist, mapper)
-             VALUES (?, ?, ?, ?)`,
-            [mapset.mapset_id, mapset.title, mapset.artist, mapset.mapper]
-        );
-    }
-
-    return { ...tags, ...mapset };
-}
-
 export async function getRandomBackgroundAction(sessionId?: string) {
     return authenticatedAction(async () => {
-        const background = await getRandomBackground(sessionId);
+        const background = await getRandomMapset("image_filename", sessionId);
         if (!background) {
             throw new NoGameContentError("No background found");
         }
@@ -90,53 +41,36 @@ export async function getRandomBackgroundAction(sessionId?: string) {
     });
 }
 
-async function getRandomBackground(sessionId?: string): Promise<MapsetDataWithTags | null> {
-    let excludedIds: number[] = [];
-    if (sessionId) {
-        const cacheKey = `session_items:${sessionId}:mapset`;
-        const cachedRaw = await redisClient.sMembers(cacheKey);
-        const cached = Array.isArray(cachedRaw) ? cachedRaw : [];
-        if (cached.length > 0) {
-            excludedIds = cached.map((id) => Number(id)).filter(Boolean);
-        }
-    }
+async function getExcludedIds(sessionId: string | undefined, itemType: "mapset" | "skin"): Promise<number[]> {
+    if (!sessionId) return [];
+    return (await redisClient.sMembers(`session_items:${sessionId}:${itemType}`)).map(Number).filter(Boolean);
+}
 
-    const tagResults: Array<MapsetTags> = await query(
+async function getRandomMapset(filenameColumn: "audio_filename" | "image_filename", sessionId?: string): Promise<MapsetDataWithTags | null> {
+    const excludedIds = await getExcludedIds(sessionId, "mapset");
+    const [tags] = await query<MapsetTags>(
         `SELECT * FROM mapset_tags
-            WHERE mapset_id IS NOT NULL
-            AND image_filename IS NOT NULL
-            AND image_filename <> ''
-            AND mapset_id NOT IN (${excludedIds.length ? excludedIds.map(() => "?").join(",") : "0"})
-            ORDER BY RAND() LIMIT 1;`,
-        excludedIds
+         WHERE ${filenameColumn} IS NOT NULL
+           AND ${filenameColumn} <> ''
+           AND mapset_id NOT IN (${excludedIds.length ? excludedIds.map(() => "?").join(",") : "0"})
+         ORDER BY RAND() LIMIT 1`,
+        excludedIds,
     );
+    if (!tags) return null;
 
-    if (!tagResults.length) {
-        return null;
-    }
+    const [storedMapset] = await query<MapsetData>("SELECT * FROM mapset_data WHERE mapset_id = ?", [tags.mapset_id]);
+    const mapset = storedMapset ?? (await getMapsetById(tags.mapset_id));
+    if (!mapset) return null;
 
-    const tags = tagResults[0];
-
-    const mapsetResults: Array<MapsetData> = await query(`SELECT * FROM mapset_data WHERE mapset_id = ?`, [tags.mapset_id]);
-    let mapset: MapsetData;
-
-    if (mapsetResults.length > 0) {
-        mapset = mapsetResults[0];
-    } else {
-        const data = await getMapsetById(tags.mapset_id);
-        if (!data) {
-            return null;
-        }
-
-        mapset = data;
-        await query(`INSERT INTO mapset_data (mapset_id, title, artist, mapper) VALUES (?, ?, ?, ?)`, [mapset.mapset_id, mapset.title, mapset.artist, mapset.mapper]);
+    if (!storedMapset) {
+        await query("INSERT INTO mapset_data (mapset_id, title, artist, mapper) VALUES (?, ?, ?, ?)", [mapset.mapset_id, mapset.title, mapset.artist, mapset.mapper]);
     }
 
     return { ...tags, ...mapset };
 }
 
 async function getMapsetById(mapsetId: number): Promise<MapsetData | null> {
-    const res = await fetch(`https://osu.ppy.sh/api/get_beatmaps?k=${env.OSU_API_KEY}&s=${mapsetId}`);
+    const res = await fetch(`https://osu.ppy.sh/api/get_beatmaps?k=${env.OSU_API_KEY}&s=${mapsetId}`, { signal: AbortSignal.timeout(10_000) });
 
     if (!res.ok) {
         return null;
@@ -163,15 +97,7 @@ export async function getRandomSkinAction(sessionId?: string) {
 }
 
 async function getRandomSkin(sessionId?: string): Promise<SkinData | null> {
-    let excludedIds: number[] = [];
-    if (sessionId) {
-        const cacheKey = `session_items:${sessionId}:skin`;
-        const cachedRaw = await redisClient.sMembers(cacheKey);
-        const cached = Array.isArray(cachedRaw) ? cachedRaw : [];
-        if (cached.length > 0) {
-            excludedIds = cached.map((id) => Number(id)).filter(Boolean);
-        }
-    }
+    const excludedIds = await getExcludedIds(sessionId, "skin");
     const excludedCondition = excludedIds.length > 0 ? `AND id NOT IN (${excludedIds.map(() => "?").join(",")})` : "";
     const params = excludedIds;
 

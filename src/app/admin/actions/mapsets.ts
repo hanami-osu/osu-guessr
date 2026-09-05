@@ -1,6 +1,6 @@
 "use server";
 
-import { query } from "@/lib/database";
+import { query, transaction } from "@/lib/database";
 import fs from "fs/promises";
 import fsSync from "fs";
 import path from "path";
@@ -81,12 +81,12 @@ function resolveContainedPath(baseDir: string, unsafePath: string): string {
     return resolvedPath;
 }
 
-function resolveBackgroundPath(filename: string): string {
-    if (!filename || filename.includes("\0") || filename.includes("/") || filename.includes("\\") || filename.includes("..") || path.isAbsolute(filename)) {
+function resolveMediaPath(baseDirectory: string, filename: string): string {
+    if (!filename || filename.includes("\0") || filename.includes("\\") || path.basename(filename) !== filename) {
         throw new Error("Invalid filename");
     }
 
-    const baseDir = path.resolve(DIRECTORIES.backgrounds);
+    const baseDir = path.resolve(baseDirectory);
     const resolved = path.resolve(baseDir, filename);
 
     if (!resolved.startsWith(baseDir + path.sep)) {
@@ -212,7 +212,6 @@ async function downloadMapset(mapsetId: number): Promise<string | null> {
             await pipeline(read, fsSync.createWriteStream(dest));
         }
 
-        // remove the downloaded archive
         await fs.unlink(oszPath).catch(() => {});
 
         return tempDir;
@@ -237,7 +236,6 @@ async function extractBackground(mapsetId: number): Promise<string | null> {
 
         const buffer = Buffer.from(await response.arrayBuffer());
 
-        // Process and compress the image
         await sharp(buffer)
             .resize({
                 width: 1920,
@@ -255,7 +253,6 @@ async function extractBackground(mapsetId: number): Promise<string | null> {
     }
 }
 
-// Audio Processing
 async function findLargestAudioFile(mapsetDir: string): Promise<string> {
     const files = await fs.readdir(mapsetDir);
     const audioExtensions = new Set([".mp3", ".ogg", ".wav"]);
@@ -289,53 +286,75 @@ async function extractAudio(mapsetId: number, mapsetDir: string): Promise<string
 }
 
 async function saveMapsetToDatabase(mapsetId: number, beatmapData: BeatmapData, imageFilename: string, audioFilename: string): Promise<void> {
-    await query(
-        `INSERT INTO mapset_data (mapset_id, title, artist, mapper)
-     VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       title = VALUES(title),
-       artist = VALUES(artist),
-       mapper = VALUES(mapper)`,
-        [mapsetId, beatmapData.title, beatmapData.artist, beatmapData.creator],
-    );
+    await transaction(async (query) => {
+        await query(
+            `INSERT INTO mapset_data (mapset_id, title, artist, mapper)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               title = VALUES(title),
+               artist = VALUES(artist),
+               mapper = VALUES(mapper)`,
+            [mapsetId, beatmapData.title, beatmapData.artist, beatmapData.creator],
+        );
 
-    await query(
-        `INSERT INTO mapset_tags (mapset_id, image_filename, audio_filename)
-     VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       image_filename = VALUES(image_filename),
-       audio_filename = VALUES(audio_filename)`,
-        [mapsetId, imageFilename, audioFilename],
-    );
+        await query(
+            `INSERT INTO mapset_tags (mapset_id, image_filename, audio_filename)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               image_filename = VALUES(image_filename),
+               audio_filename = VALUES(audio_filename)`,
+            [mapsetId, imageFilename, audioFilename],
+        );
+    });
 }
 
 async function mapsetExists(mapsetId: number): Promise<boolean> {
+    const [row] = await query<{ image_filename: string; audio_filename: string }>(
+        `SELECT mt.image_filename, mt.audio_filename
+         FROM mapset_data md
+         JOIN mapset_tags mt ON md.mapset_id = mt.mapset_id
+         WHERE md.mapset_id = ?
+           AND mt.image_filename <> ''
+           AND mt.audio_filename <> ''
+         LIMIT 1`,
+        [mapsetId],
+    );
+    if (!row) return false;
+
     try {
-        const rows = await query("SELECT 1 FROM mapset_data WHERE mapset_id = ? LIMIT 1", [mapsetId]);
-        if (Array.isArray(rows)) {
-            return rows.length > 0;
-        }
-        return Boolean(rows && Object.keys(rows).length > 0);
-    } catch (error) {
-        console.error(`Error checking mapset existence for ${mapsetId}:`, error);
+        const [image, audio] = await Promise.all([
+            fs.stat(resolveMediaPath(DIRECTORIES.backgrounds, row.image_filename)).catch(() => null),
+            fs.stat(resolveMediaPath(DIRECTORIES.audio, row.audio_filename)).catch(() => null),
+        ]);
+        return Boolean(image?.isFile() && audio?.isFile());
+    } catch {
         return false;
     }
 }
 
 async function removeMapsetFromDatabase(mapsetId: number): Promise<void> {
-    await query("DELETE FROM mapset_tags WHERE mapset_id = ?", [mapsetId]);
-    await query("DELETE FROM mapset_data WHERE mapset_id = ?", [mapsetId]);
+    await transaction(async (execute) => {
+        await execute("DELETE FROM mapset_tags WHERE mapset_id = ?", [mapsetId]);
+        await execute("DELETE FROM mapset_data WHERE mapset_id = ?", [mapsetId]);
+    });
 }
 
 export async function addMapset(rawMapsetId: number): Promise<AddMapsetResult> {
     await requireOwner();
     const mapsetId = z.coerce.number().min(1).parse(rawMapsetId);
-    console.log(`Processing mapset ID: ${mapsetId}`);
+    return addMapsetById(mapsetId);
+}
+
+async function addMapsetById(mapsetId: number): Promise<AddMapsetResult> {
+    let mapsetDir: string | null = null;
+    let audioFilename: string | null = null;
+    let imageFilename: string | null = null;
+    let saved = false;
 
     try {
         const existing = await mapsetExists(mapsetId);
         if (existing) {
-            console.log(`Mapset ${mapsetId} already exists in the database. Skipping download.`);
+            saved = true;
             return { success: true, note: "already_exists" };
         }
 
@@ -346,12 +365,12 @@ export async function addMapset(rawMapsetId: number): Promise<AddMapsetResult> {
             throw new Error("Could not fetch beatmap data from osu! API");
         }
 
-        const mapsetDir = await downloadMapset(mapsetId);
+        mapsetDir = await downloadMapset(mapsetId);
         if (!mapsetDir) {
             throw new Error("Failed to download and extract mapset");
         }
 
-        const [audioFilename, imageFilename] = await Promise.all([extractAudio(mapsetId, mapsetDir), extractBackground(mapsetId)]);
+        [audioFilename, imageFilename] = await Promise.all([extractAudio(mapsetId, mapsetDir), extractBackground(mapsetId)]);
 
         if (!audioFilename) {
             throw new Error("Failed to process audio file");
@@ -362,21 +381,26 @@ export async function addMapset(rawMapsetId: number): Promise<AddMapsetResult> {
         }
 
         await saveMapsetToDatabase(mapsetId, beatmapData, imageFilename, audioFilename);
-
-        await cleanupDirectory(mapsetDir);
-
-        console.log(`Successfully added mapset ${mapsetId}`);
+        saved = true;
         return { success: true };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         console.error(`Error adding mapset ${mapsetId}:`, errorMessage);
         return { success: false, error: errorMessage };
+    } finally {
+        if (mapsetDir) await cleanupDirectory(mapsetDir);
+        if (!saved) {
+            await Promise.all([
+                audioFilename ? fs.unlink(path.join(DIRECTORIES.audio, audioFilename)).catch(() => {}) : Promise.resolve(),
+                imageFilename ? fs.unlink(path.join(DIRECTORIES.backgrounds, imageFilename)).catch(() => {}) : Promise.resolve(),
+            ]);
+        }
     }
 }
 
 export async function addMapsetFromList(fileContent: string) {
     await requireOwner();
-    const mapsetIds = fileContent
+    const mapsetIds = [...new Set(fileContent
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean)
@@ -384,13 +408,11 @@ export async function addMapsetFromList(fileContent: string) {
             const match = line.match(/beatmapsets\/(\d+)/);
             return match ? parseInt(match[1]) : null;
         })
-        .filter((id): id is number => id !== null);
+        .filter((id): id is number => id !== null))];
 
     if (mapsetIds.length > MAX_BULK_MAPSETS) {
         throw new Error(`Too many mapsets. Maximum is ${MAX_BULK_MAPSETS}.`);
     }
-
-    console.log(mapsetIds);
 
     const total = mapsetIds.length;
     const results: Array<{ id: number; success: boolean; error?: string; note?: string }> = [];
@@ -399,28 +421,15 @@ export async function addMapsetFromList(fileContent: string) {
 
     for (let i = 0; i < mapsetIds.length; i++) {
         const mapsetId = mapsetIds[i];
-        const progress = (((i + 1) / total) * 100).toFixed(1);
-
-        console.log(`[${progress}%] Processing mapset ${mapsetId} (${i + 1}/${total})`);
-
         try {
-            const exists = await mapsetExists(mapsetId);
-            if (exists) {
-                results.push({ id: mapsetId, success: true, note: "already_exists" });
-                console.log(`→ Mapset ${mapsetId}: Already exists in database. Skipping.`);
+            const result = await addMapsetById(mapsetId);
+            if (result.success) {
+                results.push({ id: mapsetId, success: true, note: result.note });
             } else {
-                const result = await addMapset(mapsetId);
-                if (result.success) {
-                    results.push({ id: mapsetId, success: true, note: result.note });
-                    console.log(`✓ Mapset ${mapsetId}: Successfully added`);
-                } else {
-                    results.push({ id: mapsetId, success: false, error: result.error });
-                    console.log(`✗ Mapset ${mapsetId}: Failed - ${result.error}`);
-                }
+                results.push({ id: mapsetId, success: false, error: result.error });
             }
         } catch (error) {
             results.push({ id: mapsetId, success: false, error: String(error) });
-            console.log(`✗ Mapset ${mapsetId}: Failed - ${error}`);
         }
     }
 
@@ -437,26 +446,16 @@ export async function removeMapset(rawMapsetId: number): Promise<void> {
     const mapsetId = z.coerce.number().min(1).parse(rawMapsetId);
     try {
         const files = (await query("SELECT image_filename, audio_filename FROM mapset_tags WHERE mapset_id = ?", [mapsetId])) as Array<{ image_filename?: string; audio_filename?: string }>;
-
-        if (files.length > 0 && files[0]) {
-            const { image_filename, audio_filename } = files[0];
-
-            const fileRemovalPromises = [];
-
-            if (image_filename) {
-                const imagePath = path.join(DIRECTORIES.backgrounds, image_filename);
-                fileRemovalPromises.push(fs.unlink(imagePath).catch(() => console.warn(`Background file ${image_filename} not found`)));
-            }
-
-            if (audio_filename) {
-                const audioPath = path.join(DIRECTORIES.audio, audio_filename);
-                fileRemovalPromises.push(fs.unlink(audioPath).catch(() => console.warn(`Audio file ${audio_filename} not found`)));
-            }
-
-            await Promise.all(fileRemovalPromises);
-        }
+        const { image_filename, audio_filename } = files[0] ?? {};
+        const imagePath = image_filename ? resolveMediaPath(DIRECTORIES.backgrounds, image_filename) : null;
+        const audioPath = audio_filename ? resolveMediaPath(DIRECTORIES.audio, audio_filename) : null;
 
         await removeMapsetFromDatabase(mapsetId);
+
+        await Promise.all([
+            imagePath ? fs.unlink(imagePath).catch(() => console.warn(`Background file ${image_filename} not found`)) : Promise.resolve(),
+            audioPath ? fs.unlink(audioPath).catch(() => console.warn(`Audio file ${audio_filename} not found`)) : Promise.resolve(),
+        ]);
 
         console.log(`Successfully removed mapset ${mapsetId}`);
     } catch (error) {
@@ -515,7 +514,7 @@ export async function fetchBackgroundImage(filename?: string | null): Promise<st
     if (!filename) return null;
 
     try {
-        const filePath = resolveBackgroundPath(filename);
+        const filePath = resolveMediaPath(DIRECTORIES.backgrounds, filename);
         const stats = await fs.stat(filePath).catch(() => null);
         if (!stats || !stats.isFile()) return null;
 

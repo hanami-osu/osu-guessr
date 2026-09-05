@@ -2,45 +2,16 @@
 
 import { query } from "@/lib/database";
 import { z } from "zod";
-import { authenticatedAction } from "./server";
-import { OWNER_ID } from "@/lib";
 import { GameVariant } from "@/app/games/config";
-import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserWithStats, UserRanks, UserBadge } from "./types";
+import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserWithStats, UserBadge } from "./types";
 import { hasPlayedGame } from "@/lib/user-stats";
 
-export type { UserRanks };
-
-// Schemas
 const gameModeSchema = z.nativeEnum(GameMode);
+const gameVariantSchema = z.enum(["classic", "death"]);
 const searchSchema = z.object({
     term: z.string().min(2).max(250),
     limit: z.number().min(1).max(100).default(10),
 });
-
-// Server actions
-export async function createUserAction(banchoId: number, username: string, avatar_url: string) {
-    return query(
-        `INSERT INTO users (bancho_id, username, avatar_url)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-            username = VALUES(username),
-            avatar_url = VALUES(avatar_url)`,
-        [banchoId, username, avatar_url]
-    );
-}
-
-export async function deleteUserAction(banchoId: number) {
-    return authenticatedAction(async (session) => {
-        const targetBanchoId = z.coerce.number().int().min(1).parse(banchoId);
-
-        if (session.user.banchoId !== targetBanchoId && session.user.banchoId !== OWNER_ID) {
-            throw new Error("Forbidden");
-        }
-
-        await query("DELETE FROM users WHERE bancho_id = ?", [targetBanchoId]);
-        return { success: true };
-    });
-}
 
 export async function getUserByIdAction(banchoId: number): Promise<UserWithStats | null> {
     const userResult = (await query(`SELECT * FROM users WHERE bancho_id = ?`, [banchoId])) as User[];
@@ -168,19 +139,21 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
     };
 }
 
-export async function getUserStatsAction(banchoId: number): Promise<Array<UserAchievement>> {
+export async function getUserStatsAction(banchoId: number, variant?: GameVariant): Promise<Array<UserAchievement>> {
+    const validatedVariant = variant ? gameVariantSchema.parse(variant) : undefined;
     const result = (await query(
-        `SELECT user_id, game_mode, total_score, games_played,
+        `SELECT user_id, game_mode, variant, total_score, games_played,
                 highest_streak, highest_score, last_played
          FROM user_achievements
-         WHERE user_id = ?`,
-        [banchoId]
+         WHERE user_id = ?${validatedVariant ? " AND variant = ?" : ""}`,
+        validatedVariant ? [banchoId, validatedVariant] : [banchoId]
     )) as UserAchievement[];
     return result;
 }
 
 export async function getUserLatestGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit?: number, offset: number = 0): Promise<Array<Game>> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
+    const validatedVariant = gameVariantSchema.parse(variant);
     const pagination = z
         .object({
             limit: z.number().int().min(1).max(100).optional(),
@@ -198,7 +171,7 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
            WHERE user_id = ? AND variant = ?
            ORDER BY ended_at DESC`;
 
-    const params = validatedMode ? [banchoId, validatedMode, variant] : [banchoId, variant];
+    const params = validatedMode ? [banchoId, validatedMode, validatedVariant] : [banchoId, validatedVariant];
 
     if (pagination.limit) {
         query_string += " LIMIT ? OFFSET ?";
@@ -210,93 +183,77 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
 
 export async function getUserGamesCountAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic"): Promise<number> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
+    const validatedVariant = gameVariantSchema.parse(variant);
     const queryString = validatedMode
         ? `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND game_mode = ? AND variant = ?`
         : `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND variant = ?`;
-    const params = validatedMode ? [banchoId, validatedMode, variant] : [banchoId, variant];
+    const params = validatedMode ? [banchoId, validatedMode, validatedVariant] : [banchoId, validatedVariant];
     const [row] = (await query(queryString, params)) as Array<{ total: number }>;
 
     return row?.total ?? 0;
 }
 
-export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic"): Promise<Array<Game>> {
+export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit: number = 5): Promise<Array<Game>> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
+    const validated = z.object({ variant: gameVariantSchema, limit: z.number().int().min(1).max(100) }).parse({ variant, limit });
 
-    const orderBy = variant === "classic" ? "points" : "streak";
+    const orderBy = validated.variant === "classic" ? "points" : "streak";
 
     const query_string = validatedMode
         ? `SELECT user_id, game_mode, points, streak, variant, ended_at
            FROM games
            WHERE user_id = ? AND game_mode = ? AND variant = ?
-           ORDER BY ${orderBy} DESC, ended_at ASC`
+           ORDER BY ${orderBy} DESC, ended_at ASC
+           LIMIT ?`
         : `SELECT user_id, game_mode, points, streak, variant, ended_at
            FROM games
            WHERE user_id = ? AND variant = ?
-           ORDER BY ${orderBy} DESC, ended_at ASC`;
+           ORDER BY ${orderBy} DESC, ended_at ASC
+           LIMIT ?`;
 
-    const params = validatedMode ? [banchoId, validatedMode, variant] : [banchoId, variant];
+    const params = validatedMode ? [banchoId, validatedMode, validated.variant, validated.limit] : [banchoId, validated.variant, validated.limit];
 
     return query(query_string, params);
 }
 
 export async function getTopPlayersAction(gamemode: GameMode, variant: GameVariant = "classic", limit: number = 10, orderMetric: "total" | "highest" = "highest", offset: number = 0): Promise<Array<TopPlayer>> {
-    const validatedMode = gameModeSchema.parse(gamemode);
+    const validated = z
+        .object({ gamemode: gameModeSchema, variant: gameVariantSchema, limit: z.number().int().min(1).max(100), orderMetric: z.enum(["total", "highest"]), offset: z.number().int().min(0) })
+        .parse({ gamemode, variant, limit, orderMetric, offset });
+    const orderColumn = validated.variant === "death" ? "highest_streak" : validated.orderMetric === "highest" ? "highest_score" : "total_score";
+    const results = await query<Omit<TopPlayer, "badges"> & { badges: string | null }>(
+        `WITH game_stats AS (
+             SELECT user_id,
+                    COUNT(*) AS games_played,
+                    MAX(streak) AS highest_streak,
+                    ${validated.variant === "death" ? "0" : "MAX(points)"} AS highest_score,
+                    ${validated.variant === "death" ? "0" : "SUM(points)"} AS total_score,
+                    MIN(ended_at) AS earliest_ended_at
+             FROM games
+             WHERE game_mode = ? AND variant = ?
+             GROUP BY user_id
+         ), badge_stats AS (
+             SELECT ub.user_id, GROUP_CONCAT(CONCAT(b.name, ':', b.color)) AS badges
+             FROM user_badges ub
+             JOIN badges b ON ub.badge_name = b.name
+             GROUP BY ub.user_id
+         )
+         SELECT u.*, gs.games_played, gs.highest_streak, gs.highest_score, gs.total_score, gs.earliest_ended_at, bs.badges
+         FROM game_stats gs
+         JOIN users u ON gs.user_id = u.bancho_id
+         LEFT JOIN badge_stats bs ON u.bancho_id = bs.user_id
+         ORDER BY gs.${orderColumn} DESC, gs.earliest_ended_at ASC
+         LIMIT ? OFFSET ?`,
+        [validated.gamemode, validated.variant, validated.limit, validated.offset],
+    );
 
-    let query_string: string;
-
-    if (variant === "death") {
-        query_string = `SELECT u.*,
-                COUNT(*) as games_played,
-                MAX(g.streak) as highest_streak,
-                0 as highest_score,
-                0 as total_score,
-                MIN(g.ended_at) as earliest_ended_at,
-                GROUP_CONCAT(DISTINCT CONCAT(b.name, ':', b.color)) as badges
-         FROM games g
-         JOIN users u ON g.user_id = u.bancho_id
-         LEFT JOIN user_badges ub ON u.bancho_id = ub.user_id
-         LEFT JOIN badges b ON ub.badge_name = b.name
-         WHERE g.game_mode = ? AND g.variant = 'death'
-         GROUP BY g.user_id
-      ORDER BY highest_streak DESC, earliest_ended_at ASC
-         LIMIT ? OFFSET ?`;
-    } else {
-        const orderColumn = orderMetric === "highest" ? "highest_score" : "total_score";
-        query_string = `SELECT u.*,
-                COUNT(*) as games_played,
-                MAX(g.streak) as highest_streak,
-                MAX(g.points) as highest_score,
-                SUM(g.points) as total_score,
-          MIN(g.ended_at) as earliest_ended_at,
-          GROUP_CONCAT(DISTINCT CONCAT(b.name, ':', b.color)) as badges
-         FROM games g
-         JOIN users u ON g.user_id = u.bancho_id
-         LEFT JOIN user_badges ub ON u.bancho_id = ub.user_id
-         LEFT JOIN badges b ON ub.badge_name = b.name
-         WHERE g.game_mode = ? AND g.variant = 'classic'
-         GROUP BY g.user_id
-         ORDER BY ${orderColumn} DESC, earliest_ended_at ASC
-         LIMIT ? OFFSET ?`;
-    }
-
-    const results = await query(query_string, [validatedMode, limit, offset]);
-
-    /* eslint-disable  @typescript-eslint/no-explicit-any */
-    return results.map((player: any) => {
-        const processedPlayer = { ...player };
-
-        if (player.badges) {
-            const badgeArray = player.badges.split(",").map((badge: string) => {
-                const [name, color] = badge.split(":");
-                return { name, color };
-            });
-            processedPlayer.badges = badgeArray;
-        } else {
-            processedPlayer.badges = [];
-        }
-
-        return processedPlayer;
-    });
+    return results.map((player) => ({
+        ...player,
+        badges: player.badges?.split(",").map((badge) => {
+            const [name, color] = badge.split(":");
+            return { name, color };
+        }) ?? [],
+    }));
 }
 
 export async function searchUsersAction(searchTerm: string, limit: number = 10): Promise<Array<User>> {

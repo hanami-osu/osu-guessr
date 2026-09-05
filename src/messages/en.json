@@ -441,7 +441,8 @@
             "death": {
                 "title": {
                     "died": "Game Over!",
-                    "completed": "Amazing Run!"
+                    "completed": "Amazing Run!",
+                    "ended": "Run Ended"
                 },
                 "maxStreak": "Maximum Streak",
                 "totalCorrect": "Total Correct",
@@ -498,6 +499,22 @@
             "browserNotSupported": "Your browser does not support the audio element.",
             "loadFailed": "The audio could not be loaded or played.",
             "retry": "Retry audio"
+        },
+        "result": {
+            "correct": "Correct Guess!",
+            "wrong": "Wrong Guess!",
+            "skipped": "Skipped",
+            "timeout": "Time's Up!"
+        },
+        "media": {
+            "by": "by",
+            "mappedBy": "Mapped by",
+            "viewBeatmap": "View Beatmap",
+            "skinName": "Skin Name: {name}",
+            "viewSkin": "View Skin",
+            "unknown": "Unknown",
+            "backgroundAlt": "Beatmap background",
+            "skinAlt": "Skin screenshot"
         }
     },
     "leaderboard": {
@@ -568,6 +585,7 @@
             "noResults": "No users found",
             "startTyping": "Start typing to search users",
             "searching": "Searching...",
+            "failed": "Search failed. Please try again.",
             "results": "User search results",
             "resultsFound": "{count} users found"
         }

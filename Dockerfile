@@ -25,6 +25,8 @@ RUN --mount=type=secret,id=next_server_actions_encryption_key,required=false \
     fi; \
     bun run build
 
+RUN bun build scripts/migrate.ts --target=node --outfile=.next/standalone/migrate.js
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -32,6 +34,7 @@ ARG GIT_SHA=local
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_DEPLOYMENT_ID=$GIT_SHA
+ENV HOSTNAME=0.0.0.0
 ENV PORT=3000 
 
 RUN addgroup --system --gid 1001 nodejs
@@ -40,6 +43,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
 
 RUN mkdir -p /app/mapsets/audio /app/mapsets/backgrounds /app/mapsets/skins /app/tmp \
     && chown -R nextjs:nodejs /app/mapsets /app/tmp
@@ -50,4 +54,4 @@ EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node migrate.js && exec node server.js"]

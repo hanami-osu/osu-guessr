@@ -21,7 +21,7 @@ describe("getDeathEndReason", () => {
         expect(getDeathEndReason({ ...finishedState, lastGuess: { correct: true, answer: "answer", type: "guess" } })).toBe("completed");
     });
 
-    test("marks a manually ended active run as failed", () => {
-        expect(getDeathEndReason({ ...finishedState, gameStatus: "active" })).toBe("died");
+    test("distinguishes a manually ended active run from a death", () => {
+        expect(getDeathEndReason({ ...finishedState, gameStatus: "active" })).toBe("ended");
     });
 });

@@ -39,14 +39,15 @@ export function ReportDialog({ mapsetId, mapsetTitle, onOpenChange }: ReportDial
     };
 
     const handleSubmit = async () => {
-        if (description.length < 10) {
+        const normalizedDescription = description.trim();
+        if (normalizedDescription.length < 10) {
             toast({ description: t.components.report.dialog.messages.validation });
             return;
         }
 
         setIsSubmitting(true);
         try {
-            await createReportAction(mapsetId, reportType, description);
+            await createReportAction(mapsetId, reportType, normalizedDescription);
             toast({ description: t.components.report.dialog.messages.success });
             handleOpenChange(false);
             setDescription("");
@@ -88,8 +89,8 @@ export function ReportDialog({ mapsetId, mapsetTitle, onOpenChange }: ReportDial
                     </div>
 
                     <div className="space-y-2">
-                        <Label>{t.components.report.dialog.description.label}</Label>
-                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.components.report.dialog.description.placeholder} className="h-32" />
+                        <Label htmlFor="report-description">{t.components.report.dialog.description.label}</Label>
+                        <Textarea id="report-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.components.report.dialog.description.placeholder} className="h-32" />
                         <p className="text-xs text-muted-foreground">{t.components.report.dialog.description.minLength}</p>
                     </div>
 
@@ -97,7 +98,7 @@ export function ReportDialog({ mapsetId, mapsetTitle, onOpenChange }: ReportDial
                         <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
                             {t.components.report.dialog.actions.cancel}
                         </Button>
-                        <Button onClick={handleSubmit} disabled={isSubmitting || description.length < 10}>
+                        <Button onClick={handleSubmit} disabled={isSubmitting || description.trim().length < 10}>
                             {isSubmitting ? t.components.report.dialog.actions.submitting : t.components.report.dialog.actions.submit}
                         </Button>
                     </div>

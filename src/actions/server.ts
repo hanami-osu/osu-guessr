@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { auth } from "@/lib/auth";
 import { Session } from "next-auth";
@@ -9,7 +9,6 @@ export async function authenticatedAction<T>(action: (session: Session) => Promi
     if (!session?.user?.banchoId) {
         throw new Error("Unauthorized");
     }
-    // Check global lockdown state
     const locked = await isLockedForUser(session.user.banchoId);
     if (locked) {
         throw new Error("Service is in lockdown");
