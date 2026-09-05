@@ -86,7 +86,7 @@ Run the same quality gates used for changes:
 
 ```bash
 bun run check
-bun test
+bun run test
 bun run build
 ```
 

@@ -8,7 +8,7 @@
         "build": "prisma generate && IS_DOCKER_BUILD=true next build",
         "start": "dotenv -e .env -- next start",
         "check": "prisma generate && eslint src && tsc --noEmit",
-        "test": "bun test",
+        "test": "bun test --isolate",
         "sync": "bun scripts/sync-translations",
         "prisma:generate": "prisma generate",
         "db:introspect": "prisma db pull"
