@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Game, GameMode, UserAchievement, UserWithStats, UserRanks } from "@/actions/types";
-import { getUserByIdAction, getUserStatsAction, getUserLatestGamesAction, getUserTopGamesAction } from "@/actions/user-server";
+import { getUserByIdAction, getUserLatestGamesAction, getUserTopGamesAction } from "@/actions/user-server";
 import Image from "next/image";
 import Link from "next/link";
 import { GameVariant } from "@/app/games/config";
@@ -47,7 +47,6 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                 setIsLoading(true);
                 setError(null);
 
-                // First fetch the user to check if they exist
                 const userData = await getUserByIdAction(Number(banchoId));
 
                 if (!userData) {
@@ -58,11 +57,9 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                     return;
                 }
 
-                // Then fetch all other data in parallel
-                const [statsData, gamesData, topPlaysData] = await Promise.all([
-                    getUserStatsAction(Number(banchoId)),
-                    getUserLatestGamesAction(Number(banchoId), undefined, currentVariant),
-                    getUserTopGamesAction(Number(banchoId), undefined, currentVariant),
+                const [gamesData, topPlaysData] = await Promise.all([
+                    getUserLatestGamesAction(Number(banchoId), undefined, currentVariant, 100),
+                    getUserTopGamesAction(Number(banchoId), currentMode, currentVariant, 5),
                 ]);
 
                 const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -70,7 +67,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
 
                 if (request.isCurrent()) {
                     setUser(userData);
-                    setUserStats(statsData);
+                    setUserStats((userData.achievements ?? []).filter((achievement) => achievement.variant === currentVariant));
                     setUserGames(filteredGames);
                     setTopPlays(topPlaysData);
                 }
@@ -124,14 +121,6 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
     };
 
     const { username, avatar_url, achievements = [], ranks = defaultRanks } = user;
-
-    const topPlaysByMode = topPlays.reduce((acc, game) => {
-        if (!acc[game.game_mode]) {
-            acc[game.game_mode] = [];
-        }
-        acc[game.game_mode].push(game);
-        return acc;
-    }, {} as Record<GameMode, Array<Game>>);
 
     const gameStats: Record<GameMode, GameStats> = {
         [GameMode.Background]: {
@@ -211,36 +200,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                 </div>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
-                <div className="flex w-full flex-wrap justify-center gap-3">
-                    {gamemodes.map((mode) => (
-                        <Link
-                            key={mode}
-                            href={`/user/${banchoId}?mode=${mode}&variant=${currentVariant}`}
-                            className={`px-4 py-2 rounded-lg capitalize border border-border/60 ${currentMode === mode ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
-                        >
-                            {t.leaderboard.filters.mode[mode]}
-                        </Link>
-                    ))}
-                </div>
-
-                <div className="flex w-full flex-col justify-center gap-3 sm:flex-row">
-                    <Link
-                        href={`/user/${banchoId}?mode=${currentMode}&variant=classic`}
-                        className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${currentVariant === "classic" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
-                    >
-                        {t.leaderboard.filters.variant.classic}
-                    </Link>
-                    <Link
-                        href={`/user/${banchoId}?mode=${currentMode}&variant=death`}
-                        className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${
-                            currentVariant === "death" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive" : "bg-card hover:bg-destructive/10 hover:text-destructive"
-                        }`}
-                    >
-                        {t.leaderboard.filters.variant.death}
-                    </Link>
-                </div>
-            </div>
+            <ProfileFilters currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} />
 
             <section>
                 <h2 className="text-2xl font-bold mb-6 text-center capitalize">
@@ -275,7 +235,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                 </h2>
                 <div className="bg-card p-5 sm:p-6 rounded-lg border border-border/60">
                     <div className="space-y-4">
-                        {topPlaysByMode[currentMode]?.slice(0, 5).map((game, index) => (
+                        {topPlays.map((game, index) => (
                             <div key={index} className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
                                 <div className="flex items-center gap-2">
                                     <span className="text-foreground/70">#{index + 1}</span>
@@ -291,12 +251,11 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                                 </div>
                             </div>
                         ))}
-                        {(!topPlaysByMode[currentMode] || topPlaysByMode[currentMode].length === 0) && <div className="text-center py-4 text-foreground/70">{t.user.profile.noPlays}</div>}
+                        {topPlays.length === 0 && <div className="text-center py-4 text-foreground/70">{t.user.profile.noPlays}</div>}
                     </div>
                 </div>
             </section>
 
-            {/* Recent Games */}
             <section>
                 <h2 className="text-2xl font-bold mb-6 text-center">{t.user.profile.recentGames.title}</h2>
                 <div className="bg-card rounded-lg border border-border/60">
@@ -344,6 +303,43 @@ function StatBox({ label, value }: { label: string; value: string }) {
     );
 }
 
+function ProfileFilters({ currentMode, currentVariant, banchoId }: UserProfileClientProps) {
+    const { t } = useTranslationsContext();
+
+    return (
+        <div className="flex flex-col items-center gap-4">
+            <div className="flex w-full flex-wrap justify-center gap-3">
+                {gamemodes.map((mode) => (
+                    <Link
+                        key={mode}
+                        href={`/user/${banchoId}?mode=${mode}&variant=${currentVariant}`}
+                        className={`px-4 py-2 rounded-lg capitalize border border-border/60 ${currentMode === mode ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
+                    >
+                        {t.leaderboard.filters.mode[mode]}
+                    </Link>
+                ))}
+            </div>
+
+            <div className="flex w-full flex-col justify-center gap-3 sm:flex-row">
+                <Link
+                    href={`/user/${banchoId}?mode=${currentMode}&variant=classic`}
+                    className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${currentVariant === "classic" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
+                >
+                    {t.leaderboard.filters.variant.classic}
+                </Link>
+                <Link
+                    href={`/user/${banchoId}?mode=${currentMode}&variant=death`}
+                    className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${
+                        currentVariant === "death" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive" : "bg-card hover:bg-destructive/10 hover:text-destructive"
+                    }`}
+                >
+                    {t.leaderboard.filters.variant.death}
+                </Link>
+            </div>
+        </div>
+    );
+}
+
 function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { currentMode: GameMode; currentVariant: GameVariant; banchoId: string }) {
     const { t } = useTranslationsContext();
 
@@ -368,36 +364,7 @@ function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { curren
                 </div>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
-                <div className="flex justify-center gap-4">
-                    {gamemodes.map((mode) => (
-                        <Link
-                            key={mode}
-                            href={`/user/${banchoId}?mode=${mode}&variant=${currentVariant}`}
-                            className={`px-4 py-2 rounded-lg capitalize border border-border/60 ${currentMode === mode ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
-                        >
-                            {t.leaderboard.filters.mode[mode]}
-                        </Link>
-                    ))}
-                </div>
-
-                <div className="flex justify-center gap-4">
-                    <Link
-                        href={`/user/${banchoId}?mode=${currentMode}&variant=classic`}
-                        className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${currentVariant === "classic" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
-                    >
-                        {t.leaderboard.filters.variant.classic}
-                    </Link>
-                    <Link
-                        href={`/user/${banchoId}?mode=${currentMode}&variant=death`}
-                        className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${
-                            currentVariant === "death" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive" : "bg-card hover:bg-destructive/10 hover:text-destructive"
-                        }`}
-                    >
-                        {t.leaderboard.filters.variant.death}
-                    </Link>
-                </div>
-            </div>
+            <ProfileFilters currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} />
 
             <section>
                 <h2 className="text-2xl font-bold mb-6 text-center capitalize">

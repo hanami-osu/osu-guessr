@@ -2,9 +2,7 @@
 
 import { authenticatedAction } from "./server";
 import { query } from "@/lib/database";
-import redisClient from "@/lib/redis";
 import crypto from "crypto";
-import { validateApiKeyValue } from "@/lib/api/key-validation";
 
 import type { ApiKey } from "./types";
 
@@ -52,12 +50,5 @@ export async function deleteApiKeyAction(keyId: string): Promise<void> {
             WHERE id = ? AND user_id = ?`,
             [keyId, session.user.banchoId]
         );
-    });
-}
-
-export async function validateApiKey(apiKey?: string | null): Promise<number> {
-    return validateApiKeyValue(apiKey, {
-        query: (sql, values) => query(sql, values),
-        redis: redisClient,
     });
 }

@@ -2,87 +2,73 @@
 
 import { Loader2 } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
-import { ResultMessage } from "../../shared/components/Result";
+import { MapsetResult } from "../../shared/components/MapsetResult";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { GameMediaProps } from "@/lib/game/interfaces";
+import type { GameMediaProps } from "@/lib/game/types";
 import { Button } from "@/components/ui/button";
 
-export default function GameAudio({ mediaUrl, isRevealed, result, songInfo, onVolumeChange, initialVolume }: GameMediaProps) {
+export default function GameAudio({ mediaUrl, isRevealed, result, songInfo }: GameMediaProps) {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [mediaError, setMediaError] = useState<string | null>(null);
+    const [loadAttempt, setLoadAttempt] = useState(0);
+    const isRevealedRef = useRef(isRevealed);
     const { t } = useTranslationsContext();
+    isRevealedRef.current = isRevealed;
 
     useEffect(() => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            setIsLoading(true);
-            setMediaError(null);
+        if (audioRef.current) audioRef.current.volume = 0.25;
+    }, []);
 
-            const handleCanPlay = () => {
-                window.clearTimeout(loadTimeout);
-                setIsLoading(false);
-                if (!isRevealed) {
-                    const playPromise = audioRef.current!.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch((error: unknown) => {
-                            console.log("Audio playback failed:", error);
-                            setIsLoading(false);
-                            setMediaError(t.game.audio.loadFailed);
-                        });
-                    }
-                }
-            };
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
 
-            const handleError = () => {
-                window.clearTimeout(loadTimeout);
-                setIsLoading(false);
+        let cancelled = false;
+        audio.pause();
+        audio.currentTime = 0;
+        setIsLoading(true);
+        setMediaError(null);
+
+        const handleError = () => {
+            if (cancelled) return;
+            window.clearTimeout(loadTimeout);
+            setIsLoading(false);
+            setMediaError(t.game.audio.loadFailed);
+        };
+
+        const handleCanPlay = () => {
+            if (cancelled) return;
+            window.clearTimeout(loadTimeout);
+            setIsLoading(false);
+            if (isRevealedRef.current) return;
+
+            void audio.play().catch((error: unknown) => {
+                if (cancelled || (error instanceof Error && (error.name === "NotAllowedError" || error.name === "AbortError"))) return;
                 setMediaError(t.game.audio.loadFailed);
-            };
+            });
+        };
 
-            const loadTimeout = window.setTimeout(handleError, 15000);
+        const loadTimeout = window.setTimeout(handleError, 15000);
+        audio.addEventListener("canplay", handleCanPlay, { once: true });
+        audio.addEventListener("error", handleError);
+        audio.load();
 
-            const audio = audioRef.current; // Copy ref to variable
-            audio.addEventListener("canplay", handleCanPlay);
-            audio.addEventListener("error", handleError);
-            audio.load();
-
-            return () => {
-                audio.removeEventListener("canplay", handleCanPlay);
-                audio.removeEventListener("error", handleError);
-                window.clearTimeout(loadTimeout);
-                audio.pause();
-                audio.currentTime = 0;
-            };
-        }
-    }, [mediaUrl, isRevealed, t.game.audio.loadFailed]);
+        return () => {
+            cancelled = true;
+            audio.removeEventListener("canplay", handleCanPlay);
+            audio.removeEventListener("error", handleError);
+            window.clearTimeout(loadTimeout);
+            audio.pause();
+            audio.currentTime = 0;
+        };
+    }, [loadAttempt, mediaUrl, t.game.audio.loadFailed]);
 
     const retryAudio = () => {
         setMediaError(null);
         setIsLoading(true);
-        audioRef.current?.load();
+        setLoadAttempt((attempt) => attempt + 1);
     };
-
-    useEffect(() => {
-        if (audioRef.current && initialVolume !== undefined) {
-            audioRef.current.volume = initialVolume;
-        }
-    }, [initialVolume]);
-
-    useEffect(() => {
-        if (audioRef.current && onVolumeChange) {
-            const audio = audioRef.current; // Copy ref to variable
-            const handleVolumeChange = () => {
-                onVolumeChange(audio.volume);
-            };
-            audio.addEventListener("volumechange", handleVolumeChange);
-
-            return () => {
-                audio.removeEventListener("volumechange", handleVolumeChange);
-            };
-        }
-    }, [onVolumeChange]);
 
     useEffect(() => {
         if (isRevealed && audioRef.current) {
@@ -115,22 +101,7 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo, onVo
             </div>
             {isRevealed && result && songInfo && (
                 <div className="bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-                    <ResultMessage result={result} />
-                    <div className="space-y-2">
-                        <p className="text-xl font-semibold">{songInfo.title}</p>
-                        <p className="text-foreground/70">by {songInfo.artist}</p>
-                        <p className="text-sm text-foreground/50">Mapped by {songInfo.mapper}</p>
-                        {songInfo.mapsetId && (
-                            <a
-                                href={`https://osu.ppy.sh/beatmapsets/${songInfo.mapsetId}`}
-                                className="inline-block mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                View Beatmap
-                            </a>
-                        )}
-                    </div>
+                    <MapsetResult result={result} songInfo={songInfo} />
                 </div>
             )}
         </div>

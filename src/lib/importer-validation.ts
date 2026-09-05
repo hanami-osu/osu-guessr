@@ -47,7 +47,7 @@ function getMp3FrameLength(data: Uint8Array, offset: number): number | null {
     return Math.floor(((isMpeg1 ? 144 : 72) * bitrate * 1000) / sampleRate) + padding;
 }
 
-export function hasMp3FrameSequence(data: Uint8Array): boolean {
+function hasMp3FrameSequence(data: Uint8Array): boolean {
     if (data.length >= 4 && String.fromCharCode(...data.subarray(0, 4)) === "OggS") return false;
     if (data.length >= 12 && String.fromCharCode(...data.subarray(0, 4)) === "RIFF" && String.fromCharCode(...data.subarray(8, 12)) === "WAVE") return false;
 

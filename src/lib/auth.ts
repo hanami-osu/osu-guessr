@@ -1,5 +1,5 @@
-import { createUserAction } from "@/actions/user-server";
 import { env } from "@/lib/env";
+import { upsertUser } from "@/lib/user-service";
 import NextAuth, { DefaultSession } from "next-auth";
 import OsuProvider from "next-auth/providers/osu";
 
@@ -11,13 +11,13 @@ declare module "next-auth" {
     }
 }
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
+export const { auth, handlers } = NextAuth({
     callbacks: {
         jwt: async ({ token, profile }) => {
             if (profile) {
                 token.banchoId = profile.id;
 
-                await createUserAction(token.banchoId as number, profile.username as string, profile.avatar_url as string);
+                await upsertUser(token.banchoId as number, profile.username as string, profile.avatar_url as string);
             }
             return token;
         },

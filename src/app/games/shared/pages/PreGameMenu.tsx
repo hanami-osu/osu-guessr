@@ -76,7 +76,7 @@ export default function PreGameMenu({ onStart, gameMode }: PreGameMenuProps) {
                     <h1 className="text-2xl sm:text-3xl font-bold mb-6">{t.game.preGame.title[gameMode as keyof typeof t.game.preGame.title]}</h1>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                        <Button onClick={() => setSelectedMode("classic")} variant={selectedMode === "classic" ? "default" : "outline"} className="h-auto min-h-24 flex-col items-start gap-2 whitespace-normal p-4 text-left active:!transform-none data-[selected=true]:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]" data-selected={selectedMode === "classic"}>
+                        <Button onClick={() => setSelectedMode("classic")} variant={selectedMode === "classic" ? "default" : "outline"} className="h-auto min-h-24 flex-col items-start gap-2 whitespace-normal p-4 text-left active:!transform-none data-[selected=true]:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]" data-selected={selectedMode === "classic"} aria-pressed={selectedMode === "classic"}>
                             <span className="text-lg font-semibold">{t.game.preGame.modes.classic.title}</span>
                             <span className={selectedMode === "classic" ? "text-sm text-primary-foreground/80" : "text-sm text-muted-foreground"}>{t.game.preGame.modes.classic.description}</span>
                         </Button>
@@ -85,6 +85,7 @@ export default function PreGameMenu({ onStart, gameMode }: PreGameMenuProps) {
                             variant={selectedMode === "death" ? "destructive" : "outline"}
                             className="h-auto min-h-24 flex-col items-start gap-2 whitespace-normal p-4 text-left active:!transform-none hover:bg-destructive/15 hover:text-destructive hover:border-destructive/50 data-[selected=true]:shadow-[0_0_0_4px_hsl(var(--destructive)/0.08)]"
                             data-selected={selectedMode === "death"}
+                            aria-pressed={selectedMode === "death"}
                         >
                             <span className="text-lg font-semibold">{t.game.preGame.modes.death.title}</span>
                             <span className={selectedMode === "death" ? "text-sm text-destructive-foreground/80" : "text-sm text-muted-foreground"}>{t.game.preGame.modes.death.description}</span>
@@ -106,11 +107,11 @@ export default function PreGameMenu({ onStart, gameMode }: PreGameMenuProps) {
                         <Button onClick={() => onStart(selectedMode)} className="flex-1" variant={selectedMode === "death" ? "destructive" : "default"}>
                             {t.game.preGame.actions.startGame}
                         </Button>
-                        <Link href="/" className="flex-1">
-                            <Button variant="outline" className="w-full">
+                        <Button asChild variant="outline" className="flex-1">
+                            <Link href="/">
                                 {t.game.preGame.actions.backToHome}
-                            </Button>
-                        </Link>
+                            </Link>
+                        </Button>
                     </div>
                 </div>
             </div>

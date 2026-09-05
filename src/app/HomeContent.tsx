@@ -18,7 +18,6 @@ export interface Changelog {
 }
 
 interface HomeContentProps {
-    changelogs: Array<Changelog>;
     highStats: {
         total_users: number;
         total_games: number;
@@ -94,7 +93,7 @@ export function HomeAnnouncementsSection({ latestAnnouncement, announcementsHist
                                     <ul className="mt-2 space-y-1">
                                         {announcementsHistory.slice(1, 6).map((a) => (
                                             <li key={a.id}>
-                                                <span className="font-medium">{a.title}</span> <span className="text-xs text-muted-foreground">— {new Date(a.created_at).toLocaleDateString()}</span>
+                                                <span className="font-medium">{a.title}</span> <span className="text-xs text-muted-foreground">· {new Date(a.created_at).toLocaleDateString()}</span>
                                             </li>
                                         ))}
                                     </ul>
@@ -108,15 +107,5 @@ export function HomeAnnouncementsSection({ latestAnnouncement, announcementsHist
                 </div>
             </div>
         </section>
-    );
-}
-
-export default function HomeContent({ highStats, latestAnnouncement, announcementsHistory }: HomeContentProps) {
-    return (
-        <>
-            <HomeStatsSection highStats={highStats} />
-
-            <HomeAnnouncementsSection latestAnnouncement={latestAnnouncement} announcementsHistory={announcementsHistory} />
-        </>
     );
 }

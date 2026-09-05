@@ -90,6 +90,7 @@ model UserAchievement {
 }
 
 model Game {
+  sessionId String?     @unique(map: "unique_game_session") @map("session_id") @db.Char(36)
   userId   Int         @map("user_id")
   gameMode GameMode    @map("game_mode")
   points   Int         @default(0)
@@ -105,12 +106,10 @@ model Game {
 }
 
 model MapsetTag {
-  mapsetId      Int     @map("mapset_id")
+  mapsetId      Int     @id @map("mapset_id")
   imageFilename String? @map("image_filename") @db.VarChar(255)
   audioFilename String? @map("audio_filename") @db.VarChar(255)
 
-  @@index([mapsetId], map: "idx_mapset_tags_mapset_id")
-  @@ignore
   @@map("mapset_tags")
 }
 

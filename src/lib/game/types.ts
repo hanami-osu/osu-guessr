@@ -1,26 +1,34 @@
-import { GameState } from "@/actions/types";
+import type { GameState } from "@/actions/types";
 
 export interface GameSession {
     id: string;
     state: GameState;
     timer: NodeJS.Timeout | null;
     isActive: boolean;
-    lastActivity: Date;
-    retryCount: number;
 }
 
 export interface GameClientConfig {
     maxRetries: number;
     retryDelay: number;
-    sessionTimeout: number;
-    recoveryMode: "auto" | "manual";
 }
 
 export interface GameClientEvents {
     onStateUpdate: (state: GameState) => void;
     onError?: (error: Error) => void;
-    onRetry?: (attempt: number, maxRetries: number) => void;
-    onRecovery?: () => void;
 }
 
-export type GameClientStatus = "idle" | "starting" | "active" | "paused" | "ended" | "error";
+export interface GameMediaProps {
+    mediaUrl: string;
+    isRevealed: boolean;
+    result?: {
+        correct: boolean;
+        answer?: string;
+        type: "guess" | "timeout" | "skip";
+    };
+    songInfo?: {
+        title?: string;
+        artist?: string;
+        mapper?: string;
+        mapsetId?: number;
+    };
+}

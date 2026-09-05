@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { searchUsersAction } from "@/actions/user-server";
 import { z } from "zod";
-import { validateApiKey } from "@/actions/api-keys-server";
+import { validateApiKey } from "@/lib/api/validate-key";
 import { apiErrorResponse } from "@/lib/api/errors";
 
 const querySchema = z.object({

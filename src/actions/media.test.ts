@@ -13,4 +13,14 @@ describe("getMediaData", () => {
             consoleError.mockRestore();
         }
     });
+
+    test("rejects filenames that escape the media directory", async () => {
+        const consoleError = spyOn(console, "error").mockImplementation(() => {});
+
+        try {
+            await expect(getMediaData(GameMode.Background, "../../public/main_bg.webp")).rejects.toBeInstanceOf(MediaUnavailableError);
+        } finally {
+            consoleError.mockRestore();
+        }
+    });
 });

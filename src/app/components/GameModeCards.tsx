@@ -2,19 +2,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { gameRegistry } from "@/lib/game/registry";
+import { GAME_MODES } from "@/app/games/config";
 
 export default function GameModeCards() {
     const { t } = useTranslationsContext();
-    const gameModes = gameRegistry.getAllModes();
-
     return (
         <section className="py-14 md:py-16 bg-background" id="gamemodes">
             <div className="container mx-auto px-4">
                 <h2 className="mb-8 text-center text-3xl font-bold text-foreground md:mb-10">{t.gameModes.title}</h2>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
-                    {gameModes.map((mode, index) => (
+                    {GAME_MODES.map((mode, index) => (
                         <div key={mode.id} className={`motion-fade-up ${index === 1 ? "motion-delay-1" : index === 2 ? "motion-delay-2" : ""}`}>
                             <Link href={mode.url} className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg">
                                 <div className="interactive-surface relative h-64 overflow-hidden rounded-lg border border-border/60 bg-card group-hover:border-primary/40 sm:h-72 md:h-64 lg:h-72">

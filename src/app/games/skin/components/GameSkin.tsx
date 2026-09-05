@@ -2,20 +2,23 @@
 
 import Image from "next/image";
 import { ResultMessage } from "../../shared/components/Result";
-import { GameMediaProps } from "@/lib/game/interfaces";
+import type { GameMediaProps } from "@/lib/game/types";
+import { useTranslationsContext } from "@/context/translations-provider";
 
 export default function GameSkin({ mediaUrl, isRevealed, result, songInfo }: GameMediaProps) {
+    const { t } = useTranslationsContext();
+
     return (
         <div className="relative bg-card border border-border rounded-lg overflow-hidden">
             <div className="aspect-video">
-                <Image src={mediaUrl || "/placeholder.svg"} alt="Skin screenshot" fill className="object-contain" priority />
+                <Image src={mediaUrl || "/placeholder.svg"} alt={t.game.media.skinAlt} fill className="object-contain" priority />
             </div>
 
             {isRevealed && result && songInfo && (
                 <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
                     <ResultMessage result={result} />
                     <div className="space-y-2">
-                        <p className="text-xl font-semibold">Skin Name: {songInfo.title}</p>
+                        <p className="text-xl font-semibold">{t.game.media.skinName.replace("{name}", songInfo.title || t.game.media.unknown)}</p>
                         {songInfo.mapsetId && (
                             <a
                                 href={`https://skins.osuck.net/skins/${songInfo.mapsetId}`}
@@ -23,7 +26,7 @@ export default function GameSkin({ mediaUrl, isRevealed, result, songInfo }: Gam
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                View Skin
+                                {t.game.media.viewSkin}
                             </a>
                         )}
                     </div>

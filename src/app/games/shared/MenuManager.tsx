@@ -1,27 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { GameVariant } from "../config";
+import { GameMode, type GameVariant } from "@/actions/types";
+import GameAudio from "../audio/components/GameAudio";
+import GameImage from "../background/components/GameImage";
+import GameSkin from "../skin/components/GameSkin";
+import PreGameMenu from "./pages/PreGameMenu";
+import GameScreen from "./pages/GameScreen";
 
-interface MenuManagerProps {
-    PreGameMenu: React.ComponentType<{ onStart: (variant: GameVariant) => void }>;
-    GameScreen: React.ComponentType<{ onExit: () => void; variant: GameVariant }>;
-}
+const GAME_MEDIA = {
+    [GameMode.Audio]: GameAudio,
+    [GameMode.Background]: GameImage,
+    [GameMode.Skin]: GameSkin,
+};
 
-export default function MenuManager({ PreGameMenu, GameScreen }: MenuManagerProps) {
-    const [isGameStarted, setIsGameStarted] = useState(false);
-    const [selectedVariant, setSelectedVariant] = useState<GameVariant>("classic");
+export default function MenuManager({ gameMode }: { gameMode: GameMode }) {
+    const [selectedVariant, setSelectedVariant] = useState<GameVariant | null>(null);
 
-    if (!isGameStarted) {
-        return (
-            <PreGameMenu
-                onStart={(variant) => {
-                    setSelectedVariant(variant);
-                    setIsGameStarted(true);
-                }}
-            />
-        );
+    if (!selectedVariant) {
+        return <PreGameMenu onStart={setSelectedVariant} gameMode={gameMode} />;
     }
 
-    return <GameScreen onExit={() => setIsGameStarted(false)} variant={selectedVariant} />;
+    return <GameScreen onExit={() => setSelectedVariant(null)} gameVariant={selectedVariant} gameMode={gameMode} GameMedia={GAME_MEDIA[gameMode]} />;
 }

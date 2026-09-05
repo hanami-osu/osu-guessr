@@ -5,7 +5,7 @@ export enum GameMode {
 }
 export type GameVariant = "classic" | "death";
 export type ReportType = "incorrect_title" | "inappropriate_content" | "wrong_audio" | "wrong_background" | "other";
-export type ReportStatus = "pending" | "investigating" | "resolved" | "rejected";
+type ReportStatus = "pending" | "investigating" | "resolved" | "rejected";
 
 export interface ApiKey {
     id: string;
@@ -38,7 +38,7 @@ export interface SkinData {
     updated_at: Date;
 }
 
-export type GuessResult = {
+type GuessResult = {
     correct: boolean;
     answer: string;
     type: "guess" | "timeout" | "skip";
@@ -125,12 +125,13 @@ export interface Game {
     ended_at: Date;
 }
 
-export interface TopPlayer extends User {
+export interface TopPlayer extends Omit<User, "badges"> {
+    badges: Array<Pick<UserBadge, "name" | "color">>;
     total_score: bigint;
     games_played: number;
     highest_streak: number;
     highest_score: number;
-    variant: GameVariant;
+    earliest_ended_at: Date;
 }
 
 export interface HighestStats {
@@ -175,6 +176,7 @@ export interface DatabaseGameSession {
     correct_guesses: number;
     total_time_used: number;
     is_active: boolean;
+    end_pending?: boolean;
     variant: GameVariant;
     // Joined fields from mapset_data/mapset_tags or skins table
     title: string;

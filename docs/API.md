@@ -104,6 +104,7 @@ Query parameters:
     data: Array<{
         user_id: number;
         game_mode: "background" | "audio" | "skin";
+        variant: "classic" | "death";
         total_score: number;
         games_played: number;
         highest_streak: number;
@@ -113,7 +114,7 @@ Query parameters:
 }
 ```
 
-This route currently returns one array entry per stored user-achievement row. The current query does not include a `variant` field.
+This route returns one array entry per stored user-achievement row. Without `variant`, it returns both variants.
 
 ### Search users
 

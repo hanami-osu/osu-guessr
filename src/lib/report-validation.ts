@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const reportTypeSchema = z.enum(["incorrect_title", "inappropriate_content", "wrong_audio", "wrong_background", "other"]);
-export const reportStatusSchema = z.enum(["pending", "investigating", "resolved", "rejected"]);
+const reportTypeSchema = z.enum(["incorrect_title", "inappropriate_content", "wrong_audio", "wrong_background", "other"]);
+const reportStatusSchema = z.enum(["pending", "investigating", "resolved", "rejected"]);
 
 export const reportSchema = z.object({
     mapsetId: z.number().int().positive(),

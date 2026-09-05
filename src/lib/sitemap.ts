@@ -19,7 +19,7 @@ export const PUBLIC_SITEMAP_ROUTES: SitemapRoute[] = [
     { path: "/tos", changeFrequency: "yearly", priority: 0.2 },
 ];
 
-export function escapeSitemapXml(value: string): string {
+function escapeSitemapXml(value: string): string {
     return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
