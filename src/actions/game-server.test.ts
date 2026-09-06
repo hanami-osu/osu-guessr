@@ -145,6 +145,20 @@ describe("game server lifecycle", () => {
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
     });
 
+    test("allows advancing after a null guess skips the round", async () => {
+        putSession(makeSession());
+
+        const skipped = await submitGuessAction(sessionId, null);
+
+        expect(skipped.currentBeatmap.revealed).toBe(true);
+        expect(skipped.lastGuess?.type).toBe("skip");
+        expect(JSON.parse(redisValues.get(`game_session:${sessionId}`)!).has_guessed_current_round).toBe(true);
+
+        const next = await submitGuessAction(sessionId);
+        expect(next.rounds.current).toBe(2);
+        expect(next.currentBeatmap.revealed).toBe(false);
+    });
+
     test("charges recovered timer time once after answering", async () => {
         setSystemTime(new Date("2026-01-01T00:00:05.000Z"));
         putSession(

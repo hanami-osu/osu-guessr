@@ -28,7 +28,7 @@ const gameSchema = z.object({
         .max(200)
         .optional()
         .nullable()
-        .transform((g) => g?.trim()),
+        .transform((g) => (typeof g === "string" ? g.trim() : g)),
 });
 const gameModeSchema = z.nativeEnum(GameMode);
 const gameVariantSchema = z.enum(["classic", "death"]);
