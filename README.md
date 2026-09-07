@@ -20,7 +20,7 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
 - [Bun](https://bun.sh/) 1.3 or newer
 - MariaDB or MySQL
 - Redis
-- An osu! OAuth application and legacy API key
+- A public Hanami OIDC client and legacy osu! API key
 
 ## Local development
 
@@ -43,8 +43,8 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
     ```env
     PORT=3000
 
-    OSU_CLIENT_ID="your_client_id"
-    OSU_CLIENT_SECRET="your_client_secret"
+    HANAMI_ISSUER="https://hanami.yorunoken.com/api/auth"
+    HANAMI_CLIENT_ID="your_public_client_id"
     OSU_API_KEY="your_api_key"
 
     NEXTAUTH_URL="http://localhost:3000"
@@ -56,7 +56,7 @@ osu!guessr is a browser guessing game for identifying osu! beatmaps from backgro
     REDIS_URL="redis://127.0.0.1:6379"
     ```
 
-    Register an osu! OAuth application at [osu! account settings](https://osu.ppy.sh/home/account/edit#oauth). Generate independent secrets for `AUTH_SECRET` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`; do not reuse the placeholders in production.
+    Configure the public OIDC client in Hanami with the local callback URL `http://localhost:3000/api/auth/callback/hanami` for development and the production callback URL `https://your-domain.com/api/auth/callback/hanami` for deployment. Generate independent secrets for `AUTH_SECRET` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`; do not reuse the placeholders in production.
 
     `DISCORD_WEBHOOK` is optional. Reports are stored even when it is unset; the variable only enables Discord notifications.
 
@@ -113,7 +113,7 @@ bun run build
 
 ## License
 
-Copyright © 2026 Muhammed Fatih and hanami-osu contributors.
+Copyright © 2026 yorunoken and hanami-osu contributors.
 
 This project is licensed under the GNU Affero General Public License version 3 only (`AGPL-3.0-only`). See [LICENSE](./LICENSE) and [LICENSING.md](./LICENSING.md) for the full terms, third-party material, contribution licensing, and branding policy.
 

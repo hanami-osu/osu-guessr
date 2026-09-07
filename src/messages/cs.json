@@ -8,7 +8,7 @@
             "title": "{osu_guessr}",
             "subtitle": "Hádejte písně z {osu_base} podle pozadí nebo zvuku a skiny podle snímků obrazovky.",
             "startPlaying": "Začít hru",
-            "signIn": "Přihlásit se přes {osu_base}",
+            "signIn": "Přihlásit se přes Hanami",
             "learnMore": "Zjistit více",
             "artCredit": "Dílo od {artist_name}",
             "developerCredit": "Vytvořil/a yorunoken",
@@ -505,7 +505,7 @@
                 "leaderboard": "Žebříček",
                 "about": "O {osu_guessr}",
                 "settings": "Nastavení",
-                "signIn": "Přihlásit se",
+                "signIn": "Přihlásit se přes Hanami",
                 "signOut": "Odhlásit se",
                 "viewProfile": "Zobrazit profil"
             }
@@ -561,7 +561,7 @@
         "auth": {
             "required": {
                 "title": "Nutné přihlášení",
-                "description": "Pro hraní {osu_guessr} se přihlaste účtem {osu_base}.",
+                "description": "Pro hraní {osu_guessr} se přihlaste přes Hanami.",
                 "noAccount": "Nemáte {osu_base} účet? Vytvořte si ho zde"
             }
         }
@@ -621,7 +621,7 @@
                 "title": "Third-Party Services",
                 "description": "We use the following third-party services:",
                 "items": {
-                    "osu": "osu! API for authentication and beatmap data",
+                    "osu": "Hanami zajišťuje ověřování; osu! API používáme pro data o beatmapách",
                     "analytics": "Analytics services to improve user experience",
                     "cdn": "Content delivery networks for improved performance"
                 }

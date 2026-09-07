@@ -8,7 +8,7 @@
             "title": "{osu_guessr}",
             "subtitle": "{osu_base} şarkılarını arka planlardan veya seslerden, skinleri ekran görüntülerinden tahmin et.",
             "startPlaying": "Oynamaya Başla",
-            "signIn": "{osu_base} ile Giriş Yap",
+            "signIn": "Hanami ile Giriş Yap",
             "learnMore": "Daha Fazla Bilgi",
             "artCredit": "Sanatçı: {artist_name}",
             "developerCredit": "Created by yorunoken",
@@ -505,7 +505,7 @@
                 "leaderboard": "Sıralama",
                 "about": "Hakkında",
                 "settings": "Ayarlar",
-                "signIn": "Giriş Yap",
+                "signIn": "Hanami ile Giriş Yap",
                 "signOut": "Çıkış Yap",
                 "viewProfile": "Profili Görüntüle"
             }
@@ -561,7 +561,7 @@
         "auth": {
             "required": {
                 "title": "Giriş Yapmanız Gerekiyor",
-                "description": "{osu_guessr} oynamak için {osu_base} hesabınla giriş yap.",
+                "description": "{osu_guessr} oynamak için Hanami ile giriş yap.",
                 "noAccount": "Bir {osu_base} hesabınız yok mu? Buradan oluşturun"
             }
         }
@@ -621,7 +621,7 @@
                 "title": "Third-Party Services",
                 "description": "We use the following third-party services:",
                 "items": {
-                    "osu": "osu! API for authentication and beatmap data",
+                    "osu": "Kimlik doğrulamayı Hanami yönetir; osu! API beatmap verileri için kullanılır",
                     "analytics": "Analytics services to improve user experience",
                     "cdn": "Content delivery networks for improved performance"
                 }

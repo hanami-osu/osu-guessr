@@ -106,7 +106,7 @@ export default function Header() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <Button onClick={() => signIn("osu")} className="px-2 text-xs sm:px-4 sm:text-sm">
+                        <Button onClick={() => signIn("hanami")} className="px-2 text-xs sm:px-4 sm:text-sm">
                             {t.components.header.nav.signIn}
                         </Button>
                     )}

@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
+import { HanamiProvider, parseHanamiProfile } from "@/lib/hanami-auth";
 import { upsertUser } from "@/lib/user-service";
 import NextAuth, { DefaultSession } from "next-auth";
-import OsuProvider from "next-auth/providers/osu";
 
 declare module "next-auth" {
     interface Session {
@@ -15,25 +15,34 @@ export const { auth, handlers } = NextAuth({
     callbacks: {
         jwt: async ({ token, profile }) => {
             if (profile) {
-                token.banchoId = profile.id;
+                const user = parseHanamiProfile(profile);
 
-                await upsertUser(token.banchoId as number, profile.username as string, profile.avatar_url as string);
+                await upsertUser(user.banchoId, user.username, user.avatarUrl);
+
+                return {
+                    banchoId: user.banchoId,
+                    name: user.username,
+                    picture: user.avatarUrl,
+                };
             }
-            return token;
+
+            const sanitizedToken: { banchoId?: number; name?: string; picture?: string } = {};
+            if (typeof token.banchoId === "number") sanitizedToken.banchoId = token.banchoId;
+            if (typeof token.name === "string") sanitizedToken.name = token.name;
+            if (typeof token.picture === "string") sanitizedToken.picture = token.picture;
+            return sanitizedToken;
         },
         session: ({ session, token }) => ({
             ...session,
             user: {
-                ...session.user,
-                banchoId: token.banchoId,
+                banchoId: token.banchoId as number,
+                name: typeof token.name === "string" ? token.name : null,
+                image: typeof token.picture === "string" ? token.picture : null,
             },
         }),
     },
     providers: [
-        OsuProvider({
-            clientId: env.OSU_CLIENT_ID,
-            clientSecret: env.OSU_CLIENT_SECRET,
-        }),
+        HanamiProvider({ issuer: env.HANAMI_ISSUER, clientId: env.HANAMI_CLIENT_ID }),
     ],
     trustHost: true,
 });
