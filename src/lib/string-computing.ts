@@ -91,7 +91,6 @@ function longestCommonSubstring(wordA: string, wordB: string, buf: number[]): Su
     let m = [...wordA].length;
     let n = [...wordB].length;
 
-    // Ensure wordB is the longer word with length n
     if (m > n) {
         [wordA, wordB] = [wordB, wordA];
         [m, n] = [n, m];
@@ -125,7 +124,6 @@ function longestCommonSubstring(wordA: string, wordB: string, buf: number[]): Su
 
     const [finalStartA, finalStartB] = swapped ? [startB, m - endA - 1] : [m - endA - 1, startB];
 
-    // Reset the buffer
     for (let i = 0; i < n; i++) {
         buf[i] = 0;
     }

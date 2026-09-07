@@ -123,7 +123,7 @@ export default function BeatmapsAdmin() {
                 <div className="text-sm text-muted-foreground break-words lg:text-right">{output}</div>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card p-4 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-col gap-3 border-y border-border/60 py-4 sm:flex-row sm:flex-wrap sm:items-center">
                 <Input className="sm:max-w-xs" placeholder="Search artist or title" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <Button size="sm" onClick={() => fetchMapsets(1, search)}>
                     Search
@@ -138,7 +138,7 @@ export default function BeatmapsAdmin() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {mapsets.map((m) => (
-                    <div key={m.mapset_id} className="bg-card rounded-lg border border-border/60 p-4 flex flex-col">
+                    <div key={m.mapset_id} className="border-t border-border/60 py-4 flex flex-col">
                         <div className="flex items-start gap-4">
                             <div>
                                 <input type="checkbox" checked={!!selected[m.mapset_id]} onChange={() => handleToggle(m.mapset_id)} />
@@ -157,7 +157,7 @@ export default function BeatmapsAdmin() {
                             <div className="flex-1 min-w-0">
                                 <div className="font-semibold">{m.title}</div>
                                 <div className="text-sm text-muted-foreground">
-                                    {m.artist} — {m.mapper}
+                                    {m.artist} / {m.mapper}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">ID: {m.mapset_id}</div>
                             </div>

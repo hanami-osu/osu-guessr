@@ -155,7 +155,7 @@ export default function GuessInput({ guess, setGuess, isRevealed, isBusy, onGues
     };
 
     return (
-        <div className="motion-fade-up bg-card p-6 rounded-xl border border-border/50">
+        <div className="motion-fade-up py-2">
             <h2 className="text-xl font-semibold mb-4">{t.game.input.title}</h2>
             <div className="relative">
                 <input

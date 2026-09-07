@@ -31,7 +31,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
     const { t } = useTranslationsContext();
 
     return (
-        <section className="border-y border-border/40 bg-secondary/20 py-12">
+        <section className="border-y border-border/40 py-12">
             <div className="container mx-auto px-4">
                 <h2 className="text-2xl font-bold mb-6 text-center">{t.home.statistics.title}</h2>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
@@ -76,8 +76,8 @@ export function HomeAnnouncementsSection({ latestAnnouncement, announcementsHist
                 <h2 className="text-2xl font-bold mb-6 text-center">{t.home.announcements.title}</h2>
 
                 <div className="mx-auto max-w-2xl">
-                    <Link href="/announcements" className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg">
-                        <div className="interactive-surface rounded-lg border border-border/70 bg-card p-4 shadow-sm group-hover:border-primary/40 sm:p-5">
+                    <Link href="/announcements" className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+                        <div className="border-t border-border/60 py-5">
                             <div className="flex items-center gap-2 mb-3">
                                 <div className="soft-loading-dot w-2 h-2 bg-primary rounded-full"></div>
                                 <span className="text-sm font-medium text-primary">{t.home.announcements.latestLabel}</span>
@@ -87,7 +87,7 @@ export function HomeAnnouncementsSection({ latestAnnouncement, announcementsHist
                             <div className="whitespace-pre-wrap text-foreground">{latestAnnouncement.content}</div>
                         </div>
                         {announcementsHistory && announcementsHistory.length > 1 && (
-                            <div className="motion-scale-in mt-4 rounded-lg border border-border/50 bg-muted/50 p-4">
+                            <div className="motion-scale-in mt-4 border-t border-border/50 pt-4">
                                 <div className="text-sm text-muted-foreground">
                                     <strong>{t.home.announcements.previous}</strong>
                                     <ul className="mt-2 space-y-1">

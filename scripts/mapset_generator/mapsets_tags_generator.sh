@@ -37,20 +37,16 @@ while IFS= read -r line; do
         mapset_temp_dir="$TEMP_DIR/$mapset_id"
         mkdir -p "$mapset_temp_dir"
 
-        # Audio processing
-
         echo "  Downloading beatmap..."
         # wget -q "https://api.nerinyan.moe/d/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
         wget -q "https://beatconnect.io/b/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
 
-        # Check if download was successful
         if [ ! -f "$mapset_temp_dir/$mapset_id.osz" ]; then
             echo "  Failed to download .osz file"
             rm -rf "$mapset_temp_dir"
             continue
         fi
 
-        # Check file size
         filesize=$(stat -f%z "$mapset_temp_dir/$mapset_id.osz" 2>/dev/null || stat -c%s "$mapset_temp_dir/$mapset_id.osz")
         if [ "$filesize" -eq 0 ]; then
             echo "  Downloaded file is empty"

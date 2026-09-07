@@ -1,10 +1,6 @@
 # Translating osu!guessr
 
-Thank you for your interest in translating osu!guessr! This guide will help you get started with contributing translations.
-
-## Overview
-
-osu!guessr uses JSON-based translation files located in `src/messages/`. Each language has its own file (e.g., `en.json` for English, `tr.json` for Turkish).
+Translations live in `src/messages/`, with one JSON file per language (e.g., `en.json` for English).
 
 ## Adding a New Language
 
@@ -18,17 +14,12 @@ osu!guessr uses JSON-based translation files located in `src/messages/`. Each la
 
 ## Translation Guidelines
 
-1. **Keep Variables**: Maintain all variables in curly braces, such as:
+1. **Keep Variables**: Preserve variables in curly braces:
    - `{osu_base}` → remains as is
    - `{count}` → remains as is
    - `{points}` → remains as is
 
-2. **Placeholders**: Keep the same placeholder format:
-   ```json
-   "welcome": "Welcome, {username}!"
-   ```
-
-3. **Maintain Structure**: Keep the same JSON structure and keys as the English version
+2. **Wording**: Use direct descriptions and instructions. Avoid slogans and filler.
 
 ## Testing Your Translation
 
@@ -50,7 +41,7 @@ osu!guessr uses JSON-based translation files located in `src/messages/`. Each la
    - The language you're adding
    - Any notes about regional variations
    - Your osu! username (optional, for credits)
-   - Don't forget to label it as a translation
+   - A translation label
 
 ## Translation Status
 
@@ -62,9 +53,8 @@ Currently supported languages:
 - Polish (pl)
 - Russian (ru)
 
-## Need Help?
+## Help
 
-If you need any help or clarification:
 1. Open an issue with the "translation" label
 2. Contact the maintainers on Discord
 3. Check existing translations for examples

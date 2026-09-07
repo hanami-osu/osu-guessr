@@ -158,7 +158,6 @@ export interface Announcement {
     created_at: string;
 }
 
-// Database types for game sessions
 export interface DatabaseGameSession {
     id: string;
     user_id: number;

@@ -1,12 +1,12 @@
 {
     "metadata": {
         "title": "osu! guessr",
-        "description": "{osu_base} bilgini test et!"
+        "description": "{osu_base} şarkılarını arka planlardan veya seslerden, skinleri ekran görüntülerinden tahmin et."
     },
     "home": {
         "hero": {
-            "title": "{osu_guessr}'a Hoş Geldin",
-            "subtitle": "Bu nihai tahmin oyununda {osu_base} hafızanı test et, gizli hazineleri keşfet ve küresel sıralamalarda yüksel",
+            "title": "{osu_guessr}",
+            "subtitle": "{osu_base} şarkılarını arka planlardan veya seslerden, skinleri ekran görüntülerinden tahmin et.",
             "startPlaying": "Oynamaya Başla",
             "signIn": "{osu_base} ile Giriş Yap",
             "learnMore": "Daha Fazla Bilgi",
@@ -31,7 +31,7 @@
         },
         "supporters": {
             "title": "Destekçiler",
-            "beFirst": "{osu_guessr}'ı destekleyen ilk kişi ol!"
+            "beFirst": "Henüz destekçi yok."
         },
         "updates": {
             "title": "Son Güncellemeler"
@@ -52,39 +52,27 @@
         "delete": "Sil",
         "create": "Oluştur",
         "save": "Kaydet",
-        "support": "Support",
-        "sessionLoading": {
-            "title": "Loading {osu_guessr}",
-            "description": "Preparing your session...",
-            "funFact": "Did you know? I didn't either!"
-        }
+        "support": "Support"
     },
     "about": {
         "title": "{osu_guessr} Hakkında",
         "whatIs": {
             "title": "{osu_guessr} Nedir?",
-            "description1": "{osu_guessr}, {osu_base} oyuncularının geniş beatmap kütüphanesi bilgisini test eden eğlenceli bir bilgi yarışması oyunudur. İster gündelik bir oyuncu olun, ister hardcore bir mapper, bu oyun yeni şarkılar keşfetmenin ve topluluğun çeşitli müzik koleksiyonuna olan aşinalığınızı göstermenin eğlenceli bir yolunu sunar.",
-            "description2": "Arkadaşlarınla yarış, lider tablolarında yüksel ve belki de yolda yeni favori beatmapler keşfet!"
+            "description1": "{osu_guessr}, {osu_base} şarkılarını ve skinlerini tahmin ettiğin bir tarayıcı oyunudur."
         },
         "gameModes": {
             "title": "Oyun Modları",
             "background": {
                 "title": "Arkaplan Tahmin",
-                "description": "Şarkıları beatmap arkaplanlarından tanıma yeteneğini test et. Anime ekran görüntülerinden soyut sanata, bu ikonik görselleri ne kadar iyi tanıyorsun?"
+                "description": "Şarkıyı beatmap arka planından tahmin et."
             },
             "audio": {
                 "title": "Ses Tahmin",
-                "description": "Müzik bilgini test et! Beatmaplerden kısa klipleri dinle ve süre bitmeden şarkıyı tahmin etmeye çalış."
+                "description": "Şarkıyı ses kaydından tahmin et."
             },
             "skin": {
                 "title": "Skin Tahmin",
-                "comingSoon": "Çok Yakında",
-                "description": "{osu_base} skinlerini iyi bildiğini mi düşünüyorsun? Oyun içi ekran görüntülerinden ve menü öğelerinden popüler skinleri tanıma konusunda kendini test et."
-            },
-            "more": {
-                "title": "Daha Fazla Mod",
-                "planned": "Planlanıyor",
-                "description": "Sizin için heyecan verici yeni oyun modları üzerinde çalışıyoruz. Takipte kalın!"
+                "description": "{osu_base} skinini ekran görüntüsünden tahmin et."
             }
         },
         "howToPlay": {
@@ -92,15 +80,15 @@
             "steps": {
                 "1": {
                     "title": "Modunu Seç",
-                    "description": "Tercihine göre mevcut oyun modlarından seç - arkaplanlar, ses klipleri veya skinler."
+                    "description": "Arka plan, ses veya skin modunu seç."
                 },
                 "2": {
                     "title": "Tahmin Etmeye Başla",
-                    "description": "Her turda doğru şarkıyı belirlemek için {seconds} saniyen olacak. Tahminini yaz veya otomatik tamamlama önerilerini kullan."
+                    "description": "Her turda {seconds} saniyen var. Cevabını yaz veya önerilerden birini seç."
                 },
                 "3": {
                     "title": "Puan Kazan",
-                    "description": "Doğruluk ve hıza göre puan kazan. Bonus puanlar için seri yap ve yüksek skorlar için yarış!"
+                    "description": "Doğru cevaplar puan kazandırır. Hızlı cevaplar ve seriler ek puan verir."
                 }
             }
         },
@@ -121,30 +109,30 @@
             "title": "Özellikler",
             "leaderboards": {
                 "title": "Sıralama Tabloları",
-                "description": "Diğer oyuncularla küresel olarak yarış. Her oyun modu için ayrı sıralama tabloları uzmanlığınızı göstermenize olanak tanır!"
+                "description": "Oyun moduna göre puanları ve serileri karşılaştır."
             },
             "autoComplete": {
                 "title": "Otomatik Tamamlama",
-                "description": "Akıllı öneri sistemi, mükemmel yazım gerektirmeden doğru şarkı başlığını bulmanıza yardımcı olur."
+                "description": "Yazarken şarkı önerileri gösterilir."
             },
             "profiles": {
                 "title": "Oyuncu Profilleri",
-                "description": "İlerlemenizi takip edin, istatistiklerinizi görüntüleyin ve farklı oyun modlarındaki sıralamanızı görün."
+                "description": "Oyun moduna göre istatistiklerini ve sıralamanı gör."
             },
             "api": {
                 "title": "API Erişimi",
-                "description": "Geliştiriciler kendi araçlarını ve uygulamalarını oluşturmak için API'miz ile entegre olabilir."
+                "description": "API üzerinden oyuncu istatistiklerine, oyun geçmişine ve sıralamalara eriş."
             }
         },
         "documentation": {
             "title": "Dokümantasyon",
             "api": {
                 "title": "API Dokümantasyonu",
-                "description": "{osu_guessr} ile entegre olmak mı istiyorsunuz? Kapsamlı API dokümantasyonumuz başlamanız için ihtiyacınız olan her şeye sahip."
+                "description": "Uç noktalar, kimlik doğrulama ve istek sınırları."
             },
             "technical": {
                 "title": "Teknik Detaylar",
-                "description": "Oyunun perde arkasında nasıl çalıştığıyla mı ilgileniyorsunuz? Detaylı teknik dokümantasyonumuza göz atın."
+                "description": "Gereksinimler, kurulum ve dağıtım."
             }
         },
         "credits": {
@@ -167,7 +155,7 @@
                 "title": "Özel Teşekkürler",
                 "items": {
                     "peppy": "• Dean Herbert (peppy) ve {osu_base} ekibi",
-                    "community": "• Harika osu! topluluğu",
+                    "community": "• osu! topluluğu",
                     "creators": "• Tüm beatmap yaratıcıları ve skin tasarımcıları"
                 }
             }
@@ -182,7 +170,6 @@
             },
             "contribute": {
                 "title": "Katkıda Bulun",
-                "description": "Bir hata mı buldunuz? Bir öneriniz mi var? Katkıda bulunmak mı istiyorsunuz? GitHub deposumuzu ziyaret edin:",
                 "items": {
                     "bugs": "• Hata raporları ve özellik istekleri gönderin",
                     "code": "• Kod tabanına katkıda bulunun",
@@ -196,15 +183,15 @@
         "modes": {
             "background": {
                 "title": "Arkaplan Tahmin",
-                "description": "Beatmap arkaplan görselinden şarkıyı tahmin et"
+                "description": "Şarkıyı beatmap arka planından tahmin et."
             },
             "audio": {
                 "title": "Ses Tahmin",
-                "description": "Kısa ses klibinden şarkıyı tanı"
+                "description": "Şarkıyı ses kaydından tahmin et."
             },
             "skin": {
                 "title": "Skin Tahmin",
-                "description": "Arayüz öğelerinden popüler {osu_base} skinleri tanı"
+                "description": "{osu_base} skinini ekran görüntüsünden tahmin et."
             }
         }
     },
@@ -216,9 +203,9 @@
                 "skin": "Skin Guessr"
             },
             "description": {
-                "audio": "osu! şarkılarından kısa klipler duyacaksınız",
-                "background": "osu! beatmap arkaplanlarını göreceksiniz",
-                "skin": "You'll see screenshots of popular osu! skins"
+                "audio": "Şarkıyı ses kaydından tahmin et.",
+                "background": "Şarkıyı beatmap arka planından tahmin et.",
+                "skin": "{osu_base} skinini ekran görüntüsünden tahmin et."
             },
             "howToPlay": {
                 "title": "Nasıl Oynanır",
@@ -230,8 +217,7 @@
                 },
                 "death": {
                     "continuous": "Hata yapana kadar oynamaya devam et",
-                    "time": "Her turda şarkı başlığını {seconds} saniye içinde tahmin etmeye çalış",
-                    "streak": "Mümkün olan en uzun seriyi yap"
+                    "time": "Her turda şarkı başlığını {seconds} saniye içinde tahmin etmeye çalış"
                 }
             },
             "scoring": {
@@ -245,22 +231,22 @@
                 "death": {
                     "streakOnly": "Sadece seri sayınız önemli",
                     "noPoints": "Bu modda puanlar kaydedilmez",
-                    "compete": "Sıralama tablosunda en uzun seri için yarışın"
+                    "compete": "Sıralamada en uzun serin kullanılır"
                 }
             },
             "modes": {
                 "classic": {
                     "title": "Klasik Mod",
-                    "description": "10 tur, yapabildiğin kadar çok puan kazan"
+                    "description": "10 tur"
                 },
                 "death": {
                     "title": "Ölüm Modu",
-                    "description": "Sadece bir canın var, değerini bil!"
+                    "description": "Tek can"
                 }
             },
             "warning": {
-                "title": "Önemli Not",
-                "description": "Skorunuz sadece tüm {rounds} turu tamamlarsanız sayılacak. Oyundan erken ayrılmak ilerlemenizi kaybetmenize neden olur!"
+                "title": "Skor kaydı",
+                "description": "Skorunu kaydetmek için {rounds} turun tamamını bitir. Erken çıkarsan ilerlemen kaybolur."
             },
             "actions": {
                 "startGame": "Oyunu Başlat",
@@ -279,11 +265,11 @@
         "modes": {
             "classic": {
                 "title": "Klasik Mod",
-                "description": "10 tur, yapabildiğin kadar çok puan kazan"
+                "description": "10 tur"
             },
             "death": {
                 "title": "Ölüm Modu",
-                "description": "Sadece bir canın var, değerini bil!"
+                "description": "Tek can"
             }
         },
         "header": {
@@ -314,7 +300,7 @@
             "death": {
                 "title": {
                     "died": "Oyun Bitti!",
-                    "completed": "Muhteşem Bir Oyun!"
+                    "completed": "Oyun Tamamlandı"
                 },
                 "maxStreak": "Maksimum Seri",
                 "totalCorrect": "Toplam Doğru",
@@ -338,7 +324,7 @@
             "viewResults": "Sonuçları Görüntüle"
         },
         "shortcuts": {
-            "title": "Some shortcuts you should know:",
+            "title": "Klavye kısayolları",
             "items": {
                 "tab": "Tab - Cycle through suggestions",
                 "enter": "Enter - Submit guess / Next round / Select the highlighted suggestion",
@@ -347,22 +333,8 @@
                 "esc": "Esc - Close suggestions"
             }
         },
-        "comingSoon": {
-            "title": "{mode} Guessr",
-            "subtitle": "Coming Soon!",
-            "description": "We're working hard to bring you the {mode} guessing game mode. Stay tuned for updates!",
-            "whatToExpect": "What to expect:",
-            "expectations": {
-                "audio": "Test your music knowledge by identifying osu! songs from short audio clips. How many can you recognize?",
-                "skin": "Challenge yourself to recognize popular osu! skins from gameplay screenshots. Perfect for skin enthusiasts!"
-            },
-            "actions": {
-                "backToHome": "Back to Home",
-                "tryBackground": "Try Background Guessr"
-            }
-        },
         "audio": {
-            "instructions": "Listen to the audio and try to guess the song title!",
+            "instructions": "Dinle ve şarkının adını tahmin et.",
             "browserNotSupported": "Your browser does not support the audio element."
         }
     },
@@ -419,7 +391,6 @@
         },
         "notFound": {
             "title": "Kullanıcı Bulunamadı",
-            "description": "Üzgünüz, aradığınız kullanıcıyı bulamadık.",
             "subDescription": "Kullanıcı mevcut olmayabilir veya henüz {osu_guessr}'a kayıt olmamış olabilir.",
             "actions": {
                 "home": "Ana Sayfaya Dön",
@@ -442,12 +413,12 @@
             "title": "API Anahtarları",
             "usage": "{count}/5 anahtar kullanılıyor",
             "security": {
-                "title": "Önemli Güvenlik Bilgileri",
+                "title": "API anahtarı güvenliği",
                 "points": {
                     "1": "API anahtarlarınızı güvende tutun ve asla herkese açık olarak paylaşmayın",
                     "2": "Bir anahtar açığa çıkarsa, hemen silin ve yenisini oluşturun",
                     "3": "Her anahtar, hesabınızın API özelliklerine tam erişime sahiptir",
-                    "4": "API keys are stored securely and cannot be retrieved after creation"
+                    "4": "API anahtarları oluşturulduktan sonra tekrar görüntülenemez"
                 }
             },
             "actions": {
@@ -460,24 +431,24 @@
             "dialog": {
                 "create": {
                     "title": "Yeni API Anahtarı Oluştur",
-                    "description": "Yeni API anahtarınız için bir isim girin. Bu, daha sonra tanımlamanıza yardımcı olacaktır.",
+                    "description": "Anahtarı daha sonra tanıyabilmek için adlandır.",
                     "placeholder": "Anahtar adı",
                     "warning": {
                         "title": "Important",
-                        "description": "You will only see the API key once after creation. Make sure to copy it immediately as it cannot be recovered later."
+                        "description": "Oluşturduktan sonra anahtarı kopyala. Daha sonra tekrar görüntülenemez."
                     }
                 },
                 "delete": {
                     "title": "API Anahtarını Sil",
                     "description": "\"{name}\" API anahtarını silmek istediğinizden emin misiniz?",
-                    "warning": "Bu işlem geri alınamaz ve bu anahtarı kullanan tüm hizmetlerin erişimini anında iptal edecektir.",
-                    "confirm": "Yes, delete this key"
+                    "warning": "Silme işlemi kalıcıdır ve bu anahtarı kullanan hizmetlerin erişimini anında keser.",
+                    "confirm": "Delete Key"
                 },
                 "created": {
-                    "title": "API Key Created Successfully",
+                    "title": "API Key Created",
                     "warning": {
                         "title": "Copy Your API Key Now",
-                        "description": "This is your only chance to copy this API key. For security reasons, it will never be displayed again."
+                        "description": "Kapatmadan önce anahtarı kopyala. Tekrar gösterilmeyecek."
                     },
                     "copied": "API key copied to clipboard"
                 }
@@ -499,38 +470,34 @@
     },
     "support": {
         "title": "{osu_guessr}'ı Destekle",
-        "description": "Eğer {osu_guessr}'ı kullanmaktan keyif alıyorsanız ve gelişimine destek olmak istiyorsanız, bağış yapmayı düşünebilirsiniz. Desteğiniz sunucuların çalışmasını sürdürmemize ve yeni özellikler eklememize yardımcı oluyor! Ana sayfada gösterilmek üzere bağışınızla birlikte adınızı bırakabilirsiniz.",
+        "description": "Bağışlar, {osu_guessr} geliştirme ve sunucu giderlerini karşılar.",
         "benefits": {
             "title": "Supporter Benefits",
             "items": {
-                "badge": "Exclusive supporter badge on your profile",
-                "homepage": "Get featured on the homepage"
+                "badge": "Profilinde destekçi rozeti",
+                "homepage": "Ana sayfada adın"
             }
         },
         "donate": {
             "title": "Become a Supporter",
             "button": "Buy me a Coffee",
-            "description": "Support {osu_guessr} with a one-time donation through Buy Me a Coffee. Any donation amount will grant you supporter status permanently!",
-            "reminder": "Please include your osu!guessr username or user ID in your donation message to receive supporter benefits!"
+            "description": "Buy Me a Coffee üzerinden tek seferlik herhangi bir bağış, {osu_guessr} üzerinde kalıcı destekçi statüsü sağlar.",
+            "reminder": "Destekçi avantajlarını almak için bağış mesajına osu!guessr kullanıcı adını veya kullanıcı ID'ni ekle."
         }
     },
     "components": {
         "ads": {
             "twitter": {
-                "title": "Follow on Twitter",
-                "message": "Stay updated with the latest {osu_guessr} news!"
+                "title": "Follow on Twitter"
             },
             "osu": {
-                "title": "Add me on osu!",
-                "message": "Let's be friends in-game!"
+                "title": "Add me on osu!"
             },
             "discord": {
-                "title": "Join our Discord",
-                "message": "Chat with other {osu_guessr} players!"
+                "title": "Join our Discord"
             },
             "buymeacoffe": {
-                "title": "Support on Ko-fi",
-                "message": "Help keep {osu_guessr} running!"
+                "title": "Ko-fi üzerinden destekle"
             }
         },
         "header": {
@@ -544,7 +511,7 @@
             }
         },
         "footer": {
-            "madeWith": "{author} tarafından ❤️ ile yapıldı",
+            "madeWith": "Geliştiren: {author}",
             "about": "About",
             "privacy": "Privacy Policy",
             "tos": "Terms of Service"
@@ -578,30 +545,12 @@
                     "validation": "Lütfen daha detaylı bir açıklama yapın"
                 }
             }
-        },
-        "comingSoon": {
-            "title": "{mode} Tahmin",
-            "message": "Çok Yakında!",
-            "description": "{mode} tahmin oyun modunu size getirmek için çok çalışıyoruz. Güncellemeler için takipte kalın!",
-            "whatToExpect": {
-                "title": "Neler bekleyin:",
-                "audio": "Kısa ses kliplerinden {osu_base} şarkılarını tanıyarak müzik bilginizi test edin. Kaç tanesini tanıyabileceksiniz?",
-                "skin": "Oyun içi ekran görüntülerinden popüler {osu_base} skinleri tanıma konusunda kendinizi test edin. Skin tutkunları için mükemmel!"
-            },
-            "actions": {
-                "home": "Ana Sayfaya Dön",
-                "tryBackground": "Arkaplan Tahmin'i Dene"
-            }
-        },
-        "adPlaceholder": {
-            "title": "Reklam",
-            "description": "{osu_guessr}'ı desteklemek için yakında reklamlar geliyor"
         }
     },
     "errors": {
         "404": {
             "title": "404 - Sayfa Bulunamadı",
-            "description": "Ups! Görünüşe göre kayıp bir çembere denk geldiniz. Aradığınız sayfa mevcut değil.",
+            "description": "Bu sayfa mevcut değil.",
             "reportIssue": "Bunun bir hata olduğunu düşünüyorsanız, lütfen bildirin"
         },
         "game": {
@@ -612,15 +561,14 @@
         "auth": {
             "required": {
                 "title": "Giriş Yapmanız Gerekiyor",
-                "description": "{osu_guessr}'ı oynamak için {osu_base} hesabınızla giriş yapmanız gerekiyor.",
-                "subDescription": "Skorlarınızı takip etmek, sıralamada yarışmak ve ilerlemenizi kaydetmek için giriş yapın!",
+                "description": "{osu_guessr} oynamak için {osu_base} hesabınla giriş yap.",
                 "noAccount": "Bir {osu_base} hesabınız yok mu? Buradan oluşturun"
             }
         }
     },
     "confirmations": {
         "exitGame": {
-            "classic": "Çıkmak istediğinizden emin misiniz? Tüm turları tamamlamadan çıkarsanız skorunuz sayılmayacak!",
+            "classic": "Çıkılsın mı? Tüm turları bitirmeden skorun kaydedilmez.",
             "classicComplete": "Çıkmak istediğinizden emin misiniz? Skorunuz kaydedilecek.",
             "death": "Oyunu sonlandırmak istediğinizden emin misiniz? En yüksek seriniz kaydedilecek."
         }
@@ -756,5 +704,8 @@
                 }
             }
         }
+    },
+    "lockdown": {
+        "description": "Site kilitliyken yalnızca site sahibi erişebilir."
     }
 }

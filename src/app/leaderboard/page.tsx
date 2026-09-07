@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Leaderboard",
-    description: "View the top players and their scores across different game modes.",
+    description: "Top players and scores by game mode.",
 };
 
 export default function LeaderboardPage() {

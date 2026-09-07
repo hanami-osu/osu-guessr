@@ -296,7 +296,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                     )}
                     <GuessInput guess={guess} setGuess={setGuess} isRevealed={gameState.currentBeatmap.revealed} isBusy={isLoading} onGuess={handleGuess} onSkip={handleSkip} gameClient={gameClient.current!} />
 
-                    <div className="bg-card p-6 rounded-lg border border-border/60">
+                    <div className="border-t border-border/60 pt-6">
                         <h3 className="font-semibold mb-2">{t.game.shortcuts.title}</h3>
                         <ul className="list-disc list-inside space-y-1 text-foreground/70">
                             <li>{t.game.shortcuts.items.enter}</li>

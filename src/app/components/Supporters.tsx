@@ -3,9 +3,6 @@
 import { SupportPageLink } from "@/components/SupportDialogWrapper";
 import { supporters } from "@/config/supporters";
 import { useTranslationsContext } from "@/context/translations-provider";
-import React from "react";
-
-const StyledGameName = () => <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">osu!guessr</span>;
 
 export function SupportersSection() {
     const { t } = useTranslationsContext();
@@ -20,7 +17,7 @@ export function SupportersSection() {
             {supporters.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {supporters.map((supporter, index) => (
-                        <div key={index} className="rounded-lg border border-border/60 bg-card p-4 transition-colors hover:border-primary/50 sm:p-5">
+                        <div key={index} className="border-t border-border/60 py-4">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="font-semibold">
                                     {supporter.url ? (
@@ -45,14 +42,7 @@ export function SupportersSection() {
                 </div>
             ) : (
                 <div className="text-center text-foreground/70">
-                    <p>
-                        {t.home.supporters.beFirst.split("{osu_guessr}").map((part: string, index: number, array: string[]) => (
-                            <React.Fragment key={index}>
-                                {part}
-                                {index < array.length - 1 && <StyledGameName />}
-                            </React.Fragment>
-                        ))}
-                    </p>
+                    <p>{t.home.supporters.beFirst}</p>
                 </div>
             )}
         </div>

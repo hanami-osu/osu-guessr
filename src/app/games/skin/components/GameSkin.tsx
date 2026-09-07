@@ -9,7 +9,7 @@ export default function GameSkin({ mediaUrl, isRevealed, result, songInfo }: Gam
     const { t } = useTranslationsContext();
 
     return (
-        <div className="relative bg-card border border-border rounded-lg overflow-hidden">
+        <div className="relative overflow-hidden">
             <div className="aspect-video">
                 <Image src={mediaUrl || "/placeholder.svg"} alt={t.game.media.skinAlt} fill className="object-contain" priority />
             </div>

@@ -9,8 +9,8 @@ export default function PrivacyPolicy() {
         <div className="container mx-auto px-4 py-10 md:py-16 max-w-4xl">
             <h1 className="text-3xl md:text-4xl font-bold mb-8">{t.privacy.title}</h1>
 
-            <div className="space-y-8">
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+            <div className="space-y-10">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.privacy.sections.dataCollection.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.privacy.sections.dataCollection.description}</p>
@@ -22,7 +22,7 @@ export default function PrivacyPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.privacy.sections.dataUsage.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.privacy.sections.dataUsage.description}</p>
@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.privacy.sections.dataProtection.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.privacy.sections.dataProtection.description}</p>
@@ -46,7 +46,7 @@ export default function PrivacyPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.privacy.sections.thirdParty.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.privacy.sections.thirdParty.description}</p>
@@ -58,7 +58,7 @@ export default function PrivacyPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.privacy.sections.dataRetention.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.privacy.sections.dataRetention.description}</p>
@@ -66,7 +66,7 @@ export default function PrivacyPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.privacy.sections.rights.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.privacy.sections.rights.description}</p>
@@ -79,7 +79,7 @@ export default function PrivacyPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.privacy.sections.contact.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.privacy.sections.contact.description}</p>

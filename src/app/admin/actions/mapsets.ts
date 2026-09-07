@@ -457,7 +457,7 @@ export async function removeMapset(rawMapsetId: number): Promise<void> {
             audioPath ? fs.unlink(audioPath).catch(() => console.warn(`Audio file ${audio_filename} not found`)) : Promise.resolve(),
         ]);
 
-        console.log(`Successfully removed mapset ${mapsetId}`);
+        console.log(`Removed mapset ${mapsetId}`);
     } catch (error) {
         console.error(`Error removing mapset ${mapsetId}:`, error);
         throw error;

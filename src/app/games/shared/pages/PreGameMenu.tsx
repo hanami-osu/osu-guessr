@@ -54,7 +54,6 @@ export default function PreGameMenu({ onStart, gameMode }: PreGameMenuProps) {
                     <li>• {gameDescription}</li>
                     <li>• {t.game.preGame.howToPlay.death.continuous}</li>
                     <li>• {t.game.preGame.howToPlay.death.time.replace("{seconds}", ROUND_TIME.toString())}</li>
-                    <li>• {t.game.preGame.howToPlay.death.streak}</li>
                 </ul>
             </div>
 
@@ -72,7 +71,7 @@ export default function PreGameMenu({ onStart, gameMode }: PreGameMenuProps) {
     return (
         <div className="container mx-auto px-4 py-10 md:py-16">
             <div className="max-w-3xl mx-auto">
-                <div className="bg-card rounded-lg p-5 sm:p-6 border border-border/60 shadow-xl shadow-black/20">
+                <div className="py-2">
                     <h1 className="text-2xl sm:text-3xl font-bold mb-6">{t.game.preGame.title[gameMode as keyof typeof t.game.preGame.title]}</h1>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">

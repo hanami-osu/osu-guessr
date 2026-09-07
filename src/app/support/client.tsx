@@ -16,7 +16,7 @@ export function SupportPageContent() {
                     <p className="text-base leading-relaxed text-muted-foreground">{t.support.description}</p>
                 </div>
 
-                <section className="flex flex-col gap-4 rounded-lg border border-border/60 bg-card p-4 sm:p-5">
+                <section className="flex flex-col gap-4 border-t border-border/60 pt-6">
                     <h2 className="text-xl font-bold">{t.support.benefits.title}</h2>
                     <ul className="flex flex-col gap-2">
                         {Object.values(t.support.benefits.items).map((benefit, index) => (
@@ -38,7 +38,7 @@ export function SupportPageContent() {
                         href="https://www.buymeacoffee.com/yorunoken"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block rounded-lg border bg-card p-4 transition-all duration-200 hover:border-primary/20 hover:shadow-md sm:p-5"
+                        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
                     >
                         <div className="mb-3 flex items-center gap-3">
                             <Coffee className="h-5 w-5 text-primary" />

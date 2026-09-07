@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "About",
-    description: "Learn more about osu!guessr, how to play, and game mechanics.",
+    description: "Game modes, rules, scoring, and credits for osu!guessr.",
 };
 
 export default function AboutPage() {

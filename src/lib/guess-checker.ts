@@ -7,16 +7,14 @@ export enum GuessDifficulty {
 }
 
 function normalizeString(str: string): string {
-    // 1. Convert to lowercase
     let normalized = str.toLowerCase();
 
-    // 2. Remove anything inside parentheses (e.g. "(TV Size)")
+    // Ignore version labels such as "(TV Size)".
     normalized = normalized.replace(/\(.*?\)/g, "");
 
-    // 3. Remove "feat.*" and "ft.*" and anything that follows it
+    // Ignore featured-artist credits.
     normalized = normalized.replace(/\b(?:feat|ft)\.?\b.*/g, "");
 
-    // 4. Remove all characters that are not a-z, 0-9, or space, then trim
     normalized = normalized.replace(/[^a-z0-9\s]/g, "").trim();
 
     return normalized;

@@ -13,7 +13,7 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
 
     return (
         <div className="container mx-auto px-4">
-            <div className="rounded-lg border border-border/60 bg-card p-4 sm:p-5">
+            <div className="border-t border-border/60 pt-6">
                 <h2 className="mb-5 text-center text-2xl font-bold">{t.home.updates.title}</h2>
 
                 <div className="max-h-[420px] space-y-5 overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">

@@ -72,7 +72,6 @@ export default function AdminMenu() {
         setAvailableLanguages(languages);
     }, []);
 
-    // initial loaders executed after callbacks are declared
 
     const handleAddBadgeType = async () => {
         if (!newBadgeName || !newBadgeColor) return;
@@ -155,9 +154,9 @@ export default function AdminMenu() {
         try {
             const res = await addMapset(parseInt(mapsetId));
             if (res?.success && res?.note === "already_exists") {
-                appendOutput(`Mapset ${mapsetId}: already exists — skipped`);
+                appendOutput(`Mapset ${mapsetId}: already exists; skipped`);
             } else if (res?.success) {
-                appendOutput("Mapset added successfully");
+                appendOutput("Mapset added");
             } else {
                 appendOutput(`Error: ${res?.error ?? "Mapset import failed"}`);
             }
@@ -173,7 +172,7 @@ export default function AdminMenu() {
         appendOutput(`Removing mapset ${mapsetId}...`);
         try {
             await removeMapset(parseInt(mapsetId));
-            appendOutput("Mapset removed successfully");
+            appendOutput("Mapset removed");
         } catch (error) {
             appendOutput(`Error: ${error}`);
         }
@@ -223,11 +222,11 @@ export default function AdminMenu() {
                 appendOutput("Details:");
                 result.results.forEach((r: { id: number; success: boolean; error?: string; note?: string }) => {
                     if (r.success && r.note === "already_exists") {
-                        appendOutput(`Mapset ${r.id}: already exists — skipped`);
+                        appendOutput(`Mapset ${r.id}: already exists; skipped`);
                     } else if (r.success) {
                         appendOutput(`Mapset ${r.id}: added`);
                     } else {
-                        appendOutput(`Mapset ${r.id}: failed — ${r.error}`);
+                        appendOutput(`Mapset ${r.id}: failed: ${r.error}`);
                     }
                 });
             }
@@ -248,7 +247,7 @@ export default function AdminMenu() {
         appendOutput("Syncing user achievements...");
         try {
             await syncUserAchievements();
-            appendOutput("User achievements synced successfully");
+            appendOutput("User achievements synced");
         } catch (error) {
             appendOutput(`Error: ${error}`);
         }
@@ -529,14 +528,14 @@ export default function AdminMenu() {
                 <h1 className="text-3xl font-bold">Admin Panel</h1>
                 <div>
                     <Button className="bg-green-600 hover:bg-green-700 mr-2">
-                        <Link href={"/admin/beatmaps"}>Go to Beatmapsets</Link>
+                        <Link href={"/admin/beatmaps"}>Beatmapsets</Link>
                     </Button>
                 </div>
             </div>
 
             <CollapsibleSection title="Mapset Management">
                 <div className="space-y-8">
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Single Mapset</h3>
                         <div className="flex gap-4">
                             <Input type="number" placeholder="Mapset ID" value={mapsetId} onChange={(e) => setMapsetId(e.target.value)} />
@@ -552,7 +551,7 @@ export default function AdminMenu() {
                         </div>
                     </div>
 
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Bulk Upload Mapsets</h3>
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
@@ -571,7 +570,7 @@ export default function AdminMenu() {
 
             <CollapsibleSection title="Skins Management">
                 <div className="space-y-4">
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Random Skin</h3>
                         <div className="flex gap-4">
                             <Button onClick={handleListSkins} disabled={isLoading} variant="outline">
@@ -580,7 +579,7 @@ export default function AdminMenu() {
                         </div>
                     </div>
 
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Add Skin by ID or List</h3>
                         <div className="space-y-4">
                             <div className="flex gap-4">
@@ -598,12 +597,12 @@ export default function AdminMenu() {
                             </div>
 
                             <div className="text-sm text-muted-foreground">
-                                <p>Provide a .txt file with one skin ID per line, or enter a single ID above.</p>
+                                <p>Upload a .txt file with one skin ID per line, or enter an ID above.</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Remove Skin</h3>
                         <div className="flex gap-4">
                             <Input placeholder="Skin ID" value={skinRemoveId} onChange={(e) => setSkinRemoveId(e.target.value)} />
@@ -617,7 +616,7 @@ export default function AdminMenu() {
 
             <CollapsibleSection title="Badge Management">
                 <div className="space-y-8">
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Assign User Badges</h3>
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -653,7 +652,7 @@ export default function AdminMenu() {
                         </div>
                     </div>
 
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Manage Badge Types</h3>
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -686,7 +685,7 @@ export default function AdminMenu() {
             </CollapsibleSection>
 
             <CollapsibleSection title="User">
-                <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                <div className="border-t border-border/40 pt-5">
                     <Button onClick={handleSyncUsers} disabled={isLoading}>
                         Sync User Achievements
                     </Button>
@@ -694,7 +693,7 @@ export default function AdminMenu() {
             </CollapsibleSection>
 
             <CollapsibleSection title="Translation Management">
-                <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                <div className="border-t border-border/40 pt-5">
                     <div className="space-y-4">
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-2">
@@ -723,7 +722,7 @@ export default function AdminMenu() {
                             </Button>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            <p>Select a language to check missing translations. Toggle auto-fill to automatically copy English values for missing translations.</p>
+                            <p>Check for missing translations. Auto-fill copies missing values from English.</p>
                         </div>
                     </div>
                 </div>
@@ -731,8 +730,8 @@ export default function AdminMenu() {
 
             <CollapsibleSection title="Report Management">
                 <div className="space-y-4">
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
-                        <h3 className="text-lg font-medium mb-4">View and Manage Reports</h3>
+                    <div className="border-t border-border/40 pt-5">
+                        <h3 className="text-lg font-medium mb-4">Reports</h3>
                         <Button
                             onClick={async () => {
                                 setIsLoading(true);
@@ -758,7 +757,7 @@ export default function AdminMenu() {
                             List Reports
                         </Button>
                     </div>
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Update Report Status</h3>
                         <div className="flex gap-4">
                             <Input type="number" placeholder="Report ID" onChange={(e) => setReportId(e.target.value)} className="w-1/4" />
@@ -774,7 +773,7 @@ export default function AdminMenu() {
                                     appendOutput(`Updating report ${reportId} to ${reportStatus}...`);
                                     try {
                                         await updateReportStatus(parseInt(reportId), reportStatus);
-                                        appendOutput(`Report ${reportId} updated successfully`);
+                                        appendOutput(`Report ${reportId} updated`);
                                     } catch (error) {
                                         appendOutput(`Error: ${error}`);
                                     }
@@ -791,7 +790,7 @@ export default function AdminMenu() {
 
             <CollapsibleSection title="Announcements">
                 <div className="space-y-4">
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Create Announcement</h3>
                         <div className="space-y-4">
                             <Input placeholder="Title" value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} />
@@ -813,7 +812,7 @@ export default function AdminMenu() {
                         </div>
                     </div>
 
-                    <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                    <div className="border-t border-border/40 pt-5">
                         <h3 className="text-lg font-medium mb-4">Existing Announcements</h3>
                         <div className="space-y-2">
                             {announcementsList.length === 0 ? (
@@ -839,7 +838,7 @@ export default function AdminMenu() {
             </CollapsibleSection>
 
             <CollapsibleSection title="Server Lockdown">
-                <div className="bg-secondary/20 p-5 rounded-lg border border-border/50">
+                <div className="border-t border-border/40 pt-5">
                     <h3 className="text-lg font-medium mb-4">Temporarily lock the server</h3>
                     <div className="flex items-center gap-4">
                         <Input type="number" className="w-24" value={String(lockMinutes)} onChange={(e) => setLockMinutes(Number(e.target.value))} />
@@ -857,7 +856,7 @@ export default function AdminMenu() {
                 </div>
             </CollapsibleSection>
 
-            <div className="bg-card p-5 sm:p-6 rounded-lg border border-border/60" ref={consoleDivRef}>
+            <div className="border-t border-border/60 pt-6" ref={consoleDivRef}>
                 <h2 className="text-xl font-semibold mb-4">Console Output</h2>
                 <pre className="bg-background p-4 rounded-md h-64 overflow-y-auto whitespace-pre-wrap">{output}</pre>
                 <Button onClick={() => setOutput("")} variant="outline" className="mt-2">

@@ -74,13 +74,13 @@ function syncTranslations(): void {
             });
 
             fs.writeFileSync(langPath, JSON.stringify(langJson, null, 4));
-            console.log(`  ✅ Added ${missingKeys.length} missing translations`);
+            console.log(`  Added ${missingKeys.length} missing translations`);
         } else {
-            console.log(`  ✅ All translations up to date`);
+            console.log(`  No missing translations`);
         }
     });
 
-    console.log("\n🎉 Translation sync complete!");
+    console.log("\nTranslation sync complete.");
 }
 
 syncTranslations();

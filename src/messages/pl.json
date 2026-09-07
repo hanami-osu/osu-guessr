@@ -1,12 +1,12 @@
 {
     "metadata": {
         "title": "osu! guessr",
-        "description": "Przetestuj swoją wiedzę o {osu_base}!"
+        "description": "Zgaduj utwory z {osu_base} na podstawie teł lub dźwięku, a skiny ze zrzutów ekranu."
     },
     "home": {
         "hero": {
-            "title": "Witaj w {osu_guessr}",
-            "subtitle": "Rzuć wyzwanie swojej pamięci o {osu_base}, odkryj ukryte perełki, i wspinaj się w globalnym rankingu w tej niesamowitej grze o zgadywaniu",
+            "title": "{osu_guessr}",
+            "subtitle": "Zgaduj utwory z {osu_base} na podstawie teł lub dźwięku, a skiny ze zrzutów ekranu.",
             "startPlaying": "Zacznij Grać",
             "signIn": "Zaloguj się przy użyciu {osu_base}",
             "learnMore": "Dowiedz się więcej",
@@ -31,7 +31,7 @@
         },
         "supporters": {
             "title": "Wspierający",
-            "beFirst": "Bądź pierwszym, który wesprze {osu_guessr}!"
+            "beFirst": "Brak wspierających."
         },
         "updates": {
             "title": "Najnowsze Aktualizacje"
@@ -118,39 +118,27 @@
         "delete": "Usuń",
         "create": "Stwórz",
         "save": "Zapisz",
-        "support": "Support",
-        "sessionLoading": {
-            "title": "Loading {osu_guessr}",
-            "description": "Preparing your session...",
-            "funFact": "Did you know? I didn't either!"
-        }
+        "support": "Support"
     },
     "about": {
         "title": "O Grze {osu_guessr}",
         "whatIs": {
             "title": "Czym jest {osu_guessr}?",
-            "description1": "{osu_guessr} to wciągająca gra w zgadywanie, która rzuca wyzwanie graczom {osu_base} w celu sprawdzenia ich wiedzy na temat obszernej kolekcji beatmap. Niezależnie od tego, czy jesteś zwykłym graczem, czy twórcą map, ta gra oferuje interesujący sposób na odkrycie nowych piosenek oraz na pokazanie swojej znajomości ze zróżnicowaną kolekcją muzyczną społeczności {osu_base}",
-            "description2": "Konkuruj ze znajomymi, wspinaj się po rankingach, odkrywaj nowe ulubione piosenki podczas grania!"
+            "description1": "{osu_guessr} to gra przeglądarkowa, w której zgadujesz utwory i skiny z {osu_base}."
         },
         "gameModes": {
             "title": "Tryby Gry",
             "background": {
                 "title": "Background Guessr",
-                "description": "Sprawdź swoją umiejętność rozpoznawania mapy na podstawie jej tła. Od obrazków z anime, aż po sztukę abstrakcyjną. Jak dobrze znasz te ikoniczne obrazki?"
+                "description": "Zgadnij utwór na podstawie tła beatmapy."
             },
             "audio": {
                 "title": "Audio Guessr",
-                "description": "Rzuć wyzwanie swojej wiedzy muzycznej! Posłuchaj krótkiego kawałka mapy i spróbuj zgadnąć jej nazwę zanim skończy się czas."
+                "description": "Zgadnij utwór na podstawie fragmentu audio."
             },
             "skin": {
                 "title": "Skin Guessr",
-                "comingSoon": "Już wkrótce",
-                "description": "Myślisz, że znasz wiele skinów z {osu_base}? Podejmij wyzwanie i spróbuj odgadnąć nazwy popularnych skinów na podstawie elementów menu oraz zrutów ekranu z gry."
-            },
-            "more": {
-                "title": "Więcej Trybów",
-                "planned": "Planowane",
-                "description": "Pracujemy nad nowymi, ekscytującymi trybami gry. Nie przegap tego!"
+                "description": "Zgadnij skin z {osu_base} na podstawie zrzutu ekranu."
             }
         },
         "howToPlay": {
@@ -158,15 +146,15 @@
             "steps": {
                 "1": {
                     "title": "Wybierz Tryb",
-                    "description": "Wybierz jeden z dostępnych trybów gry w oparciu o swoje preferencje - tła, wycinki audio, lub skiny."
+                    "description": "Wybierz tła, audio lub skiny."
                 },
                 "2": {
                     "title": "Zacznij Zgadywać",
-                    "description": "Będziesz mieć {seconds} sekund w każdej rundzie na odgadnięcie prawidłowej piosenki. Wpisz swoją odpowiedź albo wybierz spośród sugerowanych."
+                    "description": "Masz {seconds} sekund na rundę. Wpisz odpowiedź lub wybierz podpowiedź."
                 },
                 "3": {
                     "title": "Zdobywaj Punkty",
-                    "description": "Zdobywaj punkty na podstawie dokładności i szybkości. Im więcej poprawnych odpowiedzi z rzędu, tym więcej bonusowych punktów otrzymasz. Konkuruj o najwyższy wynik!"
+                    "description": "Poprawne odpowiedzi dają punkty. Szybkie odpowiedzi i serie dają premie."
                 }
             }
         },
@@ -187,30 +175,30 @@
             "title": "Cechy Gry",
             "leaderboards": {
                 "title": "Rankingi",
-                "description": "Konkuruj z innymi graczami z całego świata. Osobne rankingi dla każdego trybu gry pozwalają na pochwalenie się swoją wiedzą z danego zakresu!"
+                "description": "Porównuj wyniki i serie według trybu gry."
             },
             "autoComplete": {
                 "title": "Automatyczne Uzupełnianie",
-                "description": "Zaawansowany system sugerowania pomaga w znalezieniu odpowiedniej nazwy piosenki bez wymagania idealnego zapisu."
+                "description": "Podpowiedzi utworów pojawiają się podczas pisania."
             },
             "profiles": {
                 "title": "Profile Graczy",
-                "description": "Śledź swoje postępy, sprawdzaj statystyki oraz swoją pozycję w rankingu w różnych trybach gry."
+                "description": "Sprawdzaj statystyki i pozycje według trybu gry."
             },
             "api": {
                 "title": "Dostęp API",
-                "description": "Programiści mogą zintegrować się z naszym API, aby stworzyć własne narzędzia i aplikacje."
+                "description": "Pobieraj statystyki graczy, historię gier i rankingi przez API."
             }
         },
         "documentation": {
             "title": "Dokumentacja",
             "api": {
                 "title": "Dokumentacja API",
-                "description": "Chcesz zintegrować się z {osu_guessr}? Nasza wszechstronna dokumentacja API posiada wszystko, czego potrzebujesz, aby rozpocząć."
+                "description": "Endpointy, uwierzytelnianie i limity żądań."
             },
             "technical": {
                 "title": "Szczegóły Techniczne",
-                "description": "Interesuje Cię to, jak gra działa od zaplecza? Sprawdź naszą szczegółową dokumentację techncizną."
+                "description": "Wymagania, konfiguracja i wdrożenie."
             }
         },
         "credits": {
@@ -233,7 +221,7 @@
                 "title": "Szczególne Podziękowania",
                 "items": {
                     "peppy": "• Dean Herbert (peppy) oraz cały zespół {osu_base}",
-                    "community": "• Wspaniała społeczność osu!",
+                    "community": "• Społeczność osu!",
                     "creators": "• Wszyscy twórcy map oraz skinów"
                 }
             }
@@ -248,7 +236,6 @@
             },
             "contribute": {
                 "title": "Zaangażuj się",
-                "description": "Znalazłeś/aś błąd? Masz jakąś sugestię? Chcesz pomóć? Odwiedź nasze repozytorium na GitHubie i:",
                 "items": {
                     "bugs": "• Przesyłaj raporty o błędach i prośby o funkcje",
                     "code": "• Wspieraj rozwój bazy kodu",
@@ -262,15 +249,15 @@
         "modes": {
             "background": {
                 "title": "Background Guessr",
-                "description": "Rozpoznaj piosenkę na podstawie ilustracji z tła beatmapy"
+                "description": "Zgadnij utwór na podstawie tła beatmapy."
             },
             "audio": {
                 "title": "Audio Guessr",
-                "description": "Rozpoznaj piosenkę na podstawie krótkiego wycinka audio"
+                "description": "Zgadnij utwór na podstawie fragmentu audio."
             },
             "skin": {
                 "title": "Skin Guessr",
-                "description": "Rozpoznaj popularne skiny z {osu_base} na podstawie ich elementów"
+                "description": "Zgadnij skin z {osu_base} na podstawie zrzutu ekranu."
             }
         }
     },
@@ -282,9 +269,9 @@
                 "skin": "Skin Guessr"
             },
             "description": {
-                "audio": "Usłyszysz krótkie wycinki piosenek z osu!",
-                "background": "Zostaną Ci pokazane tła beatmap z osu!",
-                "skin": "You'll see screenshots of popular osu! skins"
+                "audio": "Zgadnij utwór na podstawie fragmentu audio.",
+                "background": "Zgadnij utwór na podstawie tła beatmapy.",
+                "skin": "Zgadnij skin z {osu_base} na podstawie zrzutu ekranu."
             },
             "howToPlay": {
                 "title": "Jak Grać",
@@ -296,8 +283,7 @@
                 },
                 "death": {
                     "continuous": "Graj, dopóki nie zrobisz błędu",
-                    "time": "Spróbuj odgadnąć tytuł piosenki w {seconds} sekund na każdą rundę",
-                    "streak": "Zdobądź serię dobrych odpowiedzi aby uzyskać bonusowe punkty"
+                    "time": "Spróbuj odgadnąć tytuł piosenki w {seconds} sekund na każdą rundę"
                 }
             },
             "scoring": {
@@ -311,22 +297,22 @@
                 "death": {
                     "streakOnly": "Liczy się tylko ilość dobrych odpowiedzi z rzędu",
                     "noPoints": "Punkty nie są liczone w tym trybie",
-                    "compete": "Konkuruj o jak największą serię w rankingu"
+                    "compete": "Ranking uwzględnia twoją najdłuższą serię"
                 }
             },
             "modes": {
                 "classic": {
                     "title": "Tryb Klasyczny",
-                    "description": "10 rund, zdobądź jak najwięcej punktów"
+                    "description": "10 rund"
                 },
                 "death": {
                     "title": "Tryb Śmierci",
-                    "description": "Tylko jedna szansa, nie zmarnuj jej!"
+                    "description": "Jedno życie"
                 }
             },
             "warning": {
-                "title": "Ważna Uwaga",
-                "description": "Twój wynik zostanie zapisany tylko, jeżeli ukończysz {rounds} rund. Opuszczenie gry wcześniej spowoduje, że twój postęp zostanie utracony!"
+                "title": "Zapisywanie wyników",
+                "description": "Ukończ wszystkie {rounds} rund, aby zapisać wynik. Wcześniejsze wyjście usuwa postęp."
             },
             "actions": {
                 "startGame": "Rozpocznij Grę",
@@ -336,11 +322,11 @@
         "modes": {
             "classic": {
                 "title": "Tryb klasyczny",
-                "description": "10 rund, zdobądź jak najwięcej punktów"
+                "description": "10 rund"
             },
             "death": {
                 "title": "Tryb Śmierci",
-                "description": "Tylko jedna szansa, nie zmarnuj jej!"
+                "description": "Jedno życie"
             }
         },
         "status": {
@@ -380,7 +366,7 @@
             "death": {
                 "title": {
                     "died": "Koniec Gry!",
-                    "completed": "Świetny Wynik!"
+                    "completed": "Gra ukończona"
                 },
                 "maxStreak": "Największa Seria",
                 "totalCorrect": "Ilość Poprawnych Odpowiedzi",
@@ -404,7 +390,7 @@
             "viewResults": "Zobacz Wynik"
         },
         "shortcuts": {
-            "title": "Some shortcuts you should know:",
+            "title": "Skróty klawiszowe",
             "items": {
                 "tab": "Tab - Cycle through suggestions",
                 "enter": "Enter - Submit guess / Next round / Select the highlighted suggestion",
@@ -413,22 +399,8 @@
                 "esc": "Esc - Close suggestions"
             }
         },
-        "comingSoon": {
-            "title": "{mode} Guessr",
-            "subtitle": "Coming Soon!",
-            "description": "We're working hard to bring you the {mode} guessing game mode. Stay tuned for updates!",
-            "whatToExpect": "What to expect:",
-            "expectations": {
-                "audio": "Test your music knowledge by identifying osu! songs from short audio clips. How many can you recognize?",
-                "skin": "Challenge yourself to recognize popular osu! skins from gameplay screenshots. Perfect for skin enthusiasts!"
-            },
-            "actions": {
-                "backToHome": "Back to Home",
-                "tryBackground": "Try Background Guessr"
-            }
-        },
         "audio": {
-            "instructions": "Listen to the audio and try to guess the song title!",
+            "instructions": "Posłuchaj i zgadnij tytuł utworu.",
             "browserNotSupported": "Your browser does not support the audio element."
         }
     },
@@ -485,7 +457,6 @@
         },
         "notFound": {
             "title": "Nie Znaleziono Użytkownika",
-            "description": "Przepraszamy, nie mogliśmy znaleźć użytkownika, którego szukasz.",
             "subDescription": "Ten użytkownik nie istnieje, lub jeszcze nie stworzył konta w {osu_guessr}",
             "actions": {
                 "home": "Wróć na Stronę Główną",
@@ -508,12 +479,12 @@
             "title": "Klucze API",
             "usage": "{count}/5 użyte klucze",
             "security": {
-                "title": "Ważne Informacje o Bezpieczeństwie",
+                "title": "Bezpieczeństwo kluczy API",
                 "points": {
                     "1": "Chroń swoje klucze API i nigdy nie udostępniaj ich publicznie",
                     "2": "Jeżeli klucz został ujawniony, usuń go natychmiastowo i stwórz nowy",
                     "3": "Każdy klucz ma pełny dostęp do możliwości API Twojego konta",
-                    "4": "API keys are stored securely and cannot be retrieved after creation"
+                    "4": "Kluczy API nie można odzyskać po utworzeniu"
                 }
             },
             "actions": {
@@ -526,24 +497,24 @@
             "dialog": {
                 "create": {
                     "title": "Stwórz Nowy Klucz API",
-                    "description": "Wpisz nazwę swojego nowego klucza API. To pomoże Ci w jego późniejszej identyfikacji.",
+                    "description": "Nadaj kluczowi nazwę, aby później go rozpoznać.",
                     "placeholder": "Nazwa klucza",
                     "warning": {
                         "title": "Important",
-                        "description": "You will only see the API key once after creation. Make sure to copy it immediately as it cannot be recovered later."
+                        "description": "Skopiuj klucz po utworzeniu. Nie można go później odzyskać."
                     }
                 },
                 "delete": {
                     "title": "Usuń Klucz API",
                     "description": "Czy jesteś pewny, że chcesz usunąć klucz API \"{name}\"?",
-                    "warning": "Tej akcji nie można cofnąć i natychmiast odbierze ona dostęp wszystkim usługom korzystającym z tego klucza.",
-                    "confirm": "Yes, delete this key"
+                    "warning": "Usunięcie jest trwałe i natychmiast odbiera dostęp usługom używającym tego klucza.",
+                    "confirm": "Delete Key"
                 },
                 "created": {
-                    "title": "API Key Created Successfully",
+                    "title": "API Key Created",
                     "warning": {
                         "title": "Copy Your API Key Now",
-                        "description": "This is your only chance to copy this API key. For security reasons, it will never be displayed again."
+                        "description": "Skopiuj klucz przed zamknięciem. Nie zostanie ponownie wyświetlony."
                     },
                     "copied": "API key copied to clipboard"
                 }
@@ -565,38 +536,34 @@
     },
     "support": {
         "title": "Wesprzyj {osu_guessr}",
-        "description": "Jeżeli podoba Ci się {osu_guessr} i chcesz wesprzeć jego rozwój, rozważ przekazanie darowizny. Twoje wsparcie pomaga utrzymać serwery na chodzie i umożliwia wprowadzanie nowych funkcji! Wpisz swoje imię przy donacji aby zostać wyróżnionym na stronie głównej.",
+        "description": "Darowizny pokrywają koszty rozwoju i serwerów {osu_guessr}.",
         "benefits": {
             "title": "Supporter Benefits",
             "items": {
-                "badge": "Exclusive supporter badge on your profile",
-                "homepage": "Get featured on the homepage"
+                "badge": "Odznaka wspierającego na profilu",
+                "homepage": "Twoja nazwa na stronie głównej"
             }
         },
         "donate": {
             "title": "Become a Supporter",
             "button": "Buy me a Coffee",
-            "description": "Support {osu_guessr} with a one-time donation through Buy Me a Coffee. Any donation amount will grant you supporter status permanently!",
-            "reminder": "Please include your osu!guessr username or user ID in your donation message to receive supporter benefits!"
+            "description": "Jednorazowa darowizna dowolnej kwoty przez Buy Me a Coffee daje stały status wspierającego w {osu_guessr}.",
+            "reminder": "Podaj nazwę użytkownika lub ID z osu!guessr w wiadomości do darowizny, aby otrzymać korzyści wspierającego."
         }
     },
     "components": {
         "ads": {
             "twitter": {
-                "title": "Obserwuj na Twitterze",
-                "message": "Bądź na bierząco z najnowszymi wiadomościami {osu_guessr}!"
+                "title": "Obserwuj na Twitterze"
             },
             "osu": {
-                "title": "Dodaj mnie w osu!",
-                "message": "Zostańmy znajomymi w grze!"
+                "title": "Dodaj mnie w osu!"
             },
             "buymeacoffe": {
-                "title": "Wesprzyj na Ko-fi",
-                "message": "Pomóż utrzymać {osu_guessr} na chodzie!"
+                "title": "Wesprzyj na Ko-fi"
             },
             "discord": {
-                "title": "Dołącz do naszego Discorda",
-                "message": "Rozmawiaj z innymi graczami {osu_guessr}!"
+                "title": "Dołącz do naszego Discorda"
             }
         },
         "header": {
@@ -610,7 +577,7 @@
             }
         },
         "footer": {
-            "madeWith": "Stworzone z ❤️ przez {author}",
+            "madeWith": "Autor: {author}",
             "about": "O Grze",
             "privacy": "Polityka Prywatności",
             "tos": "Terms of Service"
@@ -644,30 +611,12 @@
                     "validation": "Prosimy o bardziej szczegółowy opis"
                 }
             }
-        },
-        "comingSoon": {
-            "title": "{mode} Guessr",
-            "message": "Już Wkrótce!",
-            "description": "Pracujemy ciężko, aby wprowadzić tryb {mode} Guessr. Nie przegap aktualizacji!",
-            "whatToExpect": {
-                "title": "Czego możesz oczekiwać:",
-                "audio": "Sprawdź swoją wiedzę muzyczną rozpoznając piosenki z {osu_base} na podstawie krótkich wycinków audio. Jak wiele jesteś w stanie rozpoznać?",
-                "skin": "Rzuć sobie wyzwanie, aby odgadnąć skiny z {osu_base} na podstawie zrzutów ekranu. Idealne dla miłośników skinów!"
-            },
-            "actions": {
-                "home": "Wróć na Stronę Główną",
-                "tryBackground": "Zagraj w Background Guessr"
-            }
-        },
-        "adPlaceholder": {
-            "title": "Reklama",
-            "description": "Reklamy już wkrótce, aby pomóc wesprzeć {osu_guessr}"
         }
     },
     "errors": {
         "404": {
             "title": "404 - Nie Znaleziono Strony",
-            "description": "Ups! Wygląda na to, że trafiłeś w nieistniejące kółko. Strona, której szukasz, nie istnieje.",
+            "description": "Ta strona nie istnieje.",
             "reportIssue": "Jeżeli wierzysz, że jest to błąd, zgłoś go tutaj: "
         },
         "game": {
@@ -678,15 +627,14 @@
         "auth": {
             "required": {
                 "title": "Musisz się zalogować",
-                "description": "Musisz być zalogowany za pomocą konta {osu_base}, aby móc grać w {osu_guessr}.",
-                "subDescription": "Zaloguj się, aby śledzić swoje wyniki, rywalizować w rankingach oraz zapisywać swoje postępy!",
+                "description": "Zaloguj się kontem {osu_base}, aby grać w {osu_guessr}.",
                 "noAccount": "Nie masz konta {osu_base}? Stwórz je tutaj."
             }
         }
     },
     "confirmations": {
         "exitGame": {
-            "classic": "Czy na pewno chcesz wyjść? Twój wynik nie zostanie zapisany, jeżeli opuścisz grę przed ukończeniem wszystkich rund!",
+            "classic": "Wyjść? Wynik zostanie zapisany dopiero po ukończeniu wszystkich rund.",
             "classicComplete": "Czy na pewno chcesz wyjść? Twój wynik zostanie zapisany.",
             "death": "Czy na pewno chcesz zakończyć grę? Twoja największa seria zostanie zapisana."
         }
@@ -756,5 +704,8 @@
                 }
             }
         }
+    },
+    "lockdown": {
+        "description": "Gdy strona jest zablokowana, dostęp ma tylko właściciel."
     }
 }

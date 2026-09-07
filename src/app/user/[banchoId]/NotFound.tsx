@@ -13,11 +13,10 @@ export default function UserNotFound() {
     return (
         <div className="container mx-auto px-4 py-10 md:py-16">
             <div className="max-w-2xl mx-auto text-center">
-                <div className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <div className="border-t border-border/60 pt-8">
                     <h1 className="text-3xl md:text-4xl font-bold mb-4">{t.user.notFound.title}</h1>
 
                     <div className="space-y-4 mb-8">
-                        <p className="text-foreground/70">{t.user.notFound.description}</p>
                         <p className="text-foreground/70">
                             {t.user.notFound.subDescription.split("{osu_guessr}").map((part: string, index: number, array: string[]) => (
                                 <React.Fragment key={index}>
@@ -37,10 +36,6 @@ export default function UserNotFound() {
                                 {t.user.notFound.actions.leaderboard}
                             </Button>
                         </Link>
-                    </div>
-
-                    <div className="mt-8 pt-6 border-t border-border/50">
-                        <p className="text-sm text-foreground/50">{t.errors.game.unknown}</p>
                     </div>
                 </div>
             </div>

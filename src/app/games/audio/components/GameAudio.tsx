@@ -78,7 +78,7 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo }: Ga
     }, [isRevealed]);
 
     return (
-        <div className="relative bg-card border border-border rounded-lg overflow-hidden">
+        <div className="relative overflow-hidden">
             <div className="p-6">
                 {isLoading && (
                     <div className="flex justify-center items-center h-[50px] mb-4">

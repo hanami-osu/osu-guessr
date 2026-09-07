@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Skin Guessr",
-    description: "Test your knowledge of osu! skins by identifying them from screenshots.",
+    description: "Guess osu! skins from screenshots.",
 };
 
 export default function SkinGuessr() {

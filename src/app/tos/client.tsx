@@ -9,15 +9,15 @@ export default function TosPolicy() {
         <div className="container mx-auto px-4 py-10 md:py-16 max-w-4xl">
             <h1 className="text-3xl md:text-4xl font-bold mb-8">{t.tos.title}</h1>
 
-            <div className="space-y-8">
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+            <div className="space-y-10">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.tos.sections.acceptance.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.tos.sections.acceptance.description}</p>
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.tos.sections.eligibility.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.tos.sections.eligibility.description}</p>
@@ -29,7 +29,7 @@ export default function TosPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.tos.sections.content.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.tos.sections.content.description}</p>
@@ -41,7 +41,7 @@ export default function TosPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.tos.sections.termination.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.tos.sections.termination.description}</p>
@@ -52,7 +52,7 @@ export default function TosPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.tos.sections.disclaimer.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.tos.sections.disclaimer.description}</p>
@@ -60,14 +60,14 @@ export default function TosPolicy() {
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.tos.sections.changes.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.tos.sections.changes.description}</p>
                     </div>
                 </section>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <h2 className="text-2xl font-semibold mb-4">{t.tos.sections.contact.title}</h2>
                     <div className="space-y-4 text-foreground/80">
                         <p>{t.tos.sections.contact.description}</p>

@@ -1,12 +1,12 @@
 {
     "metadata": {
         "title": "osu! guessr",
-        "description": "Испытай свои знания в {osu_base}!"
+        "description": "Угадывай песни из {osu_base} по фонам или аудио, а скины по скриншотам."
     },
     "home": {
         "hero": {
-            "title": "Добро пожаловать в {osu_guessr}",
-            "subtitle": "Испытай свою память в {osu_base}, открой для себя подводные камеи, и поднимайся в глобальном рейтинге в игре на угадывание!",
+            "title": "{osu_guessr}",
+            "subtitle": "Угадывай песни из {osu_base} по фонам или аудио, а скины по скриншотам.",
             "startPlaying": "Начать игру",
             "signIn": "Войти с {osu_base}",
             "learnMore": "Узнать больше",
@@ -31,7 +31,7 @@
         },
         "supporters": {
             "title": "Саппортеры",
-            "beFirst": "Будь первым, кто поддержит {osu_guessr}!"
+            "beFirst": "Пока нет спонсоров."
         },
         "updates": {
             "title": "Последние обновления"
@@ -52,39 +52,27 @@
         "delete": "Удалить",
         "create": "Создать",
         "save": "Сохранить",
-        "support": "Support",
-        "sessionLoading": {
-            "title": "Loading {osu_guessr}",
-            "description": "Preparing your session...",
-            "funFact": "Did you know? I didn't either!"
-        }
+        "support": "Support"
     },
     "about": {
         "title": "Об игре {osu_guessr}",
         "whatIs": {
             "title": "Что такое {osu_guessr}?",
-            "description1": "{osu_guessr} - это увлекательная викторина, которая заставляет игроков {osu_base} проверить свои знания об обширной библиотеке карт. Независимо от того, являетесь ли вы случайным игроком или хардкорным маппером, эта игра предлагает веселый способ открыть для себя новые песни и продемонстрировать свое знакомство с разнообразной музыкальной коллекцией сообщества.",
-            "description2": "Соревнуйтесь с друзьями, поднимайтесь в таблицах лидеров и, возможно, даже откроете для себя новые карты во время игры!"
+            "description1": "{osu_guessr} предлагает угадывать песни и скины из {osu_base} в браузере."
         },
         "gameModes": {
             "title": "Режимы игры",
             "background": {
                 "title": "Background Guessr",
-                "description": "Проверь свою способность распознавать песни из фона их карт. От скриншотов из аниме до абстрактных артов, насколько хорошо ты знаешь эти культовые изображения?"
+                "description": "Угадай песню по фону карты."
             },
             "audio": {
                 "title": "Audio Guessr",
-                "description": "Испытай свои знания песен! Слушай короткие отрывки из карт и постарайся определить песню до того, как закончится время."
+                "description": "Угадай песню по аудиофрагменту."
             },
             "skin": {
                 "title": "Skin Guessr",
-                "comingSoon": "Скоро",
-                "description": "Думаешь, ты знаешь свои скины в {osu_base}? Испытай себя, сможешь ли ты распознать популярные скины по скриншотам геймплея и элементам меню."
-            },
-            "more": {
-                "title": "Больше режимов",
-                "planned": "Запланировано",
-                "description": "Мы работаем над новыми захватывающими игровыми режимами для вас. Оставайтесь с нами!"
+                "description": "Угадай скин из {osu_base} по скриншоту."
             }
         },
         "howToPlay": {
@@ -92,15 +80,15 @@
             "steps": {
                 "1": {
                     "title": "Выбери режим",
-                    "description": "Выбери один из доступных режимов игры в зависимости от ваших предпочтений - фоны, отрывки аудио или скины."
+                    "description": "Выбери фоны, аудио или скины."
                 },
                 "2": {
                     "title": "Начни угадывать",
-                    "description": "У тебя будет {seconds} секунд за раунд, чтобы определить правильную песню. Введи свое предположение или используй предложения автозаполнения."
+                    "description": "На каждый раунд даётся {seconds} секунд. Введи ответ или выбери подсказку."
                 },
                 "3": {
                     "title": "Баллы",
-                    "description": "Зарабатывайте очки, основанные на точности и скорости. Стройте серию за бонусные очки и соревнуйтесь за высокие баллы!"
+                    "description": "Правильные ответы приносят очки. Быстрые ответы и серии дают бонусы."
                 }
             }
         },
@@ -121,30 +109,30 @@
             "title": "Особенности",
             "leaderboards": {
                 "title": "Лидерборды",
-                "description": "Соревнуйтесь с другими игроками по всему миру. Отдельные лидерборды для каждого режима игры позволяют вам продемонстрировать свой опыт!"
+                "description": "Сравнивай очки и серии по режимам игры."
             },
             "autoComplete": {
                 "title": "Автозаполнение",
-                "description": "Умная система предложений поможет вам найти правильное название песни, не требуя идеального написания."
+                "description": "При вводе появляются подсказки с названиями песен."
             },
             "profiles": {
                 "title": "Профили игроков",
-                "description": "Отслеживайте свой прогресс, просматривайте статистику и просматривайте свой рейтинг в различных режимах игры."
+                "description": "Смотри свою статистику и позиции по режимам игры."
             },
             "api": {
                 "title": "Доступ к API",
-                "description": "Разработчики могут интегрироваться с нашим API для создания собственных инструментов и приложений."
+                "description": "Получай статистику игроков, историю игр и рейтинги через API."
             }
         },
         "documentation": {
             "title": "Документация",
             "api": {
                 "title": "Документация по API",
-                "description": "Хотите интегрироваться с {osu_guessr}? В нашей всеобъемлющей документации по API есть все необходимое для начала работы."
+                "description": "Эндпоинты, аутентификация и лимиты запросов."
             },
             "technical": {
                 "title": "Технические детали",
-                "description": "Интересует, как игра работает изнутри? Ознакомьтесь с нашей подробной технической документацией."
+                "description": "Требования, настройка и развёртывание."
             }
         },
         "credits": {
@@ -167,7 +155,7 @@
                 "title": "Особая благодарность",
                 "items": {
                     "peppy": "• Дину Герберту (peppy) и команде {osu_base}",
-                    "community": "• Удивительному сообществу osu!",
+                    "community": "• Сообщество osu!",
                     "creators": "• Всем мапперам и создателям скинов"
                 }
             }
@@ -182,7 +170,6 @@
             },
             "contribute": {
                 "title": "Участвовать в разработке",
-                "description": "Нашли баг? Имеются предложения? Хотите участвовать в разработке? Посетите наш репозиторий на GitHub, чтобы:",
                 "items": {
                     "bugs": "• Отправить отчеты о багах и запросы на новые функции",
                     "code": "• Внести свой вклад в кодовую базу",
@@ -196,15 +183,15 @@
         "modes": {
             "background": {
                 "title": "Background Guessr",
-                "description": "Распознай песню по фону карты"
+                "description": "Угадай песню по фону карты."
             },
             "audio": {
                 "title": "Audio Guessr",
-                "description": "Распознай карту по короткому отрывку аудио"
+                "description": "Угадай песню по аудиофрагменту."
             },
             "skin": {
                 "title": "Skin Guessr",
-                "description": "Распознай популярные скины {osu_base} по элементам интерфейса"
+                "description": "Угадай скин из {osu_base} по скриншоту."
             }
         }
     },
@@ -216,9 +203,9 @@
                 "skin": "Skin Guessr"
             },
             "description": {
-                "audio": "Вы услышите короткие отрывки песен из osu!",
-                "background": "Вам будут показаны фоны карт из osu!",
-                "skin": "You'll see screenshots of popular osu! skins"
+                "audio": "Угадай песню по аудиофрагменту.",
+                "background": "Угадай песню по фону карты.",
+                "skin": "Угадай скин из {osu_base} по скриншоту."
             },
             "howToPlay": {
                 "title": "Как играть",
@@ -230,8 +217,7 @@
                 },
                 "death": {
                     "continuous": "Продолжайте играть, пока не сделаете ошибку",
-                    "time": "Попробуйте угадать название песни в течение {seconds} секунд за раунд",
-                    "streak": "Создайте как можно большее комбо"
+                    "time": "Попробуйте угадать название песни в течение {seconds} секунд за раунд"
                 }
             },
             "scoring": {
@@ -245,22 +231,22 @@
                 "death": {
                     "streakOnly": "Только ваше комбо имеет значение",
                     "noPoints": "В этом режиме баллы не записываются",
-                    "compete": "Соревнуйтесь за самое большое комбо в лидерборде"
+                    "compete": "Рейтинг учитывает твою лучшую серию"
                 }
             },
             "modes": {
                 "classic": {
                     "title": "Классический режим",
-                    "description": "10 раундов, наберите как можно больше очков, сколько сможете"
+                    "description": "10 раундов"
                 },
                 "death": {
                     "title": "Смертельный режим",
-                    "description": "Жизнь только одна, дорожите ею!"
+                    "description": "Одна жизнь"
                 }
             },
             "warning": {
-                "title": "Важное замечание",
-                "description": "Ваш результат будет засчитан только в том случае, если вы пройдете все {rounds} раундов. Досрочный выход из игры приведет к потере вашего прогресса!"
+                "title": "Сохранение очков",
+                "description": "Заверши все {rounds} раундов, чтобы сохранить очки. При досрочном выходе прогресс теряется."
             },
             "actions": {
                 "startGame": "Начать игру",
@@ -270,11 +256,11 @@
         "modes": {
             "classic": {
                 "title": "Классический режим",
-                "description": "10 раундов, наберите как можно больше очков, сколько сможете"
+                "description": "10 раундов"
             },
             "death": {
                 "title": "Смертельный режим",
-                "description": "Жизнь только одна, дорожите ею!"
+                "description": "Одна жизнь"
             }
         },
         "status": {
@@ -314,7 +300,7 @@
             "death": {
                 "title": {
                     "died": "Вы проиграли!",
-                    "completed": "Замечательное прохождение!"
+                    "completed": "Игра завершена"
                 },
                 "maxStreak": "Максимальное комбо",
                 "totalCorrect": "Всего правильных ответов",
@@ -338,7 +324,7 @@
             "viewResults": "Посмотреть результаты"
         },
         "shortcuts": {
-            "title": "Some shortcuts you should know:",
+            "title": "Горячие клавиши",
             "items": {
                 "tab": "Tab - Cycle through suggestions",
                 "enter": "Enter - Submit guess / Next round / Select the highlighted suggestion",
@@ -347,22 +333,8 @@
                 "esc": "Esc - Close suggestions"
             }
         },
-        "comingSoon": {
-            "title": "{mode} Guessr",
-            "subtitle": "Coming Soon!",
-            "description": "We're working hard to bring you the {mode} guessing game mode. Stay tuned for updates!",
-            "whatToExpect": "What to expect:",
-            "expectations": {
-                "audio": "Test your music knowledge by identifying osu! songs from short audio clips. How many can you recognize?",
-                "skin": "Challenge yourself to recognize popular osu! skins from gameplay screenshots. Perfect for skin enthusiasts!"
-            },
-            "actions": {
-                "backToHome": "Back to Home",
-                "tryBackground": "Try Background Guessr"
-            }
-        },
         "audio": {
-            "instructions": "Listen to the audio and try to guess the song title!",
+            "instructions": "Послушай и угадай название песни.",
             "browserNotSupported": "Your browser does not support the audio element."
         }
     },
@@ -419,7 +391,6 @@
         },
         "notFound": {
             "title": "Игрок не найдет",
-            "description": "Извините, мы не смогли найти игрока, которого вы ищете.",
             "subDescription": "Этого пользователя не существует, либо он ещё не зарегистрирован в {osu_guessr}.",
             "actions": {
                 "home": "На главную",
@@ -442,12 +413,12 @@
             "title": "Ключи API",
             "usage": "{count}/5 ключей использовано",
             "security": {
-                "title": "Важная информация по безопасности",
+                "title": "Безопасность API-ключей",
                 "points": {
                     "1": "Храните свои API-ключи в безопасности и никогда не публикуйте их публично",
                     "2": "Если ключ украден, немедленно удилате его и создайте новый",
                     "3": "Каждый ключ имеет полный доступ к возможностям API вашей учетной записи",
-                    "4": "API keys are stored securely and cannot be retrieved after creation"
+                    "4": "API-ключи нельзя восстановить после создания"
                 }
             },
             "actions": {
@@ -460,24 +431,24 @@
             "dialog": {
                 "create": {
                     "title": "Создать новый ключ API",
-                    "description": "Введите имя для вашего нового API-ключа. Это поможет вам идентифицировать его в будущем.",
+                    "description": "Назови ключ, чтобы позже его распознать.",
                     "placeholder": "Название ключа",
                     "warning": {
                         "title": "Important",
-                        "description": "You will only see the API key once after creation. Make sure to copy it immediately as it cannot be recovered later."
+                        "description": "Скопируй ключ после создания. Позже его нельзя восстановить."
                     }
                 },
                 "delete": {
                     "title": "Удалить ключ API",
                     "description": "Вы действительно хотите удалить ключ API \"{name}\"?",
-                    "warning": "Это действие невозможно отменить, и оно немедленно приведет к аннулированию доступа к любым сервисам, использующим этот ключ.",
-                    "confirm": "Yes, delete this key"
+                    "warning": "Удаление необратимо и сразу лишает доступа сервисы, использующие этот ключ.",
+                    "confirm": "Delete Key"
                 },
                 "created": {
-                    "title": "API Key Created Successfully",
+                    "title": "API Key Created",
                     "warning": {
                         "title": "Copy Your API Key Now",
-                        "description": "This is your only chance to copy this API key. For security reasons, it will never be displayed again."
+                        "description": "Скопируй ключ перед закрытием. Он больше не будет показан."
                     },
                     "copied": "API key copied to clipboard"
                 }
@@ -499,19 +470,19 @@
     },
     "support": {
         "title": "Support {osu_guessr}",
-        "description": "Help support the development and maintenance of {osu_guessr} by becoming a supporter!",
+        "description": "Пожертвования покрывают расходы на разработку и серверы {osu_guessr}.",
         "benefits": {
             "title": "Supporter Benefits",
             "items": {
-                "badge": "Exclusive supporter badge on your profile",
-                "homepage": "Get featured on the homepage"
+                "badge": "Значок спонсора в профиле",
+                "homepage": "Твоё имя на главной странице"
             }
         },
         "donate": {
             "title": "Become a Supporter",
             "button": "Buy me a Coffee",
-            "description": "Support {osu_guessr} with a one-time donation through Buy Me a Coffee. Any donation amount will grant you supporter status permanently!",
-            "reminder": "Please include your osu!guessr username or user ID in your donation message to receive supporter benefits!"
+            "description": "Разовое пожертвование любой суммы через Buy Me a Coffee даёт постоянный статус спонсора в {osu_guessr}.",
+            "reminder": "Укажи имя пользователя или ID в osu!guessr в сообщении к пожертвованию, чтобы получить преимущества спонсора."
         }
     },
     "components": {
@@ -526,7 +497,7 @@
             }
         },
         "footer": {
-            "madeWith": "Сделано с ❤️ - {author}",
+            "madeWith": "Автор: {author}",
             "about": "About",
             "privacy": "Privacy Policy",
             "tos": "Terms of Service"
@@ -561,47 +532,25 @@
                 }
             }
         },
-        "comingSoon": {
-            "title": "{mode} Guessr",
-            "message": "Скоро!",
-            "description": "Мы прилагаем все усилия, чтобы ввести для вас режим {mode}. Следите за обновлениями!",
-            "whatToExpect": {
-                "title": "Чего ожидать:",
-                "audio": "Проверьте ваши знания песен из {osu_base} по коротким отрывкам аудио. Сколько сможете угадать?",
-                "skin": "Попробуйте распознать популярные скины {osu_base} по скриншотам игрового процесса. Идеально подходит для любителей скинов!"
-            },
-            "actions": {
-                "home": "На главную",
-                "tryBackground": "Попробуйте Background Guessr"
-            }
-        },
-        "adPlaceholder": {
-            "title": "Реклама",
-            "description": "Скоро появится реклама, чтобы помочь поддержать {osu_guessr}"
-        },
         "ads": {
             "twitter": {
-                "title": "Follow on Twitter",
-                "message": "Stay updated with the latest {osu_guessr} news!"
+                "title": "Follow on Twitter"
             },
             "osu": {
-                "title": "Add me on osu!",
-                "message": "Let's be friends in-game!"
+                "title": "Add me on osu!"
             },
             "buymeacoffe": {
-                "title": "Support on Ko-fi",
-                "message": "Help keep {osu_guessr} running!"
+                "title": "Поддержать на Ko-fi"
             },
             "discord": {
-                "title": "Join our Discord",
-                "message": "Chat with other {osu_guessr} players!"
+                "title": "Join our Discord"
             }
         }
     },
     "errors": {
         "404": {
             "title": "404 - Страница не найдена",
-            "description": "Ой! Похоже, вы наткнулись на недостающий кружок. Страница, которую вы ищете, не существует.",
+            "description": "Эта страница не существует.",
             "reportIssue": "Если вы считаете, что это ошибка - пожалуйста, сообщите о ней."
         },
         "game": {
@@ -612,15 +561,14 @@
         "auth": {
             "required": {
                 "title": "Требуется войти в аккаунт",
-                "description": "Вам нужно войти с аккаунтом {osu_base}, чтобы поиграть в {osu_guessr}.",
-                "subDescription": "Войдите в систему, чтобы отслеживать свои результаты, соревноваться в таблице лидеров и сохранять свой прогресс!",
+                "description": "Войди через аккаунт {osu_base}, чтобы играть в {osu_guessr}.",
                 "noAccount": "У вас нет аккаунта {osu_base}? Создайте его здесь"
             }
         }
     },
     "confirmations": {
         "exitGame": {
-            "classic": "Вы уверены, что хотите выйти? Ваши очки не будут засчитаны, если вы выйдете до завершения всех раундов!",
+            "classic": "Выйти? Очки сохранятся только после завершения всех раундов.",
             "classicComplete": "Вы уверены, что хотите выйти? Ваш результат будет сохранен.",
             "death": "Вы уверены, что хотите завершить свою игру? Ваше самое высокое комбо будет сохранено."
         }
@@ -756,5 +704,8 @@
                 }
             }
         }
+    },
+    "lockdown": {
+        "description": "Пока сайт заблокирован, доступ есть только у владельца."
     }
 }

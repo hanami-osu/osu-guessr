@@ -164,7 +164,7 @@ export async function addSkinsFromList(rawIds: number[]): Promise<Array<{ id: nu
     }
 
     const successful = results.filter((r) => r.success).length;
-    console.log(`Successfully processed ${successful}/${ids.length} skins`);
+    console.log(`Processed ${successful}/${ids.length} skins`);
 
     return results;
 }
@@ -198,7 +198,7 @@ export async function removeSkin(rawId: number): Promise<{ success: boolean; err
             await fs.unlink(imagePath).catch(() => console.warn(`Image file ${imageFilename} not found`));
         }
 
-        console.log(`Successfully removed skin ${id}`);
+        console.log(`Removed skin ${id}`);
         return { success: true };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";

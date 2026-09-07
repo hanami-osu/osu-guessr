@@ -12,7 +12,7 @@ interface Props {
 export async function generateMetadata(): Promise<Metadata> {
     return {
         title: "User Profile",
-        description: `View player statistics and achievements on osu!guessr`,
+        description: `Player statistics and achievements on osu!guessr`,
     };
 }
 

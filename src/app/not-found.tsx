@@ -10,7 +10,7 @@ export default function NotFound() {
     return (
         <div className="container mx-auto px-4 py-16">
             <div className="max-w-2xl mx-auto text-center">
-                <div className="bg-card rounded-xl p-8 border border-border/50">
+                <div className="py-8">
                     <h1 className="text-4xl font-bold mb-4">{t.errors["404"].title}</h1>
 
                     <div className="space-y-4 mb-8">

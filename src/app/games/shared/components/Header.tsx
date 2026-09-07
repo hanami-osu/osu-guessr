@@ -34,7 +34,7 @@ export default function GameHeader({ streak, points, timeLeft, currentRound, tot
     };
 
     return (
-        <div className="motion-fade-up flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8 rounded-lg border border-border/60 bg-card/50 p-4">
+        <div className="motion-fade-up flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8 border-b border-border/60 pb-4">
             <div className="flex flex-wrap items-center gap-3">
                 <h1 className="w-full text-2xl font-bold capitalize sm:w-auto sm:text-3xl">{t.game.header.title.replace("{mode}", mode)}</h1>
 
@@ -62,7 +62,7 @@ export default function GameHeader({ streak, points, timeLeft, currentRound, tot
                     </>
                 )}
             </div>
-            <div className="self-start rounded-lg bg-secondary/80 px-4 py-2 text-xl font-mono ring-1 ring-border/70 transition-[box-shadow,background-color] duration-150 ease-[var(--ease-out-smooth)] lg:self-auto">
+            <div className="self-start py-2 text-2xl font-mono tabular-nums lg:self-auto">
                 <span className={timeLeft < 10 ? "text-destructive" : "text-foreground"}>{t.game.header.timeLeft.replace("{seconds}", timeLeft.toString())}</span>
             </div>
         </div>

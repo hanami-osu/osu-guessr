@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Audio Guessr",
-    description: "Challenge yourself by identifying songs from short audio clips.",
+    description: "Guess osu! songs from audio clips.",
 };
 
 export default function AudioGuessr() {

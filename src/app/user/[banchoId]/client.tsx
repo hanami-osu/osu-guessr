@@ -164,7 +164,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-10 space-y-8 max-w-4xl">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6 bg-card p-5 sm:p-8 rounded-lg border border-border/60">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-b border-border/60 pb-8">
                 <div className="relative h-28 w-28 sm:h-32 sm:w-32 shrink-0">
                     <Image src={avatar_url} alt={username} fill className="rounded-full object-cover" />
                 </div>
@@ -206,7 +206,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                 <h2 className="text-2xl font-bold mb-6 text-center capitalize">
                     {t.user.profile.gameStats.title} ({currentMode})
                 </h2>
-                <div className="bg-card p-5 sm:p-6 rounded-lg border border-border/60">
+                <div className="border-t border-border/60 pt-6">
                     {gameStats[currentMode].games_played > 0 ? (
                         <div className="space-y-4">
                             {currentVariant === "classic" && (
@@ -233,7 +233,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
                 <h2 className="text-2xl font-bold mb-6 text-center capitalize">
                     {t.user.profile.topGames.title} ({currentMode})
                 </h2>
-                <div className="bg-card p-5 sm:p-6 rounded-lg border border-border/60">
+                <div className="border-t border-border/60 pt-6">
                     <div className="space-y-4">
                         {topPlays.map((game, index) => (
                             <div key={index} className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
@@ -258,7 +258,7 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
 
             <section>
                 <h2 className="text-2xl font-bold mb-6 text-center">{t.user.profile.recentGames.title}</h2>
-                <div className="bg-card rounded-lg border border-border/60">
+                <div className="border-y border-border/60">
                     {userGames.length > 0 ? (
                         <div className="divide-y divide-border/50">
                             {userGames.map((game, index) => (
@@ -296,7 +296,7 @@ function StatItem({ label, value }: { label: string; value: string }) {
 
 function StatBox({ label, value }: { label: string; value: string }) {
     return (
-        <div className="bg-background/50 p-3 rounded-lg border border-border/50">
+        <div className="py-2">
             <div className="text-sm text-foreground/70">{label}</div>
             <div className="text-lg font-semibold">{value}</div>
         </div>
@@ -345,7 +345,7 @@ function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { curren
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-10 space-y-8 max-w-4xl">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6 bg-card p-5 sm:p-8 rounded-lg border border-border/60">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-b border-border/60 pb-8">
                 <div className="relative h-32 w-32">
                     <div className="h-32 w-32 bg-muted rounded-full animate-pulse" />
                 </div>
@@ -355,7 +355,7 @@ function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { curren
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                         {[...Array(3)].map((_, i) => (
-                            <div key={i} className="bg-background/50 p-3 rounded-lg">
+                            <div key={i} className="py-2">
                                 <div className="h-4 w-16 bg-muted rounded animate-pulse mb-2" />
                                 <div className="h-6 w-12 bg-muted rounded animate-pulse" />
                             </div>
@@ -370,7 +370,7 @@ function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { curren
                 <h2 className="text-2xl font-bold mb-6 text-center capitalize">
                     {t.user.profile.gameStats.title} ({currentMode})
                 </h2>
-                <div className="bg-card p-5 sm:p-6 rounded-lg border border-border/60">
+                <div className="border-t border-border/60 pt-6">
                     <div className="space-y-4">
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="flex justify-between items-center">
@@ -386,7 +386,7 @@ function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { curren
                 <h2 className="text-2xl font-bold mb-6 text-center capitalize">
                     {t.user.profile.topGames.title} ({currentMode})
                 </h2>
-                <div className="bg-card p-5 sm:p-6 rounded-lg border border-border/60">
+                <div className="border-t border-border/60 pt-6">
                     <div className="space-y-4">
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="flex justify-between items-center">
@@ -403,7 +403,7 @@ function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { curren
 
             <section>
                 <h2 className="text-2xl font-bold mb-6 text-center">{t.user.profile.recentGames.title}</h2>
-                <div className="bg-card rounded-lg border border-border/60">
+                <div className="border-y border-border/60">
                     <div className="divide-y divide-border/50">
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="p-4 flex justify-between items-center">

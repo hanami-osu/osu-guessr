@@ -29,7 +29,7 @@ export const metadata: Metadata = {
         default: "osu!guessr",
         template: "%s | osu!guessr",
     },
-    description: "Test your osu! knowledge! Guess beatmaps by audio or background.",
+    description: "Guess osu! songs from audio clips or beatmap backgrounds, and skins from screenshots.",
     icons: {
         icon: "/favicon.png",
     },
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     },
     openGraph: {
         title: "osu!guessr",
-        description: "Guess osu! beatmaps from audio clips and screenshots. Free web game for osu! fans.",
+        description: "Guess osu! songs from audio clips or beatmap backgrounds, and skins from screenshots.",
         url: publicOrigin,
         siteName: "osu!guessr",
         images: [{ url: `${publicOrigin}/main_bg.webp`, width: 1200, height: 630 }],
@@ -75,7 +75,7 @@ export default async function RootLayout({
             <html lang={initialLocale}>
                 <body className={`${publicSans.variable} antialiased`}>
                     <div className="flex items-center justify-center min-h-screen bg-background">
-                        <div className="max-w-xl mx-auto p-8 bg-card rounded-lg border border-border">
+                        <div className="max-w-xl mx-auto px-4 py-8">
                             <h1 className="text-2xl font-bold mb-4">{t.lockdown.title}</h1>
                             <p className="mb-4">{t.lockdown.until.replace("{date}", new Date(lock.until).toLocaleString(initialLocale))}</p>
                             <p className="text-sm text-muted-foreground">{t.lockdown.description}</p>
@@ -90,7 +90,6 @@ export default async function RootLayout({
     return (
         <html lang={initialLocale}>
             <head>
-                {/* JSON-LD structured data for Site */}
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{

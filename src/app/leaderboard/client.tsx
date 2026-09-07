@@ -65,7 +65,7 @@ export default function LeaderboardClient() {
         <div className="container mx-auto px-4 py-10 md:py-16">
             <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center">{t.leaderboard.title}</h1>
 
-            <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center gap-4 mb-8 p-4 bg-card rounded-lg border border-border/60">
+            <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center gap-4 mb-8 py-4">
                 <div className="flex items-center justify-between gap-2 md:justify-start">
                     <span className="text-sm font-medium text-muted-foreground">Mode:</span>
                     <Select
@@ -117,7 +117,7 @@ export default function LeaderboardClient() {
                 </div>
             </div>
 
-            <div className="bg-card rounded-lg border border-border/60 overflow-hidden">
+            <div className="border-y border-border/60">
                 {isLoading ? (
                     <div className="p-8 text-center" role="status">
                         {t.common.loading}
@@ -134,7 +134,7 @@ export default function LeaderboardClient() {
                     <div className="overflow-x-auto">
                         <table className="w-full table-fixed sm:table-auto">
                             <caption className="sr-only">{t.leaderboard.title}</caption>
-                            <thead className="bg-secondary/50">
+                            <thead className="border-b border-border/60">
                             <tr>
                                 <th scope="col" className="w-14 px-3 py-3 text-left sm:w-auto sm:px-6 sm:py-4">{t.leaderboard.table.rank}</th>
                                 <th scope="col" className="px-2 py-3 text-left sm:px-6 sm:py-4">{t.leaderboard.table.player}</th>

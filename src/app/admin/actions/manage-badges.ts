@@ -37,7 +37,7 @@ export async function addBadge(name: string, color: string) {
 
         await query("INSERT INTO badges (name, color) VALUES (?, ?)", [formattedName, validated.color]);
 
-        return `Successfully added badge "${formattedName}" with color ${validated.color}`;
+        return `Added badge "${formattedName}" with color ${validated.color}`;
     } catch (error) {
         if (error instanceof z.ZodError) {
             throw new Error(`Validation error: ${error.errors.map((e) => e.message).join(", ")}`);
@@ -51,7 +51,7 @@ export async function removeBadge(name: string) {
         await requireOwner();
         const formattedName = capitalizeWords(name);
         await query("DELETE FROM badges WHERE name = ?", [formattedName]);
-        return `Successfully removed badge "${formattedName}"`;
+        return `Removed badge "${formattedName}"`;
     } catch (error) {
         throw new Error(`Failed to remove badge: ${error}`);
     }
@@ -62,7 +62,7 @@ export async function assignBadgeToUser(userId: number, badgeName: string) {
         await requireOwner();
         const formattedName = capitalizeWords(badgeName);
         await query("INSERT INTO user_badges (user_id, badge_name) VALUES (?, ?)", [userId, formattedName]);
-        return `Successfully assigned badge "${formattedName}" to user ${userId}`;
+        return `Assigned badge "${formattedName}" to user ${userId}`;
     } catch (error) {
         throw new Error(`Failed to assign badge: ${error}`);
     }
@@ -73,7 +73,7 @@ export async function removeBadgeFromUser(userId: number, badgeName: string) {
         await requireOwner();
         const formattedName = capitalizeWords(badgeName);
         await query("DELETE FROM user_badges WHERE user_id = ? AND badge_name = ?", [userId, formattedName]);
-        return `Successfully removed badge "${formattedName}" from user ${userId}`;
+        return `Removed badge "${formattedName}" from user ${userId}`;
     } catch (error) {
         throw new Error(`Failed to remove badge: ${error}`);
     }

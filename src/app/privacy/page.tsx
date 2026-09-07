@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Privacy Policy",
-    description: "Learn about how we handle your data and privacy on osu!guessr.",
+    description: "How osu!guessr collects, uses, and stores your data.",
 };
 
 export default function PrivacyPolicyPage() {

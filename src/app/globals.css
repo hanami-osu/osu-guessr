@@ -88,23 +88,6 @@ body {
         animation-delay: 220ms;
     }
 
-    .interactive-surface {
-        transition:
-            border-color 180ms var(--ease-out-smooth),
-            background-color 180ms var(--ease-out-smooth),
-            box-shadow 180ms var(--ease-out-smooth),
-            transform 180ms var(--ease-out-smooth);
-    }
-
-    .interactive-surface:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 18px 50px -34px hsl(var(--primary) / 0.6);
-    }
-
-    .interactive-surface:active {
-        transform: translateY(0);
-    }
-
     .press-feedback {
         transition:
             transform 120ms var(--ease-press),
@@ -152,13 +135,11 @@ body {
             animation: none;
         }
 
-        .interactive-surface,
         .press-feedback,
         .subtle-link::after {
             transition-duration: 1ms;
         }
 
-        .interactive-surface:hover,
         .press-feedback:active:not(:disabled) {
             transform: none;
         }

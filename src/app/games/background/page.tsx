@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Background Guessr",
-    description: "Test your knowledge by guessing songs from their beatmap backgrounds.",
+    description: "Guess osu! songs from beatmap backgrounds.",
 };
 
 export default function BackgroundGuessr() {

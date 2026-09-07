@@ -40,6 +40,6 @@ export async function getLockInfo(): Promise<LockInfo | null> {
 export async function isLockedForUser(banchoId?: number): Promise<boolean> {
     const info = await getLockInfo();
     if (!info) return false;
-    if (banchoId && banchoId === info.ownerId) return false; // owner exempt
+    if (banchoId && banchoId === info.ownerId) return false;
     return true;
 }

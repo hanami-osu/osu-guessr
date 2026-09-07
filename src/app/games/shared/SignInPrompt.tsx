@@ -11,12 +11,11 @@ export default function SignInPrompt() {
     return (
         <div className="container mx-auto px-4 py-16">
             <div className="max-w-2xl mx-auto text-center">
-                <div className="bg-card rounded-xl p-8 border border-border/50">
+                <div className="py-8">
                     <h1 className="text-3xl font-bold mb-6">{t.errors.auth.required.title}</h1>
 
                     <div className="space-y-4 mb-8">
                         <p className="text-foreground/70">{t.errors.auth.required.description}</p>
-                        <p className="text-foreground/70">{t.errors.auth.required.subDescription}</p>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">

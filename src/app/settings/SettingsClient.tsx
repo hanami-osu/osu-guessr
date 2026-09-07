@@ -48,7 +48,6 @@ export default function SettingsClient() {
         loadApiKeys();
     }, [loadApiKeys]);
 
-    // Key management functions
     async function handleCreateKey() {
         if (!newKeyName.trim()) return;
 
@@ -97,7 +96,6 @@ export default function SettingsClient() {
         }
     }
 
-    // Dialog management
     function handleCloseNewKeyDialog() {
         if (!copied) {
             const confirmed = window.confirm(t.settings.apiKeys.dialog.created.warning.description);
@@ -106,7 +104,6 @@ export default function SettingsClient() {
         setDialogs((prev) => ({ ...prev, newKey: null }));
     }
 
-    // Render helper functions
     function renderKeyList() {
         if (loading.keys) {
             return (
@@ -166,7 +163,7 @@ export default function SettingsClient() {
             <div className="max-w-3xl mx-auto">
                 <h1 className="text-3xl md:text-4xl font-bold mb-8">{t.settings.title}</h1>
 
-                <section className="bg-card rounded-lg p-5 sm:p-8 border border-border/60">
+                <section className="border-t border-border/60 pt-8">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                         <h2 className="text-2xl font-bold">{t.settings.apiKeys.title}</h2>
                         <div className="text-sm text-foreground/70">{t.settings.apiKeys.usage.replace("{count}", apiKeys.length.toString())}</div>
