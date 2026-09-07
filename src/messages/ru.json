@@ -8,7 +8,7 @@
             "title": "{osu_guessr}",
             "subtitle": "Угадывай песни из {osu_base} по фонам или аудио, а скины по скриншотам.",
             "startPlaying": "Начать игру",
-            "signIn": "Войти с {osu_base}",
+            "signIn": "Войти через Hanami",
             "learnMore": "Узнать больше",
             "artCredit": "Арт создан {artist_name}",
             "developerCredit": "Created by yorunoken",
@@ -491,7 +491,7 @@
                 "leaderboard": "Лидерборд",
                 "about": "О нас",
                 "settings": "Настройки",
-                "signIn": "Войти",
+                "signIn": "Войти через Hanami",
                 "signOut": "Выйти",
                 "viewProfile": "Посмотреть профиль"
             }
@@ -561,7 +561,7 @@
         "auth": {
             "required": {
                 "title": "Требуется войти в аккаунт",
-                "description": "Войди через аккаунт {osu_base}, чтобы играть в {osu_guessr}.",
+                "description": "Войди через Hanami, чтобы играть в {osu_guessr}.",
                 "noAccount": "У вас нет аккаунта {osu_base}? Создайте его здесь"
             }
         }
@@ -621,7 +621,7 @@
                 "title": "Third-Party Services",
                 "description": "We use the following third-party services:",
                 "items": {
-                    "osu": "osu! API for authentication and beatmap data",
+                    "osu": "Hanami отвечает за аутентификацию; API osu! используется для данных о битмапах",
                     "analytics": "Analytics services to improve user experience",
                     "cdn": "Content delivery networks for improved performance"
                 }

@@ -8,7 +8,7 @@
             "title": "{osu_guessr}",
             "subtitle": "Adivina canciones de {osu_base} por fondos o audio, y skins por capturas de pantalla.",
             "startPlaying": "Comienza a jugar",
-            "signIn": "Inicia sesión con {osu_base}",
+            "signIn": "Inicia sesión con Hanami",
             "learnMore": "Más información",
             "artCredit": "Arte de {artist_name}",
             "developerCredit": "Creado por yorunoken",
@@ -505,7 +505,7 @@
                 "leaderboard": "Clasificaciones",
                 "about": "Acerca del sitio",
                 "settings": "Ajustes",
-                "signIn": "Iniciar sesión",
+                "signIn": "Inicia sesión con Hanami",
                 "signOut": "Cerrar sesión",
                 "viewProfile": "Ver perfil"
             }
@@ -561,7 +561,7 @@
         "auth": {
             "required": {
                 "title": "Inicio de sesión obligatorio",
-                "description": "Inicia sesión con tu cuenta de {osu_base} para jugar a {osu_guessr}.",
+                "description": "Inicia sesión con Hanami para jugar a {osu_guessr}.",
                 "noAccount": "¿No tienes una cuenta de {osu_base}? Crea una aquí"
             }
         }
@@ -621,7 +621,7 @@
                 "title": "Servicios de terceros",
                 "description": "Usamos los siguientes servicios de terceros:",
                 "items": {
-                    "osu": "La API de osu! para la autenticación y los datos de beatmaps",
+                    "osu": "Hanami gestiona la autenticación; la API de osu! se usa para los datos de beatmaps",
                     "analytics": "Servicios analíticos para mejorar la experiencia de usuario",
                     "cdn": "Redes de distribución de contenido para un mejor rendimiento"
                 }

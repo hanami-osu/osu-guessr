@@ -42,7 +42,7 @@ export default function Hero() {
                                 {t.home.hero.startPlaying}
                             </Button>
                         ) : (
-                            <Button size="lg" onClick={() => signIn("osu")} className="text-base sm:text-lg px-8 w-full sm:w-auto">
+                            <Button size="lg" onClick={() => signIn("hanami")} className="text-base sm:text-lg px-8 w-full sm:w-auto">
                                 {t.home.hero.signIn}
                             </Button>
                         )}

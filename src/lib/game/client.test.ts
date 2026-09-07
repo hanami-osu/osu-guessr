@@ -5,8 +5,8 @@ Object.assign(process.env, {
     DATABASE_URL: "mysql://root@localhost:3306/test",
     REDIS_URL: "redis://localhost:6379",
     AUTH_SECRET: "test",
-    OSU_CLIENT_ID: "test",
-    OSU_CLIENT_SECRET: "test",
+    HANAMI_ISSUER: "https://hanami.example.com/api/auth",
+    HANAMI_CLIENT_ID: "test",
     OSU_API_KEY: "test",
 });
 

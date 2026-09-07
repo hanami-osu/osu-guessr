@@ -11,8 +11,8 @@ const envSchema = z.object({
     IS_DOCKER_BUILD: z.string().optional(),
 
     AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
-    OSU_CLIENT_ID: z.string().min(1, "OSU_CLIENT_ID is required"),
-    OSU_CLIENT_SECRET: z.string().min(1, "OSU_CLIENT_SECRET is required"),
+    HANAMI_ISSUER: z.string().url("HANAMI_ISSUER must be a valid URL"),
+    HANAMI_CLIENT_ID: z.string().min(1, "HANAMI_CLIENT_ID is required"),
     NEXTAUTH_URL: optionalUrl("NEXTAUTH_URL must be a valid URL"),
 
     OSU_API_KEY: z.string().min(1, "OSU_API_KEY is required"),
@@ -32,8 +32,8 @@ const processEnv = {
     REDIS_URL: process.env.REDIS_URL,
     IS_DOCKER_BUILD: process.env.IS_DOCKER_BUILD,
     AUTH_SECRET: process.env.AUTH_SECRET,
-    OSU_CLIENT_ID: process.env.OSU_CLIENT_ID,
-    OSU_CLIENT_SECRET: process.env.OSU_CLIENT_SECRET,
+    HANAMI_ISSUER: process.env.HANAMI_ISSUER,
+    HANAMI_CLIENT_ID: process.env.HANAMI_CLIENT_ID,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     OSU_API_KEY: process.env.OSU_API_KEY,
     OSUCK_API_KEY: process.env.OSUCK_API_KEY,

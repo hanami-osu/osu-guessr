@@ -19,7 +19,7 @@ export default function SignInPrompt() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Button onClick={() => signIn("osu")} className="w-full sm:w-auto">
+                        <Button onClick={() => signIn("hanami")} className="w-full sm:w-auto">
                             {t.home.hero.signIn}
                         </Button>
                         <Button asChild variant="outline" className="w-full sm:w-auto">

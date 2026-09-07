@@ -8,7 +8,7 @@
             "title": "{osu_guessr}",
             "subtitle": "Zgaduj utwory z {osu_base} na podstawie teł lub dźwięku, a skiny ze zrzutów ekranu.",
             "startPlaying": "Zacznij Grać",
-            "signIn": "Zaloguj się przy użyciu {osu_base}",
+            "signIn": "Zaloguj się przez Hanami",
             "learnMore": "Dowiedz się więcej",
             "artCredit": "Grafika autorstwa: {artist_name}",
             "developerCredit": "Stworzone przez: yorunoken",
@@ -78,7 +78,7 @@
                 "title": "Usługi Stron Trzecich",
                 "description": "Korzystamy z następujących usług stron trzecich:",
                 "items": {
-                    "osu": "osu! API w celu uwierzytelniania logowania i pozyskiwania danych o beatmapach",
+                    "osu": "Hanami obsługuje uwierzytelnianie; API osu! służy do pobierania danych beatmap",
                     "analytics": "Usługi analityczne poprawiające doświadczenia użytkownika",
                     "cdn": "Sieci dostarczania treści w celu lepszej wydajności"
                 }
@@ -571,7 +571,7 @@
                 "leaderboard": "Ranking",
                 "about": "O Grze",
                 "settings": "Ustawienia",
-                "signIn": "Zaloguj się",
+                "signIn": "Zaloguj się przez Hanami",
                 "signOut": "Wyloguj się",
                 "viewProfile": "Zobacz Profil"
             }
@@ -627,7 +627,7 @@
         "auth": {
             "required": {
                 "title": "Musisz się zalogować",
-                "description": "Zaloguj się kontem {osu_base}, aby grać w {osu_guessr}.",
+                "description": "Zaloguj się przez Hanami, aby grać w {osu_guessr}.",
                 "noAccount": "Nie masz konta {osu_base}? Stwórz je tutaj."
             }
         }

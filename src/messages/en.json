@@ -8,7 +8,7 @@
             "title": "{osu_guessr}",
             "subtitle": "Guess {osu_base} songs from backgrounds or audio, and skins from screenshots.",
             "startPlaying": "Start Playing",
-            "signIn": "Sign in with {osu_base}",
+            "signIn": "Sign in with Hanami",
             "learnMore": "Learn More",
             "artCredit": "Art by {artist_name}",
             "developerCredit": "Created by yorunoken",
@@ -78,7 +78,7 @@
                 "title": "Third-Party Services",
                 "description": "We use the following third-party services:",
                 "items": {
-                    "osu": "osu! API for authentication and beatmap data",
+                    "osu": "Hanami handles authentication; osu! API is used for beatmap data",
                     "analytics": "Analytics services to improve user experience",
                     "cdn": "Content delivery networks for improved performance"
                 }
@@ -668,7 +668,7 @@
                 "leaderboard": "Leaderboard",
                 "about": "About",
                 "settings": "Settings",
-                "signIn": "Sign In",
+                "signIn": "Sign in with Hanami",
                 "signOut": "Sign out",
                 "viewProfile": "View Profile",
                 "admin": "Admin"
@@ -725,7 +725,7 @@
         "auth": {
             "required": {
                 "title": "Sign in Required",
-                "description": "Sign in with your {osu_base} account to play {osu_guessr}.",
+                "description": "Sign in with Hanami to play {osu_guessr}.",
                 "noAccount": "Don't have an {osu_base} account? Create one here"
             }
         }
