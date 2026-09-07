@@ -12,9 +12,9 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
     const sortedChangelogs = [...changelogs].reverse();
 
     return (
-        <div className="container mx-auto px-4">
-            <div className="border-t border-border/60 pt-6">
-                <h2 className="mb-5 text-center text-2xl font-bold">{t.home.updates.title}</h2>
+        <div className="container mx-auto max-w-6xl px-4">
+            <div className="border-t border-border pt-6">
+                <h2 className="mb-5 text-2xl font-bold">{t.home.updates.title}</h2>
 
                 <div className="max-h-[420px] space-y-5 overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
                     {sortedChangelogs.map((log, i) => (

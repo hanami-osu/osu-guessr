@@ -7,12 +7,12 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, description, icon }: StatsCardProps) {
     return (
-        <div className="py-4">
+        <div className="h-full border-t border-border py-5">
             <div className="flex items-start gap-3">
-                <div className="pt-1 text-primary">{icon}</div>
+                <div className="pt-1 text-muted-foreground">{icon}</div>
                 <div className="min-w-0">
-                    <h3 className="font-semibold">{title}</h3>
-                    <p className="text-2xl font-bold leading-tight text-primary">{value}</p>
+                    <h3 className="text-sm text-muted-foreground">{title}</h3>
+                    <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums leading-tight text-foreground">{value}</p>
                     <p className="text-sm text-foreground/70 mt-1">{description}</p>
                 </div>
             </div>

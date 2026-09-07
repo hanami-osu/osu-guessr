@@ -31,11 +31,11 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
     const { t } = useTranslationsContext();
 
     return (
-        <section className="border-y border-border/40 py-12">
-            <div className="container mx-auto px-4">
-                <h2 className="text-2xl font-bold mb-6 text-center">{t.home.statistics.title}</h2>
+        <section className="pb-10 pt-2">
+            <div className="container mx-auto max-w-6xl px-4">
+                <h2 className="text-2xl font-bold tracking-tight mb-6">{t.home.statistics.title}</h2>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
-                    <div className="motion-fade-up">
+                    <div>
                         <StatsCard
                             title={t.home.statistics.totalPlayers.title}
                             value={highStats.total_users.toLocaleString()}
@@ -43,7 +43,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
                             icon={<Users2 className="h-6 w-6" />}
                         />
                     </div>
-                    <div className="motion-fade-up motion-delay-1">
+                    <div>
                         <StatsCard
                             title={t.home.statistics.gamesPlayed.title}
                             value={highStats.total_games.toLocaleString()}
@@ -51,7 +51,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
                             icon={<Gamepad2 className="h-6 w-6" />}
                         />
                     </div>
-                    <div className="motion-fade-up motion-delay-2">
+                    <div>
                         <StatsCard
                             title={t.home.statistics.highScore.title}
                             value={highStats.highest_points.toLocaleString()}
@@ -72,14 +72,14 @@ export function HomeAnnouncementsSection({ latestAnnouncement, announcementsHist
 
     return (
         <section className="py-12">
-            <div className="container mx-auto px-4">
-                <h2 className="text-2xl font-bold mb-6 text-center">{t.home.announcements.title}</h2>
+            <div className="container mx-auto max-w-6xl px-4">
+                <h2 className="text-2xl font-bold tracking-tight mb-6">{t.home.announcements.title}</h2>
 
-                <div className="mx-auto max-w-2xl">
+                <div className="border-t border-border py-6">
                     <Link href="/announcements" className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                        <div className="border-t border-border/60 py-5">
+                        <div className="pb-5">
                             <div className="flex items-center gap-2 mb-3">
-                                <div className="soft-loading-dot w-2 h-2 bg-primary rounded-full"></div>
+                                <div className="w-2 h-2 bg-primary rounded-full"></div>
                                 <span className="text-sm font-medium text-primary">{t.home.announcements.latestLabel}</span>
                             </div>
                             <h3 className="text-xl font-semibold mb-2">{latestAnnouncement.title}</h3>
@@ -87,7 +87,7 @@ export function HomeAnnouncementsSection({ latestAnnouncement, announcementsHist
                             <div className="whitespace-pre-wrap text-foreground">{latestAnnouncement.content}</div>
                         </div>
                         {announcementsHistory && announcementsHistory.length > 1 && (
-                            <div className="motion-scale-in mt-4 border-t border-border/50 pt-4">
+                            <div className="mt-4 border-t border-border/50 pt-4">
                                 <div className="text-sm text-muted-foreground">
                                     <strong>{t.home.announcements.previous}</strong>
                                     <ul className="mt-2 space-y-1">

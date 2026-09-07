@@ -30,10 +30,10 @@ export default function Footer() {
                     <Link href="/about" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.about}
                     </Link>
-                    <Link href="/privacy" className="hover:text-foreground transition-colors duration-200">
+                    <Link href="https://hanami.yorunoken.com/legal/privacy" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.privacy}
                     </Link>
-                    <Link href="/tos" className="hover:text-foreground transition-colors duration-200">
+                    <Link href="https://hanami.yorunoken.com/legal/terms" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.tos}
                     </Link>
                     <a
