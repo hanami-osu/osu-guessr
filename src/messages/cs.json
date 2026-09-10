@@ -305,7 +305,7 @@
                 "maxStreak": "Nejdelší série",
                 "totalCorrect": "Celkový počet správných odpovědí",
                 "averageTime": "Průměrný čas",
-                "diedMessage": "Udělali jste dvě chyby!"
+                "diedMessage": "Udělali jste chybu."
             },
             "labels": {
                 "averageTime": "Průměrný čas",

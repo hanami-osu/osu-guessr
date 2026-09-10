@@ -15,22 +15,33 @@ import { useTranslationsContext } from "@/context/translations-provider";
 import { AdSlider } from "@/components/Ads";
 import { createLatestRequestGate } from "@/lib/latest-request";
 
-export default function LeaderboardClient() {
-    const { t } = useTranslationsContext();
+interface LeaderboardClientProps {
+    initialData: TopPlayer[];
+    initialError?: string | null;
+}
+
+export default function LeaderboardClient({ initialData, initialError = null }: LeaderboardClientProps) {
+    const { t, locale } = useTranslationsContext();
     const { data: session } = useSession();
     const [selectedMode, setSelectedMode] = useState<GameMode>(GameMode.Background);
     const [selectedVariant, setSelectedVariant] = useState<GameVariant>("classic");
-    const [leaderboardData, setLeaderboardData] = useState<Array<TopPlayer>>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [leaderboardData, setLeaderboardData] = useState<Array<TopPlayer>>(initialData);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(initialError);
     const [orderMetric, setOrderMetric] = useState<"total" | "highest">("highest");
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
     const requestGate = useRef(createLatestRequestGate());
+    const isInitialRender = useRef(true);
 
     const errorMessage = t.notifications.error;
 
     useEffect(() => {
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            return;
+        }
+
         const request = requestGate.current.begin();
 
         async function fetchLeaderboard() {
@@ -62,57 +73,55 @@ export default function LeaderboardClient() {
     const gameModes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin];
 
     return (
-        <div className="container mx-auto px-4 py-10 md:py-16">
-            <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center">{t.leaderboard.title}</h1>
+        <div className="container mx-auto max-w-6xl px-4 py-10 md:py-16">
+            <div className="mb-8 md:mb-10">
+                <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t.leaderboard.title}</h1>
+            </div>
 
-            <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center gap-4 mb-8 py-4">
-                <div className="flex items-center justify-between gap-2 md:justify-start">
-                    <span className="text-sm font-medium text-muted-foreground">Mode:</span>
-                    <Select
-                        value={selectedMode}
-                        onValueChange={(value: GameMode) => {
-                            setSelectedMode(value);
-                            setPage(1);
-                        }}
-                    >
-                        <SelectTrigger className="w-32">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {gameModes.map((mode) => (
-                                <SelectItem key={mode} value={mode} className="capitalize">
-                                    {t.leaderboard.filters.mode[mode]}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+            <div className="mb-8 flex flex-col gap-5 border-y border-border/60 py-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-10">
+                <div className="min-w-0">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Mode</div>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2">
+                        {gameModes.map((mode) => (
+                            <button
+                                key={mode}
+                                type="button"
+                                aria-pressed={selectedMode === mode}
+                                onClick={() => {
+                                    setSelectedMode(mode);
+                                    setPage(1);
+                                }}
+                                className={`border-b-2 pb-1 text-sm font-medium transition-colors ${selectedMode === mode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                            >
+                                {t.leaderboard.filters.mode[mode]}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 md:justify-start">
-                    <span className="text-sm font-medium text-muted-foreground">Variant:</span>
-                    <div className="flex rounded-md border border-border/60">
-                        <Button
-                            variant={selectedVariant === "classic" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => {
-                                setSelectedVariant("classic");
-                                setPage(1);
-                            }}
-                            className="rounded-r-none border-r"
-                        >
-                            {t.leaderboard.filters.variant.classic}
-                        </Button>
-                        <Button
-                            variant={selectedVariant === "death" ? "destructive" : "ghost"}
-                            size="sm"
-                            onClick={() => {
-                                setSelectedVariant("death");
-                                setPage(1);
-                            }}
-                            className="rounded-l-none"
-                        >
-                            {t.leaderboard.filters.variant.death}
-                        </Button>
+                <div className="min-w-0">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Variant</div>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2">
+                        {(["classic", "death"] as const).map((variant) => (
+                            <button
+                                key={variant}
+                                type="button"
+                                aria-pressed={selectedVariant === variant}
+                                onClick={() => {
+                                    setSelectedVariant(variant);
+                                    setPage(1);
+                                }}
+                                className={`border-b-2 pb-1 text-sm font-medium transition-colors ${
+                                    selectedVariant === variant
+                                        ? variant === "death"
+                                            ? "border-destructive text-foreground"
+                                            : "border-primary text-foreground"
+                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                }`}
+                            >
+                                {t.leaderboard.filters.variant[variant]}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -134,12 +143,12 @@ export default function LeaderboardClient() {
                     <div className="overflow-x-auto">
                         <table className="w-full table-fixed sm:table-auto">
                             <caption className="sr-only">{t.leaderboard.title}</caption>
-                            <thead className="border-b border-border/60">
+                            <thead className="border-b border-border/60 text-sm text-muted-foreground">
                             <tr>
-                                <th scope="col" className="w-14 px-3 py-3 text-left sm:w-auto sm:px-6 sm:py-4">{t.leaderboard.table.rank}</th>
-                                <th scope="col" className="px-2 py-3 text-left sm:px-6 sm:py-4">{t.leaderboard.table.player}</th>
+                                <th scope="col" className="w-14 px-3 py-3 text-left font-medium sm:w-auto sm:px-5 sm:py-4">{t.leaderboard.table.rank}</th>
+                                <th scope="col" className="px-2 py-3 text-left font-medium sm:px-5 sm:py-4">{t.leaderboard.table.player}</th>
                                 {selectedVariant === "classic" && (
-                                    <th scope="col" className="hidden px-3 py-3 text-right sm:table-cell sm:px-6 sm:py-4">
+                                    <th scope="col" className="hidden px-3 py-3 text-right sm:table-cell sm:px-5 sm:py-4">
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -147,15 +156,15 @@ export default function LeaderboardClient() {
                                                 setOrderMetric("total");
                                                 setPage(1);
                                             }}
-                                            className="h-auto p-0 font-semibold hover:bg-transparent"
+                                            className="h-auto p-0 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
                                         >
                                             {t.leaderboard.table.totalScore}
                                             {orderMetric === "total" && <ChevronDownIcon className="ml-1 h-3 w-3" />}
                                         </Button>
                                     </th>
                                 )}
-                                <th scope="col" className="hidden px-6 py-4 text-right md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
-                                <th scope="col" className="w-20 px-3 py-3 text-right text-xs sm:w-auto sm:px-6 sm:py-4 sm:text-base">
+                                <th scope="col" className="hidden px-5 py-4 text-right font-medium md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
+                                <th scope="col" className="w-20 px-3 py-3 text-right text-xs font-medium sm:w-auto sm:px-5 sm:py-4 sm:text-sm">
                                     {selectedVariant === "classic" ? (
                                         <Button
                                             variant="ghost"
@@ -164,7 +173,7 @@ export default function LeaderboardClient() {
                                                 setOrderMetric("highest");
                                                 setPage(1);
                                             }}
-                                            className="h-auto p-0 font-semibold hover:bg-transparent"
+                                            className="h-auto p-0 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
                                         >
                                             {t.leaderboard.table.hiScore}
                                             {orderMetric === "highest" && <ChevronDownIcon className="ml-1 h-3 w-3" />}
@@ -177,17 +186,13 @@ export default function LeaderboardClient() {
                             </thead>
                             <tbody className="divide-y divide-border/50">
                                 {leaderboardData.map((player, index) => (
-                                    <tr key={player.bancho_id} className={`hover:bg-secondary/20 transition-colors ${session?.user?.name === player.username ? "bg-primary/10" : ""}`}>
-                                        <td className="px-3 py-3 sm:px-6 sm:py-4">
-                                            {index + 1 <= 3 && page === 1 ? (
-                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-foreground font-bold text-sm ring-1 ring-border/70">
-                                                    {(page - 1) * pageSize + index + 1}
-                                                </div>
-                                            ) : (
-                                                <span className="text-muted-foreground font-mono">{(page - 1) * pageSize + index + 1}</span>
-                                            )}
+                                    <tr key={player.bancho_id} className={`transition-colors hover:bg-secondary/20 ${session?.user?.name === player.username ? "bg-primary/10" : ""}`}>
+                                        <td className="px-3 py-4 sm:px-5 sm:py-5">
+                                            <span className={`${index + 1 <= 3 && page === 1 ? "font-semibold text-primary" : "text-muted-foreground"} font-mono tabular-nums`}>
+                                                {(page - 1) * pageSize + index + 1}
+                                            </span>
                                         </td>
-                                        <td className="min-w-0 px-2 py-3 sm:px-6 sm:py-4">
+                                        <td className="min-w-0 px-2 py-4 sm:px-5 sm:py-5">
                                             <Link href={`/user/${player.bancho_id}`} className="group flex min-w-0 items-center gap-2 transition-colors hover:text-primary sm:gap-3">
                                                 <Image
                                                     src={player.avatar_url || "/placeholder.svg"}
@@ -216,9 +221,9 @@ export default function LeaderboardClient() {
                                                 </div>
                                             </Link>
                                         </td>
-                                        {selectedVariant === "classic" && <td className="hidden px-6 py-4 text-right font-mono text-sm sm:table-cell">{BigInt(player.total_score).toLocaleString()}</td>}
-                                        <td className="hidden px-6 py-4 text-right font-mono text-sm text-muted-foreground md:table-cell">{player.games_played}</td>
-                                        <td className="px-3 py-3 text-right font-mono text-sm font-semibold sm:px-6 sm:py-4">{selectedVariant === "classic" ? player.highest_score : player.highest_streak}</td>
+                                        {selectedVariant === "classic" && <td className="hidden px-5 py-5 text-right font-mono text-sm tabular-nums sm:table-cell">{BigInt(player.total_score).toLocaleString(locale)}</td>}
+                                        <td className="hidden px-5 py-5 text-right font-mono text-sm tabular-nums text-muted-foreground md:table-cell">{player.games_played}</td>
+                                        <td className="px-3 py-4 text-right font-mono text-sm font-semibold tabular-nums sm:px-5 sm:py-5">{selectedVariant === "classic" ? player.highest_score : player.highest_streak}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -227,20 +232,8 @@ export default function LeaderboardClient() {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-4 mt-4">
-                <div className="hidden md:block" />
-
-                <div className="flex items-center justify-center">
-                    <Button size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                        {"Prev"}
-                    </Button>
-                    <span className="text-sm text-muted-foreground mx-3">Page {page}</span>
-                    <Button size="sm" onClick={() => setPage((p) => p + 1)} disabled={leaderboardData.length < pageSize}>
-                        {"Next"}
-                    </Button>
-                </div>
-
-                <div className="flex items-center justify-center md:justify-end gap-2">
+            <div className="mt-5 flex flex-col-reverse items-center justify-between gap-4 sm:flex-row">
+                <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Page size</span>
                     <Select
                         value={String(pageSize)}
@@ -249,7 +242,7 @@ export default function LeaderboardClient() {
                             setPage(1);
                         }}
                     >
-                        <SelectTrigger className="w-24">
+                        <SelectTrigger className="h-9 w-20">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -260,6 +253,16 @@ export default function LeaderboardClient() {
                             ))}
                         </SelectContent>
                     </Select>
+                </div>
+
+                <div className="flex items-center justify-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                        {"Prev"}
+                    </Button>
+                    <span className="mx-2 min-w-14 text-center text-sm text-muted-foreground">Page {page}</span>
+                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => p + 1)} disabled={leaderboardData.length < pageSize}>
+                        {"Next"}
+                    </Button>
                 </div>
             </div>
 

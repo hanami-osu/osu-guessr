@@ -433,7 +433,7 @@
                 "maxStreak": "Maximum Streak",
                 "totalCorrect": "Total Correct",
                 "averageTime": "Average Time",
-                "diedMessage": "You made two mistakes!"
+                "diedMessage": "You made a mistake."
             },
             "labels": {
                 "averageTime": "Average Time",

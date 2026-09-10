@@ -27,7 +27,7 @@ interface HomeContentProps {
 }
 
 export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStats">) {
-    const { t } = useTranslationsContext();
+    const { t, locale } = useTranslationsContext();
 
     return (
         <section className="pb-10 pt-2">
@@ -37,7 +37,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
                     <div>
                         <StatsCard
                             title={t.home.statistics.totalPlayers.title}
-                            value={highStats.total_users.toLocaleString()}
+                            value={highStats.total_users.toLocaleString(locale)}
                             description={t.home.statistics.totalPlayers.description}
                             icon={<Users2 className="h-6 w-6" />}
                         />
@@ -45,7 +45,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
                     <div>
                         <StatsCard
                             title={t.home.statistics.gamesPlayed.title}
-                            value={highStats.total_games.toLocaleString()}
+                            value={highStats.total_games.toLocaleString(locale)}
                             description={t.home.statistics.gamesPlayed.description}
                             icon={<Gamepad2 className="h-6 w-6" />}
                         />
@@ -53,7 +53,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
                     <div>
                         <StatsCard
                             title={t.home.statistics.highScore.title}
-                            value={highStats.highest_points.toLocaleString()}
+                            value={highStats.highest_points.toLocaleString(locale)}
                             description={t.home.statistics.highScore.description}
                             icon={<Trophy className="h-6 w-6" />}
                         />
@@ -65,7 +65,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
 }
 
 export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeContentProps, "latestAnnouncement">) {
-    const { t } = useTranslationsContext();
+    const { t, locale } = useTranslationsContext();
 
     if (!latestAnnouncement) return null;
 
@@ -89,7 +89,7 @@ export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeConten
                         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                             <span className="font-medium text-primary">{t.home.announcements.latestLabel}</span>
                             <time className="text-muted-foreground" dateTime={latestAnnouncement.created_at}>
-                                {new Date(latestAnnouncement.created_at).toLocaleDateString()}
+                                {new Date(latestAnnouncement.created_at).toLocaleDateString(locale, { timeZone: "UTC" })}
                             </time>
                         </div>
                         <h3 className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-xl">{latestAnnouncement.title}</h3>

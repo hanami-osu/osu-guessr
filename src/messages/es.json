@@ -305,7 +305,7 @@
                 "maxStreak": "Racha máxima",
                 "totalCorrect": "Aciertos totales",
                 "averageTime": "Tiempo promedio",
-                "diedMessage": "¡Cometiste dos errores!"
+                "diedMessage": "Cometiste un error."
             },
             "labels": {
                 "averageTime": "Tiempo promedio",

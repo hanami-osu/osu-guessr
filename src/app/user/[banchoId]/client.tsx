@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { Game, GameMode, UserAchievement, UserWithStats, UserRanks } from "@/actions/types";
-import { getUserByIdAction, getUserLatestGamesAction, getUserTopGamesAction } from "@/actions/user-server";
 import Image from "next/image";
 import Link from "next/link";
 import { GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import UserNotFound from "./NotFound";
 import { getHighestScore } from "@/lib/user-stats";
-import { createLatestRequestGate } from "@/lib/latest-request";
 
 interface GameStats {
     game_mode: GameMode;
@@ -26,83 +23,23 @@ interface UserProfileClientProps {
     currentMode: GameMode;
     currentVariant: GameVariant;
     banchoId: string;
+    user?: UserWithStats | null;
+    userGames?: Game[];
+    topPlays?: Game[];
+    loadError?: string | null;
 }
 
-export default function UserProfileClient({ currentMode, currentVariant, banchoId }: UserProfileClientProps) {
-    const { t } = useTranslationsContext();
+export default function UserProfileClient({ currentMode, currentVariant, banchoId, user = null, userGames = [], topPlays = [], loadError = null }: UserProfileClientProps) {
+    const { t, locale } = useTranslationsContext();
 
-    const [user, setUser] = useState<UserWithStats | null>(null);
-    const [userStats, setUserStats] = useState<UserAchievement[]>([]);
-    const [userGames, setUserGames] = useState<Game[]>([]);
-    const [topPlays, setTopPlays] = useState<Game[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const requestGate = useRef(createLatestRequestGate());
-
-    useEffect(() => {
-        const request = requestGate.current.begin();
-
-        const fetchUserData = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
-
-                const userData = await getUserByIdAction(Number(banchoId));
-
-                if (!userData) {
-                    if (request.isCurrent()) {
-                        setUser(null);
-                        setError("User not found");
-                    }
-                    return;
-                }
-
-                const [gamesData, topPlaysData] = await Promise.all([
-                    getUserLatestGamesAction(Number(banchoId), undefined, currentVariant, 100),
-                    getUserTopGamesAction(Number(banchoId), currentMode, currentVariant, 5),
-                ]);
-
-                const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                const filteredGames = gamesData.filter((x) => new Date(x.ended_at) > twentyFourHoursAgo);
-
-                if (request.isCurrent()) {
-                    setUser(userData);
-                    setUserStats((userData.achievements ?? []).filter((achievement) => achievement.variant === currentVariant));
-                    setUserGames(filteredGames);
-                    setTopPlays(topPlaysData);
-                }
-            } catch (err) {
-                if (request.isCurrent()) {
-                    console.error("Failed to fetch user data:", err);
-                    setError(err instanceof Error ? err.message : "Failed to load user data");
-                }
-            } finally {
-                if (request.isCurrent()) {
-                    setIsLoading(false);
-                }
-            }
-        };
-
-        void fetchUserData();
-        return () => request.cancel();
-    }, [banchoId, currentMode, currentVariant]);
-
-    if (isLoading) {
-        return <UserProfileSkeleton currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} />;
-    }
-
-    if (error || !user) {
-        if (error === "User not found" || !user) {
-            return <UserNotFound />;
-        }
-
+    if (loadError) {
         return (
             <div className="container mx-auto px-4 py-10 md:py-16">
-                <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex min-h-[400px] items-center justify-center">
                     <div className="text-center">
-                        <p className="text-destructive mb-4">Failed to load user data</p>
-                        <p className="text-muted-foreground">{error}</p>
-                        <Link href="/" className="text-primary hover:underline mt-4 block">
+                        <p className="mb-4 text-destructive">Failed to load user data</p>
+                        <p className="text-muted-foreground">{loadError}</p>
+                        <Link href="/" className="mt-4 block text-primary hover:underline">
                             Return to home
                         </Link>
                     </div>
@@ -110,6 +47,12 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
             </div>
         );
     }
+
+    if (!user) {
+        return <UserNotFound />;
+    }
+
+    const userStats: UserAchievement[] = (user.achievements ?? []).filter((achievement) => achievement.variant === currentVariant);
 
     const defaultRanks: UserRanks = {
         globalRank: undefined,
@@ -163,121 +106,127 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
     });
 
     return (
-        <div className="container mx-auto px-4 py-8 md:py-10 space-y-8 max-w-4xl">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-b border-border/60 pb-8">
-                <div className="relative h-28 w-28 sm:h-32 sm:w-32 shrink-0">
-                    <Image src={avatar_url} alt={username} fill className="rounded-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex flex-col gap-3 mb-2 sm:flex-row sm:items-center sm:flex-wrap">
-                        <Link href={`https://osu.ppy.sh/u/${banchoId}`} target="_blank" rel="noopener noreferrer" className="text-3xl md:text-4xl font-bold hover:text-primary transition-colors break-words">
-                            {username}
-                        </Link>
-                        <div className="flex flex-wrap gap-2">
+        <div className="container mx-auto max-w-5xl space-y-10 px-4 py-8 md:py-12">
+            <div className="border-b border-border/60 pb-8">
+                <div className="flex items-start gap-5 sm:items-center sm:gap-6">
+                    <div className="relative h-20 w-20 shrink-0 sm:h-28 sm:w-28">
+                        <Image src={avatar_url} alt={username} fill className="rounded-full object-cover" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <Link
+                                href={`https://osu.ppy.sh/u/${banchoId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="break-words text-2xl font-bold tracking-tight transition-colors hover:text-primary sm:text-3xl md:text-4xl"
+                            >
+                                {username}
+                            </Link>
                             {user.badges.map((badge, index) => (
                                 <span
                                     key={index}
-                                    className="px-2 py-1 rounded text-sm border"
-                                    style={{
-                                        backgroundColor: `${badge.color}10`,
-                                        color: badge.color,
-                                        borderColor: `${badge.color}30`,
-                                    }}
+                                    className="border-b px-1.5 py-0.5 text-xs font-medium"
+                                    style={{ color: badge.color, borderColor: `${badge.color}70` }}
                                 >
                                     {badge.name}
                                 </span>
                             ))}
                         </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                        <StatBox label={t.user.profile.stats.hiScore} value={getHighestScore(achievements).toLocaleString()} />
-                        <StatBox label={t.user.profile.stats.totalGames} value={achievements?.reduce((sum, a) => sum + a.games_played, 0).toLocaleString() ?? "0"} />
-                        <StatBox
-                            label={t.user.profile.stats.globalRank}
-                            value={currentVariant === "classic" ? ranks.modeRanks[currentMode].classic?.toLocaleString() ?? "-" : ranks.modeRanks[currentMode].death?.toLocaleString() ?? "-"}
-                        />
+
+                        <div className="mt-5 grid grid-cols-3 gap-x-3 gap-y-4 sm:mt-6 sm:gap-x-6">
+                            <StatBox label={t.user.profile.stats.hiScore} value={getHighestScore(achievements).toLocaleString(locale)} />
+                            <StatBox label={t.user.profile.stats.totalGames} value={achievements?.reduce((sum, a) => sum + a.games_played, 0).toLocaleString(locale) ?? "0"} />
+                            <StatBox
+                                label={t.user.profile.stats.globalRank}
+                                value={currentVariant === "classic" ? ranks.modeRanks[currentMode].classic?.toLocaleString(locale) ?? "-" : ranks.modeRanks[currentMode].death?.toLocaleString(locale) ?? "-"}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
 
             <ProfileFilters currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} />
 
-            <section>
-                <h2 className="text-2xl font-bold mb-6 text-center capitalize">
-                    {t.user.profile.gameStats.title} ({currentMode})
-                </h2>
-                <div className="border-t border-border/60 pt-6">
-                    {gameStats[currentMode].games_played > 0 ? (
-                        <div className="space-y-4">
-                            {currentVariant === "classic" && (
-                                <>
-                                    <StatItem label={t.user.profile.gameStats.totalScore} value={gameStats[currentMode].total_score.toLocaleString()} />
-                                    <StatItem label={t.user.profile.gameStats.modeRank} value={ranks.modeRanks[currentMode].classic?.toLocaleString() ?? "-"} />
-                                </>
-                            )}
-                            {currentVariant === "death" && <StatItem label={t.user.profile.gameStats.modeRank} value={ranks.modeRanks[currentMode].death?.toLocaleString() ?? "-"} />}
-                            <StatItem label={t.user.profile.gameStats.gamesPlayed} value={gameStats[currentMode].games_played.toString()} />
-                            <StatItem
-                                label={currentVariant === "classic" ? t.user.profile.gameStats.highestScore : t.user.profile.gameStats.bestStreak}
-                                value={currentVariant === "classic" ? gameStats[currentMode].highest_score.toLocaleString() : gameStats[currentMode].highest_streak.toString()}
-                            />
-                            <StatItem label={t.user.profile.gameStats.lastPlayed} value={gameStats[currentMode].last_played.toLocaleDateString()} />
-                        </div>
-                    ) : (
-                        <div className="text-center py-4 text-foreground/70">{t.user.profile.noPlays}</div>
-                    )}
-                </div>
-            </section>
-
-            <section>
-                <h2 className="text-2xl font-bold mb-6 text-center capitalize">
-                    {t.user.profile.topGames.title} ({currentMode})
-                </h2>
-                <div className="border-t border-border/60 pt-6">
-                    <div className="space-y-4">
-                        {topPlays.map((game, index) => (
-                            <div key={index} className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-foreground/70">#{index + 1}</span>
-                                    {currentVariant === "classic" ? (
-                                        <span>{t.user.profile.topGames.points.replace("{points}", game.points.toLocaleString())}</span>
-                                    ) : (
-                                        <span>{t.user.profile.topGames.streak.replace("{count}", game.streak.toString())}</span>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-foreground/70">
-                                    {currentVariant === "classic" && <span>{game.streak}x</span>}
-                                    <span>{new Date(game.ended_at).toLocaleDateString()}</span>
-                                </div>
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+                <section>
+                    <h2 className="mb-5 text-xl font-semibold tracking-tight capitalize">
+                        {t.user.profile.gameStats.title} ({currentMode})
+                    </h2>
+                    <div className="border-t border-border/60 pt-5">
+                        {gameStats[currentMode].games_played > 0 ? (
+                            <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                                {currentVariant === "classic" && (
+                                    <>
+                                        <StatItem label={t.user.profile.gameStats.totalScore} value={gameStats[currentMode].total_score.toLocaleString(locale)} />
+                                        <StatItem label={t.user.profile.gameStats.modeRank} value={ranks.modeRanks[currentMode].classic?.toLocaleString(locale) ?? "-"} />
+                                    </>
+                                )}
+                                {currentVariant === "death" && <StatItem label={t.user.profile.gameStats.modeRank} value={ranks.modeRanks[currentMode].death?.toLocaleString(locale) ?? "-"} />}
+                                <StatItem label={t.user.profile.gameStats.gamesPlayed} value={gameStats[currentMode].games_played.toString()} />
+                                <StatItem
+                                    label={currentVariant === "classic" ? t.user.profile.gameStats.highestScore : t.user.profile.gameStats.bestStreak}
+                                    value={currentVariant === "classic" ? gameStats[currentMode].highest_score.toLocaleString(locale) : gameStats[currentMode].highest_streak.toString()}
+                                />
+                                <StatItem label={t.user.profile.gameStats.lastPlayed} value={gameStats[currentMode].last_played.toLocaleDateString(locale)} />
                             </div>
-                        ))}
-                        {topPlays.length === 0 && <div className="text-center py-4 text-foreground/70">{t.user.profile.noPlays}</div>}
+                        ) : (
+                            <div className="py-4 text-muted-foreground">{t.user.profile.noPlays}</div>
+                        )}
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <section>
+                    <h2 className="mb-5 text-xl font-semibold tracking-tight capitalize">
+                        {t.user.profile.topGames.title} ({currentMode})
+                    </h2>
+                    <div className="border-t border-border/60 pt-2">
+                        {topPlays.length > 0 ? (
+                            <div className="divide-y divide-border/50">
+                                {topPlays.map((game, index) => (
+                                    <div key={index} className="flex items-center justify-between gap-4 py-3">
+                                        <div className="flex min-w-0 items-baseline gap-3">
+                                            <span className="w-5 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{index + 1}</span>
+                                            <span className="truncate font-medium">
+                                                {currentVariant === "classic"
+                                                    ? t.user.profile.topGames.points.replace("{points}", game.points.toLocaleString(locale))
+                                                    : t.user.profile.topGames.streak.replace("{count}", game.streak.toString())}
+                                            </span>
+                                        </div>
+                                        <div className="shrink-0 text-right text-xs text-muted-foreground">
+                                            {currentVariant === "classic" && <div>{game.streak}x</div>}
+                                            <div>{new Date(game.ended_at).toLocaleDateString(locale)}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-4 text-muted-foreground">{t.user.profile.noPlays}</div>
+                        )}
+                    </div>
+                </section>
+            </div>
 
             <section>
-                <h2 className="text-2xl font-bold mb-6 text-center">{t.user.profile.recentGames.title}</h2>
+                <h2 className="mb-5 text-xl font-semibold tracking-tight">{t.user.profile.recentGames.title}</h2>
                 <div className="border-y border-border/60">
                     {userGames.length > 0 ? (
                         <div className="divide-y divide-border/50">
                             {userGames.map((game, index) => (
-                                <div key={index} className="p-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-                                    <div>
-                                        <span className="font-medium capitalize">{game.game_mode} Mode</span>
-                                        <span className="text-foreground/70 ml-4">{new Date(game.ended_at).toLocaleDateString()}</span>
+                                <div key={index} className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-baseline gap-3">
+                                        <span className="font-medium capitalize">{game.game_mode}</span>
+                                        <span className="text-sm text-muted-foreground">{new Date(game.ended_at).toLocaleDateString(locale)}</span>
                                     </div>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                        {currentVariant === "classic" && <span className="font-semibold">{t.user.profile.topGames.points.replace("{points}", game.points.toLocaleString())}</span>}
-                                        <span className="font-semibold">{t.user.profile.topGames.streak.replace("{count}", game.streak.toString())}</span>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                                        {currentVariant === "classic" && <span className="font-medium">{t.user.profile.topGames.points.replace("{points}", game.points.toLocaleString(locale))}</span>}
+                                        <span className="text-muted-foreground">{t.user.profile.topGames.streak.replace("{count}", game.streak.toString())}</span>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-6">
-                            <h3 className="text-center text-foreground/70 py-4">{t.user.profile.recentGames.noGames}</h3>
-                        </div>
+                        <div className="py-8 text-muted-foreground">{t.user.profile.recentGames.noGames}</div>
                     )}
                 </div>
             </section>
@@ -287,18 +236,18 @@ export default function UserProfileClient({ currentMode, currentVariant, banchoI
 
 function StatItem({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between items-center gap-4">
-            <span className="text-foreground/70">{label}</span>
-            <span className="font-medium text-right">{value}</span>
+        <div>
+            <div className="text-xs text-muted-foreground">{label}</div>
+            <div className="mt-1 font-medium tabular-nums">{value}</div>
         </div>
     );
 }
 
 function StatBox({ label, value }: { label: string; value: string }) {
     return (
-        <div className="py-2">
-            <div className="text-sm text-foreground/70">{label}</div>
-            <div className="text-lg font-semibold">{value}</div>
+        <div className="min-w-0">
+            <div className="text-xs text-muted-foreground sm:text-sm">{label}</div>
+            <div className="mt-1 truncate text-lg font-semibold tabular-nums sm:text-xl">{value}</div>
         </div>
     );
 }
@@ -307,119 +256,42 @@ function ProfileFilters({ currentMode, currentVariant, banchoId }: UserProfileCl
     const { t } = useTranslationsContext();
 
     return (
-        <div className="flex flex-col items-center gap-4">
-            <div className="flex w-full flex-wrap justify-center gap-3">
+        <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-10">
+            <div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Mode</div>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
                 {gamemodes.map((mode) => (
                     <Link
                         key={mode}
                         href={`/user/${banchoId}?mode=${mode}&variant=${currentVariant}`}
-                        className={`px-4 py-2 rounded-lg capitalize border border-border/60 ${currentMode === mode ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
+                        aria-current={currentMode === mode ? "page" : undefined}
+                        className={`border-b-2 pb-1 text-sm font-medium capitalize transition-colors ${currentMode === mode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                     >
                         {t.leaderboard.filters.mode[mode]}
                     </Link>
                 ))}
+                </div>
             </div>
 
-            <div className="flex w-full flex-col justify-center gap-3 sm:flex-row">
+            <div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Variant</div>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
                 <Link
                     href={`/user/${banchoId}?mode=${currentMode}&variant=classic`}
-                    className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${currentVariant === "classic" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-primary/10"}`}
+                    aria-current={currentVariant === "classic" ? "page" : undefined}
+                    className={`border-b-2 pb-1 text-sm font-medium transition-colors ${currentVariant === "classic" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                 >
                     {t.leaderboard.filters.variant.classic}
                 </Link>
                 <Link
                     href={`/user/${banchoId}?mode=${currentMode}&variant=death`}
-                    className={`min-w-[120px] text-center px-4 py-2 rounded-lg border border-border/60 ${
-                        currentVariant === "death" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive" : "bg-card hover:bg-destructive/10 hover:text-destructive"
-                    }`}
+                    aria-current={currentVariant === "death" ? "page" : undefined}
+                    className={`border-b-2 pb-1 text-sm font-medium transition-colors ${currentVariant === "death" ? "border-destructive text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                 >
                     {t.leaderboard.filters.variant.death}
                 </Link>
-            </div>
-        </div>
-    );
-}
-
-function UserProfileSkeleton({ currentMode, currentVariant, banchoId }: { currentMode: GameMode; currentVariant: GameVariant; banchoId: string }) {
-    const { t } = useTranslationsContext();
-
-    return (
-        <div className="container mx-auto px-4 py-8 md:py-10 space-y-8 max-w-4xl">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-b border-border/60 pb-8">
-                <div className="relative h-32 w-32">
-                    <div className="h-32 w-32 bg-muted rounded-full animate-pulse" />
-                </div>
-                <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="h-10 w-48 bg-muted rounded animate-pulse" />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                        {[...Array(3)].map((_, i) => (
-                            <div key={i} className="py-2">
-                                <div className="h-4 w-16 bg-muted rounded animate-pulse mb-2" />
-                                <div className="h-6 w-12 bg-muted rounded animate-pulse" />
-                            </div>
-                        ))}
-                    </div>
                 </div>
             </div>
-
-            <ProfileFilters currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} />
-
-            <section>
-                <h2 className="text-2xl font-bold mb-6 text-center capitalize">
-                    {t.user.profile.gameStats.title} ({currentMode})
-                </h2>
-                <div className="border-t border-border/60 pt-6">
-                    <div className="space-y-4">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="flex justify-between items-center">
-                                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                                <div className="h-4 w-16 bg-muted rounded animate-pulse" />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            <section>
-                <h2 className="text-2xl font-bold mb-6 text-center capitalize">
-                    {t.user.profile.topGames.title} ({currentMode})
-                </h2>
-                <div className="border-t border-border/60 pt-6">
-                    <div className="space-y-4">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-4 w-6 bg-muted rounded animate-pulse" />
-                                    <div className="h-4 w-20 bg-muted rounded animate-pulse" />
-                                </div>
-                                <div className="h-4 w-16 bg-muted rounded animate-pulse" />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            <section>
-                <h2 className="text-2xl font-bold mb-6 text-center">{t.user.profile.recentGames.title}</h2>
-                <div className="border-y border-border/60">
-                    <div className="divide-y divide-border/50">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="p-4 flex justify-between items-center">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-4 w-20 bg-muted rounded animate-pulse" />
-                                    <div className="h-4 w-16 bg-muted rounded animate-pulse" />
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="h-4 w-12 bg-muted rounded animate-pulse" />
-                                    <div className="h-4 w-8 bg-muted rounded animate-pulse" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
         </div>
     );
 }

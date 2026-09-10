@@ -72,7 +72,7 @@ export default async function RootLayout({
 
     if (lock && session?.user?.banchoId !== OWNER_ID) {
         return (
-            <html lang={initialLocale}>
+            <html lang={initialLocale} suppressHydrationWarning>
                 <body className={`${publicSans.variable} antialiased`}>
                     <div className="flex items-center justify-center min-h-screen bg-background">
                         <div className="max-w-xl mx-auto px-4 py-8">
@@ -88,7 +88,7 @@ export default async function RootLayout({
     }
 
     return (
-        <html lang={initialLocale}>
+        <html lang={initialLocale} suppressHydrationWarning>
             <head>
                 <script
                     type="application/ld+json"

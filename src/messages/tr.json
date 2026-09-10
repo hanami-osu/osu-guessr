@@ -305,7 +305,7 @@
                 "maxStreak": "Maksimum Seri",
                 "totalCorrect": "Toplam Doğru",
                 "averageTime": "Ortalama Süre",
-                "diedMessage": "İki hata yaptın!"
+                "diedMessage": "Bir hata yaptın."
             },
             "labels": {
                 "averageTime": "Ortalama Süre",

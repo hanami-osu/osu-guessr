@@ -371,7 +371,7 @@
                 "maxStreak": "Największa Seria",
                 "totalCorrect": "Ilość Poprawnych Odpowiedzi",
                 "averageTime": "Średni Czas",
-                "diedMessage": "Zrobiłeś/aś dwa błędy!"
+                "diedMessage": "Zrobiłeś/aś błąd."
             },
             "labels": {
                 "averageTime": "Średni Czas",

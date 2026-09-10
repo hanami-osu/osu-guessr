@@ -14,80 +14,87 @@ interface GameStatsProps {
     gameEndReason?: "completed" | "died" | "ended";
 }
 
+interface ResultStatProps {
+    label: string;
+    value: string | number;
+}
+
+function ResultStat({ label, value }: ResultStatProps) {
+    return (
+        <div className="py-5 text-center sm:text-left">
+            <div className="text-2xl font-semibold tabular-nums text-foreground">{value}</div>
+            <div className="mt-1 text-sm text-muted-foreground">{label}</div>
+        </div>
+    );
+}
+
 export default function GameStats({ totalPoints, correctGuesses, maxStreak, totalRounds, averageTime, onPlayAgain, gameVariant, gameEndReason }: GameStatsProps) {
     const { t } = useTranslationsContext();
+    const isDeath = gameVariant === "death";
+    const died = isDeath && gameEndReason === "died";
+    const title = isDeath
+        ? gameEndReason === "died"
+            ? t.game.stats.death.title.died
+            : gameEndReason === "ended"
+              ? t.game.stats.death.title.ended
+              : t.game.stats.death.title.completed
+        : t.game.stats.classic.title;
 
     return (
-        <div className="container mx-auto px-4 py-10 md:py-16">
-            <div className="max-w-2xl mx-auto">
-                <div className="motion-fade-up py-2">
-                    {gameVariant === "classic" ? (
-                        <>
-                            <h1 className="text-2xl sm:text-3xl font-bold mb-6">{t.game.stats.classic.title}</h1>
+        <div className="container mx-auto max-w-3xl px-4 py-10 md:py-16">
+            <div className="motion-fade-up">
+                <header className="border-b border-border/60 pb-6">
+                    <h1 className={`text-3xl font-bold tracking-tight sm:text-4xl ${died ? "text-destructive" : "text-foreground"}`}>{title}</h1>
+                    {died && <p className="mt-2 text-sm font-medium text-destructive/90">{t.game.stats.death.diedMessage}</p>}
+                </header>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                                <div className="border-t border-border/60 py-4 text-center">
-                                    <div className="text-2xl font-bold text-primary">{totalPoints}</div>
-                                    <div className="text-sm text-foreground/70">{t.game.stats.classic.totalPoints}</div>
-                                </div>
-                                <div className="border-t border-border/60 py-4 text-center">
-                                    <div className="text-2xl font-bold text-primary">{maxStreak}</div>
-                                    <div className="text-sm text-foreground/70">{t.game.stats.classic.highestStreak}</div>
-                                </div>
-                                <div className="border-t border-border/60 py-4 text-center">
-                                    <div className="text-2xl font-bold text-primary">
-                                        {t.game.stats.classic.correctGuesses.replace("{correct}", correctGuesses.toString()).replace("{total}", totalRounds.toString())}
-                                    </div>
-                                    <div className="text-sm text-foreground/70">{t.game.stats.labels.correctGuesses}</div>
-                                </div>
-                                <div className="border-t border-border/60 py-4 text-center">
-                                    <div className="text-2xl font-bold text-primary">{t.game.stats.classic.averageTime.replace("{time}", averageTime.toFixed(1))}</div>
-                                    <div className="text-sm text-foreground/70">{t.game.stats.labels.averageTime}</div>
-                                </div>
+                {isDeath ? (
+                    <>
+                        <section className="border-b border-border/60 py-8 sm:py-10">
+                            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.game.stats.death.maxStreak}</div>
+                            <div className="mt-2 text-5xl font-bold tabular-nums text-primary sm:text-6xl">{maxStreak}</div>
+                        </section>
+
+                        <div className="grid grid-cols-2 divide-x divide-border/60 border-b border-border/60">
+                            <div className="pr-5 sm:pr-8">
+                                <ResultStat label={t.game.stats.death.totalCorrect} value={correctGuesses} />
                             </div>
-                        </>
-                    ) : (
-                        <>
-                            <h1 className={`text-2xl sm:text-3xl font-bold mb-6 ${gameEndReason === "died" ? "text-destructive" : "text-primary"}`}>
-                                {gameEndReason === "died" ? t.game.stats.death.title.died : gameEndReason === "ended" ? t.game.stats.death.title.ended : t.game.stats.death.title.completed}
-                            </h1>
-
-                            <div className="grid grid-cols-1 gap-6 mb-8">
-                                <div className="border-y border-border/60 py-6 text-center">
-                                    <div className="text-4xl font-bold text-primary mb-2">{maxStreak}</div>
-                                    <div className="text-lg text-foreground/70">{t.game.stats.death.maxStreak}</div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-                                    <div className="text-center">
-                                        <div className="text-2xl font-bold text-primary">{correctGuesses}</div>
-                                        <div className="text-sm text-foreground/70">{t.game.stats.death.totalCorrect}</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-2xl font-bold text-primary">{t.game.stats.classic.averageTime.replace("{time}", averageTime.toFixed(1))}</div>
-                                        <div className="text-sm text-foreground/70">{t.game.stats.labels.averageTime}</div>
-                                    </div>
-                                </div>
-
-                                {gameEndReason === "died" && (
-                                    <div className="bg-destructive/10 p-4 rounded-lg text-center border border-destructive/20">
-                                        <p className="text-destructive font-medium">{t.game.stats.death.diedMessage}</p>
-                                    </div>
-                                )}
+                            <div className="pl-5 sm:pl-8">
+                                <ResultStat label={t.game.stats.labels.averageTime} value={t.game.stats.classic.averageTime.replace("{time}", averageTime.toFixed(1))} />
                             </div>
-                        </>
-                    )}
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <section className="border-b border-border/60 py-8 sm:py-10">
+                            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.game.stats.classic.totalPoints}</div>
+                            <div className="mt-2 text-5xl font-bold tabular-nums text-primary sm:text-6xl">{totalPoints.toLocaleString()}</div>
+                        </section>
 
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <Button onClick={onPlayAgain} className="flex-1" variant={gameVariant === "death" ? "destructive" : "default"}>
-                            {t.game.stats.actions.tryAgain}
-                        </Button>
-                        <Button asChild variant="outline" className="flex-1">
-                            <Link href="/">
-                                {t.game.stats.actions.backToHome}
-                            </Link>
-                        </Button>
-                    </div>
+                        <div className="grid grid-cols-3 divide-x divide-border/60 border-b border-border/60">
+                            <div className="pr-4 sm:pr-6">
+                                <ResultStat
+                                    label={t.game.stats.labels.correctGuesses}
+                                    value={t.game.stats.classic.correctGuesses.replace("{correct}", correctGuesses.toString()).replace("{total}", totalRounds.toString())}
+                                />
+                            </div>
+                            <div className="px-4 sm:px-6">
+                                <ResultStat label={t.game.stats.classic.highestStreak} value={maxStreak} />
+                            </div>
+                            <div className="pl-4 sm:pl-6">
+                                <ResultStat label={t.game.stats.labels.averageTime} value={t.game.stats.classic.averageTime.replace("{time}", averageTime.toFixed(1))} />
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                    <Button onClick={onPlayAgain} className="h-11 flex-1" variant={isDeath ? "destructive" : "default"}>
+                        {t.game.stats.actions.tryAgain}
+                    </Button>
+                    <Button asChild variant="ghost" className="h-11 flex-1 border border-border/60">
+                        <Link href="/">{t.game.stats.actions.backToHome}</Link>
+                    </Button>
                 </div>
             </div>
         </div>

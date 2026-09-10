@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Loader2, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,18 +8,43 @@ import { Input } from "@/components/ui/input";
 
 import { listMapsets, removeMapset, fetchBackgroundImage, Mapset } from "../actions/mapsets";
 
-export default function BeatmapsAdmin() {
-    const [mapsets, setMapsets] = useState<Mapset[]>([]);
+interface BeatmapsAdminProps {
+    initialMapsets: Mapset[];
+}
+
+export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
+    const [mapsets, setMapsets] = useState<Mapset[]>(initialMapsets);
     const [selected, setSelected] = useState<Record<number, boolean>>({});
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [output, setOutput] = useState("");
+    const [output, setOutput] = useState(`Loaded ${initialMapsets.length} mapsets`);
     const [images, setImages] = useState<Record<number, string | null>>({});
     const [page, setPage] = useState(1);
+    const isInitialRender = useRef(true);
+    const initialMapsetsRef = useRef(initialMapsets);
     const limit = 50;
 
-    const fetchMapsets = async (p = 1, q = "") => {
+    const fetchImages = useCallback(async (list: Mapset[]) => {
+        const imgs: Record<number, string | null> = {};
+        await Promise.all(
+            list.map(async (mapset) => {
+                if (!mapset.image_filename) {
+                    imgs[mapset.mapset_id] = null;
+                    return;
+                }
+
+                try {
+                    imgs[mapset.mapset_id] = await fetchBackgroundImage(mapset.image_filename);
+                } catch {
+                    imgs[mapset.mapset_id] = null;
+                }
+            })
+        );
+        setImages(imgs);
+    }, []);
+
+    const fetchMapsets = useCallback(async (p = 1, q = "") => {
         setIsLoading(true);
         setOutput("Loading mapsets...");
         setSelected({});
@@ -29,32 +54,23 @@ export default function BeatmapsAdmin() {
             setMapsets(list || []);
             setOutput(`Loaded ${list.length} mapsets`);
 
-            const imgs: Record<number, string | null> = {};
-            await Promise.all(
-                (list || []).map(async (mapset: Mapset) => {
-                    if (mapset.image_filename) {
-                        try {
-                            const data = await fetchBackgroundImage(mapset.image_filename);
-                            imgs[mapset.mapset_id] = data;
-                        } catch {
-                            imgs[mapset.mapset_id] = null;
-                        }
-                    } else {
-                        imgs[mapset.mapset_id] = null;
-                    }
-                })
-            );
-            setImages(imgs);
+            await fetchImages(list || []);
         } catch (err) {
             setOutput(`Error loading mapsets: ${String(err)}`);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [fetchImages]);
 
     useEffect(() => {
-        fetchMapsets(page, search);
-    }, [page, search]);
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            void fetchImages(initialMapsetsRef.current);
+            return;
+        }
+
+        void fetchMapsets(page, search);
+    }, [fetchImages, fetchMapsets, page, search]);
 
     const handleSearch = (event: FormEvent) => {
         event.preventDefault();

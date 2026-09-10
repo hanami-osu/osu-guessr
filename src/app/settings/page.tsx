@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import SignInPrompt from "../games/shared/SignInPrompt";
 import SettingsClient from "./SettingsClient";
+import { listApiKeysAction } from "@/actions/api-keys-server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +18,11 @@ export default async function SettingsPage() {
         return <SignInPrompt />;
     }
 
-    return <SettingsClient />;
+    try {
+        const apiKeys = await listApiKeysAction();
+        return <SettingsClient initialApiKeys={apiKeys} />;
+    } catch (error) {
+        console.error("Failed to load API keys:", error);
+        return <SettingsClient initialApiKeys={[]} initialLoadError />;
+    }
 }

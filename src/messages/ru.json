@@ -305,7 +305,7 @@
                 "maxStreak": "Максимальное комбо",
                 "totalCorrect": "Всего правильных ответов",
                 "averageTime": "Среднее время",
-                "diedMessage": "Вы допустили две ошибки!"
+                "diedMessage": "Вы допустили ошибку."
             },
             "labels": {
                 "averageTime": "Среднее время",

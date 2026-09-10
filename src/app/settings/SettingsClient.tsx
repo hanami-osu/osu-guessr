@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createApiKeyAction, deleteApiKeyAction, ApiKey, listApiKeysAction } from "@/actions/api-keys-server";
@@ -10,12 +10,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { useTranslationsContext } from "@/context/translations-provider";
 
-export default function SettingsClient() {
-    const { t } = useTranslationsContext();
+interface SettingsClientProps {
+    initialApiKeys: ApiKey[];
+    initialLoadError?: boolean;
+}
 
-    const [apiKeys, setApiKeys] = useState<Array<ApiKey>>([]);
+export default function SettingsClient({ initialApiKeys, initialLoadError = false }: SettingsClientProps) {
+    const { t, locale } = useTranslationsContext();
+
+    const [apiKeys, setApiKeys] = useState<Array<ApiKey>>(initialApiKeys);
     const [loading, setLoading] = useState({
-        keys: true,
+        keys: false,
         creation: false,
         deletion: false,
     });
@@ -26,7 +31,7 @@ export default function SettingsClient() {
     });
     const [newKeyName, setNewKeyName] = useState("");
     const [copied, setCopied] = useState(false);
-    const [keyLoadError, setKeyLoadError] = useState<string | null>(null);
+    const [keyLoadError, setKeyLoadError] = useState<string | null>(initialLoadError ? t.settings.apiKeys.errors.loadFailed : null);
     const [operationError, setOperationError] = useState<string | null>(null);
     const [copyError, setCopyError] = useState<string | null>(null);
 
@@ -43,10 +48,6 @@ export default function SettingsClient() {
             setLoading((prev) => ({ ...prev, keys: false }));
         }
     }, [t.settings.apiKeys.errors.loadFailed]);
-
-    useEffect(() => {
-        loadApiKeys();
-    }, [loadApiKeys]);
 
     async function handleCreateKey() {
         if (!newKeyName.trim()) return;
@@ -136,9 +137,9 @@ export default function SettingsClient() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                         <p className="font-medium">{key.name}</p>
-                        <p className="text-sm text-foreground/70">{t.settings.apiKeys.keyInfo.created.replace("{date}", new Date(key.created_at).toLocaleDateString())}</p>
+                        <p className="text-sm text-foreground/70">{t.settings.apiKeys.keyInfo.created.replace("{date}", new Date(key.created_at).toLocaleDateString(locale, { timeZone: "UTC" }))}</p>
                         {key.last_used ? (
-                            <p className="text-sm text-foreground/70">{t.settings.apiKeys.keyInfo.lastUsed.replace("{date}", new Date(key.last_used).toLocaleDateString())}</p>
+                            <p className="text-sm text-foreground/70">{t.settings.apiKeys.keyInfo.lastUsed.replace("{date}", new Date(key.last_used).toLocaleDateString(locale, { timeZone: "UTC" }))}</p>
                         ) : (
                             <p className="text-sm text-foreground/70">{t.settings.apiKeys.keyInfo.neverUsed}</p>
                         )}

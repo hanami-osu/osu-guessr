@@ -5,7 +5,7 @@ const deploymentId = process.env.NEXT_DEPLOYMENT_ID || process.env.VERCEL_GIT_CO
 const nextConfig: NextConfig = {
     output: "standalone",
     deploymentId,
-    images: { remotePatterns: [{ hostname: "a.ppy.sh" }, { hostname: "assets.ppy.sh" }] },
+    images: { remotePatterns: [{ hostname: "a.ppy.sh" }, { hostname: "assets.ppy.sh" }, { hostname: "osu.ppy.sh" }] },
     reactStrictMode: false,
     experimental: {
         serverActions: {
