@@ -16,8 +16,8 @@ async function HomeStats() {
 }
 
 async function HomeAnnouncements() {
-    const announcements = await listRecentAnnouncements(6);
-    return <HomeAnnouncementsSection latestAnnouncement={announcements[0] ?? null} announcementsHistory={announcements} />;
+    const announcements = await listRecentAnnouncements(1);
+    return <HomeAnnouncementsSection latestAnnouncement={announcements[0] ?? null} />;
 }
 
 async function HomeChangelogs() {
@@ -37,10 +37,10 @@ export default function Home() {
             <Hero />
             <GameModeCards />
             <Suspense fallback={null}>
-                <HomeStats />
+                <HomeAnnouncements />
             </Suspense>
             <Suspense fallback={null}>
-                <HomeAnnouncements />
+                <HomeStats />
             </Suspense>
             <section className="bg-secondary/20 py-12">
                 <SupportersSection />

@@ -13,12 +13,12 @@ export default function GameModeCards() {
 
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
                     {GAME_MODES.map((mode) => (
-                        <Link key={mode.id} href={mode.url} className="group block h-full overflow-hidden rounded-xl border border-white/10 bg-card transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background">
-                            <div className="relative aspect-[16/9] overflow-hidden border-b border-white/10">
-                                <Image src={mode.image || "/placeholder.svg"} alt="" fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover opacity-90 transition-opacity duration-150 group-hover:opacity-100" />
+                        <Link key={mode.id} href={mode.url} className="group block border-t border-border pt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background">
+                            <div className="relative aspect-[16/9] overflow-hidden bg-card">
+                                <Image src={mode.image || "/placeholder.svg"} alt="" fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover opacity-85 transition-[opacity,transform] duration-200 group-hover:scale-[1.015] group-hover:opacity-100" />
                             </div>
-                            <div className="p-5 sm:p-6">
-                                <h3 className="mb-2 text-xl font-bold text-foreground tracking-tight">{t.gameModes.modes[mode.id].title}</h3>
+                            <div className="pt-4">
+                                <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">{t.gameModes.modes[mode.id].title}</h3>
                                 <p className="text-foreground/70 text-sm leading-relaxed">{t.gameModes.modes[mode.id].description}</p>
                             </div>
                         </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import { StatsCard } from "./components/StatsCard";
-import { Gamepad2, Trophy, Users2 } from "lucide-react";
+import { ArrowRight, Gamepad2, Trophy, Users2 } from "lucide-react";
 import { useTranslationsContext } from "@/context/translations-provider";
 import Link from "next/link";
 
@@ -24,7 +24,6 @@ interface HomeContentProps {
         highest_points: number;
     };
     latestAnnouncement?: { title: string; content: string; created_at: string } | null;
-    announcementsHistory?: Array<{ id: number; title: string; content: string; created_at: string }>;
 }
 
 export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStats">) {
@@ -65,46 +64,39 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
     );
 }
 
-export function HomeAnnouncementsSection({ latestAnnouncement, announcementsHistory }: Pick<HomeContentProps, "latestAnnouncement" | "announcementsHistory">) {
+export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeContentProps, "latestAnnouncement">) {
     const { t } = useTranslationsContext();
 
     if (!latestAnnouncement) return null;
 
-    return (
-        <section className="py-12">
-            <div className="container mx-auto max-w-6xl px-4">
-                <h2 className="text-2xl font-bold tracking-tight mb-6">{t.home.announcements.title}</h2>
+    const preview = latestAnnouncement.content.length > 180 ? `${latestAnnouncement.content.slice(0, 180).trimEnd()}…` : latestAnnouncement.content;
 
-                <div className="border-t border-border py-6">
-                    <Link href="/announcements" className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                        <div className="pb-5">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                                <span className="text-sm font-medium text-primary">{t.home.announcements.latestLabel}</span>
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2">{latestAnnouncement.title}</h3>
-                            <div className="text-sm text-muted-foreground mb-3">{new Date(latestAnnouncement.created_at).toLocaleString()}</div>
-                            <div className="whitespace-pre-wrap text-foreground">{latestAnnouncement.content}</div>
-                        </div>
-                        {announcementsHistory && announcementsHistory.length > 1 && (
-                            <div className="mt-4 border-t border-border/50 pt-4">
-                                <div className="text-sm text-muted-foreground">
-                                    <strong>{t.home.announcements.previous}</strong>
-                                    <ul className="mt-2 space-y-1">
-                                        {announcementsHistory.slice(1, 6).map((a) => (
-                                            <li key={a.id}>
-                                                <span className="font-medium">{a.title}</span> <span className="text-xs text-muted-foreground">· {new Date(a.created_at).toLocaleDateString()}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        )}
-                        <div className="mt-4 text-center">
-                            <span className="text-sm text-primary hover:text-primary/80 underline">{t.home.announcements.viewAll} →</span>
-                        </div>
+    return (
+        <section className="py-10 md:py-12">
+            <div className="container mx-auto max-w-6xl px-4">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                    <h2 className="text-2xl font-bold tracking-tight">{t.home.announcements.title}</h2>
+                    <Link href="/announcements" className="subtle-link shrink-0 text-sm text-foreground/65 transition-colors hover:text-primary">
+                        {t.home.announcements.viewAll}
                     </Link>
                 </div>
+
+                <Link
+                    href="/announcements"
+                    className="group grid gap-5 border-y border-border py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                >
+                    <div className="min-w-0">
+                        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                            <span className="font-medium text-primary">{t.home.announcements.latestLabel}</span>
+                            <time className="text-muted-foreground" dateTime={latestAnnouncement.created_at}>
+                                {new Date(latestAnnouncement.created_at).toLocaleDateString()}
+                            </time>
+                        </div>
+                        <h3 className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-xl">{latestAnnouncement.title}</h3>
+                        <p className="mt-2 max-w-4xl whitespace-pre-line text-sm leading-relaxed text-foreground/65 sm:text-base">{preview}</p>
+                    </div>
+                    <ArrowRight className="hidden h-5 w-5 text-muted-foreground transition-[color,transform] duration-150 group-hover:translate-x-1 group-hover:text-primary sm:block" aria-hidden="true" />
+                </Link>
             </div>
         </section>
     );
