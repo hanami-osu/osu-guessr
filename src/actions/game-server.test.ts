@@ -68,8 +68,18 @@ function makeSession(overrides: Partial<DatabaseGameSession> = {}): DatabaseGame
         last_points: null,
         correct_guesses: 0,
         total_time_used: 0,
+        total_response_time_ms: 0,
         is_active: true,
         variant: "classic",
+        run_type: "standard",
+        challenge_id: null,
+        seed: null,
+        config_snapshot: null,
+        ranked: true,
+        ruleset_version: 1,
+        pp_version: 1,
+        started_at: new Date().toISOString(),
+        round_history: [],
         title: answer,
         artist: "Artist",
         mapper: "Mapper",
@@ -89,6 +99,8 @@ beforeEach(() => {
     queryMock.mockReset().mockImplementation(async (sql) =>
         sql.includes("ROW_COUNT()")
             ? [{ inserted: 1 }]
+            : sql.includes("SELECT id FROM games")
+              ? [{ id: 1n }]
             : [
                   {
                       mapset_id: 1,
@@ -142,6 +154,8 @@ describe("game server lifecycle", () => {
 
         expect(finished.gameStatus).toBe("finished");
         expect(transactionMock).toHaveBeenCalledTimes(1);
+        expect(queryMock.mock.calls.some(([sql]) => sql.includes("INSERT INTO game_rounds"))).toBe(true);
+        expect(queryMock.mock.calls.some(([sql]) => sql.includes("INSERT INTO content_stats"))).toBe(true);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
     });
 
@@ -173,6 +187,11 @@ describe("game server lifecycle", () => {
 
         const answered = await submitGuessAction(sessionId, answer);
         expect(answered.rounds.totalTimeUsed).toBe(5);
+
+        const persistedRound = JSON.parse(redisValues.get(`game_session:${sessionId}`)!).round_history[0];
+        expect(persistedRound.response_time_ms).toBe(5000);
+        expect(persistedRound.result_type).toBe("guess");
+        expect(persistedRound.answer_snapshot).toBe(answer);
 
         const state = await getGameStateAction(sessionId);
         expect(state.timeLeft).toBe(25);
@@ -207,7 +226,7 @@ describe("game server lifecycle", () => {
         await endGameAction(sessionId);
 
         expect(transactionMock).toHaveBeenCalledTimes(2);
-        expect(queryMock).toHaveBeenCalledTimes(3);
+        expect(queryMock).toHaveBeenCalledTimes(4);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
     });
@@ -248,6 +267,6 @@ describe("game server lifecycle", () => {
         await Promise.allSettled([endGameAction(sessionId), endGameAction(sessionId)]);
 
         expect(transactionMock).toHaveBeenCalledTimes(1);
-        expect(queryMock).toHaveBeenCalledTimes(3);
+        expect(queryMock).toHaveBeenCalledTimes(4);
     });
 });

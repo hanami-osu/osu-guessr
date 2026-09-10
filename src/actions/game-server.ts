@@ -6,14 +6,16 @@ import redisClient from "@/lib/redis";
 import { z } from "zod";
 import { BASE_POINTS, STREAK_BONUS, TIME_BONUS_MULTIPLIER, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, type GameVariant } from "../app/games/config";
 import { getRandomAudioAction, getRandomBackgroundAction, getRandomSkinAction } from "./mapsets-server";
-import { GameMode, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type SkinData } from "./types";
+import { GameMode, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "./types";
 import { getMediaData } from "./media";
 import { checkGuess, GuessDifficulty } from "@/lib/guess-checker";
 import { isNoGameContentError } from "@/lib/game/content-errors";
 import { canPersistGameResult } from "@/lib/game/completion";
+import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 
 const GRACE_PERIOD = 1;
 const SESSION_LOCK_TTL_MS = 30_000;
+const ROUND_TIME_MS = ROUND_TIME * 1000;
 const RELEASE_SESSION_LOCK_SCRIPT = `
 if redis.call("get", KEYS[1]) == ARGV[1] then
     return redis.call("del", KEYS[1])
@@ -84,12 +86,22 @@ async function validateGameSession(sessionId: string, userId: number): Promise<D
     return session;
 }
 
-async function finishGameSession(sessionId: string, userId: number): Promise<void> {
+function resolveEndReason(gameState: DatabaseGameSession, requestedReason?: GameEndReason): GameEndReason {
+    if (gameState.end_reason) return gameState.end_reason;
+    if (requestedReason === "quit" && gameState.variant === "classic" && gameState.current_round === MAX_ROUNDS && gameState.has_guessed_current_round) {
+        return "completed";
+    }
+    if (requestedReason) return requestedReason;
+    return gameState.variant === "classic" ? "completed" : "quit";
+}
+
+async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<void> {
     const cacheKey = `game_session:${sessionId}`;
     const gameState = await getGameSession(sessionId, userId);
     if (!gameState.is_active && !gameState.end_pending) return;
 
-    const pendingState = { ...gameState, is_active: false, end_pending: true };
+    const endReason = resolveEndReason(gameState, requestedReason);
+    const pendingState = { ...gameState, is_active: false, end_pending: true, end_reason: endReason };
     await redisClient.set(cacheKey, JSON.stringify(pendingState), { EX: 3600 });
 
     if (!canPersistGameResult({ variant: gameState.variant, currentRound: gameState.current_round, hasGuessedCurrentRound: gameState.has_guessed_current_round }, MAX_ROUNDS)) {
@@ -98,29 +110,137 @@ async function finishGameSession(sessionId: string, userId: number): Promise<voi
     }
 
     const points = gameState.variant === "death" ? 0 : gameState.total_points;
+    const roundHistory = gameState.round_history ?? [];
+    const skipCount = roundHistory.filter((round) => round.result_type === "skip").length;
+    const timeoutCount = roundHistory.filter((round) => round.result_type === "timeout").length;
+    const totalResponseTimeMs = gameState.total_response_time_ms ?? roundHistory.reduce((total, round) => total + round.response_time_ms, 0);
+    const rulesetVersion = gameState.ruleset_version ?? 0;
+    const ppVersion = gameState.pp_version ?? 0;
 
     await transaction(async (query) => {
-        await query("INSERT IGNORE INTO games (session_id, user_id, game_mode, points, streak, variant) VALUES (?, ?, ?, ?, ?, ?)", [
-            sessionId,
-            userId,
-            gameState.game_mode,
-            points,
-            gameState.highest_streak,
-            gameState.variant,
-        ]);
+        await query(
+            `INSERT IGNORE INTO games
+             (session_id, user_id, game_mode, points, streak, variant, run_type, challenge_id, seed, config_snapshot,
+              ranked, ruleset_version, pp_version, pp, rounds_played, correct_count, skip_count, timeout_count,
+              total_response_time_ms, started_at, ended_at, end_reason)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), ?)`,
+            [
+                sessionId,
+                userId,
+                gameState.game_mode,
+                points,
+                gameState.highest_streak,
+                gameState.variant,
+                gameState.run_type ?? "standard",
+                gameState.challenge_id ?? null,
+                gameState.seed ?? null,
+                gameState.config_snapshot ? JSON.stringify(gameState.config_snapshot) : null,
+                gameState.ranked ?? true,
+                rulesetVersion,
+                ppVersion,
+                roundHistory.length,
+                gameState.correct_guesses,
+                skipCount,
+                timeoutCount,
+                totalResponseTimeMs,
+                gameState.started_at ?? new Date().toISOString(),
+                endReason,
+            ],
+        );
         const [{ inserted }] = await query<{ inserted: number }>("SELECT ROW_COUNT() AS inserted");
         if (inserted === 1) {
+            const [persistedGame] = await query<{ id: bigint }>("SELECT id FROM games WHERE session_id = ? LIMIT 1", [sessionId]);
+            if (!persistedGame) throw new Error("Persisted game could not be resolved");
+
+            for (const round of roundHistory) {
+                await query(
+                    `INSERT INTO game_rounds
+                     (game_id, round_number, item_type, item_id, submitted_guess, answer_snapshot, result_type, correct,
+                      response_time_ms, time_limit_ms, points_earned, streak_before, streak_after, difficulty_snapshot, content_snapshot)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        persistedGame.id,
+                        round.round_number,
+                        round.item_type,
+                        round.item_id,
+                        round.submitted_guess,
+                        round.answer_snapshot,
+                        round.result_type,
+                        round.correct,
+                        round.response_time_ms,
+                        round.time_limit_ms,
+                        round.points_earned,
+                        round.streak_before,
+                        round.streak_after,
+                        round.difficulty_snapshot,
+                        round.content_snapshot ? JSON.stringify(round.content_snapshot) : null,
+                    ],
+                );
+
+                await query(
+                    `INSERT INTO content_stats
+                     (game_mode, item_type, item_id, ruleset_version, pp_version, appearances, correct_count, skip_count,
+                      timeout_count, total_response_time_ms, fastest_correct_ms)
+                     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                       appearances = appearances + 1,
+                       correct_count = correct_count + VALUES(correct_count),
+                       skip_count = skip_count + VALUES(skip_count),
+                       timeout_count = timeout_count + VALUES(timeout_count),
+                       total_response_time_ms = total_response_time_ms + VALUES(total_response_time_ms),
+                       fastest_correct_ms = CASE
+                           WHEN VALUES(fastest_correct_ms) IS NULL THEN fastest_correct_ms
+                           WHEN fastest_correct_ms IS NULL THEN VALUES(fastest_correct_ms)
+                           ELSE LEAST(fastest_correct_ms, VALUES(fastest_correct_ms))
+                       END`,
+                    [
+                        gameState.game_mode,
+                        round.item_type,
+                        round.item_id,
+                        rulesetVersion,
+                        ppVersion,
+                        round.correct ? 1 : 0,
+                        round.result_type === "skip" ? 1 : 0,
+                        round.result_type === "timeout" ? 1 : 0,
+                        round.response_time_ms,
+                        round.correct ? round.response_time_ms : null,
+                    ],
+                );
+            }
+
             await query(
                 `INSERT INTO user_achievements
-                 (user_id, game_mode, variant, total_score, games_played, highest_streak, highest_score)
-                 VALUES (?, ?, ?, ?, 1, ?, ?)
+                 (user_id, game_mode, variant, ruleset_version, pp_version, total_score, games_played, rounds_played,
+                  total_correct, total_skips, total_timeouts, total_response_time_ms, highest_streak, highest_score, best_run_pp, profile_pp)
+                 VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 0, 0)
                  ON DUPLICATE KEY UPDATE
                    total_score = total_score + VALUES(total_score),
                    games_played = games_played + 1,
+                   rounds_played = rounds_played + VALUES(rounds_played),
+                   total_correct = total_correct + VALUES(total_correct),
+                   total_skips = total_skips + VALUES(total_skips),
+                   total_timeouts = total_timeouts + VALUES(total_timeouts),
+                   total_response_time_ms = total_response_time_ms + VALUES(total_response_time_ms),
                    highest_streak = GREATEST(highest_streak, VALUES(highest_streak)),
                    highest_score = GREATEST(highest_score, VALUES(highest_score)),
-                   last_played = CURRENT_TIMESTAMP`,
-                [userId, gameState.game_mode, gameState.variant, points, gameState.highest_streak, points],
+                   best_run_pp = GREATEST(best_run_pp, VALUES(best_run_pp)),
+                   profile_pp = VALUES(profile_pp),
+                   last_played = CURRENT_TIMESTAMP(3)`,
+                [
+                    userId,
+                    gameState.game_mode,
+                    gameState.variant,
+                    rulesetVersion,
+                    ppVersion,
+                    points,
+                    roundHistory.length,
+                    gameState.correct_guesses,
+                    skipCount,
+                    timeoutCount,
+                    totalResponseTimeMs,
+                    gameState.highest_streak,
+                    points,
+                ],
             );
         }
     });
@@ -146,6 +266,7 @@ export async function startGameAction(gameMode: GameMode, variant: GameVariant =
     await redisClient.sAdd(sessionItemsKey, itemId.toString());
     await redisClient.expire(sessionItemsKey, 3600);
 
+    const startedAt = new Date().toISOString();
     await redisClient.set(
         sessKey,
         JSON.stringify({
@@ -158,20 +279,30 @@ export async function startGameAction(gameMode: GameMode, variant: GameVariant =
             current_round: 1,
             current_item_id: itemId,
             time_left: ROUND_TIME,
-            last_action_at: new Date().toISOString(),
             last_guess: null,
             last_guess_correct: null,
             last_points: null,
             correct_guesses: 0,
             total_time_used: 0,
+            total_response_time_ms: 0,
             is_active: true,
             variant: variant,
+            run_type: "standard",
+            challenge_id: null,
+            seed: null,
+            config_snapshot: null,
+            ranked: true,
+            ruleset_version: CURRENT_RULESET_VERSION,
+            pp_version: CURRENT_PP_VERSION,
+            started_at: startedAt,
+            round_history: [],
             title: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).title : (item.data as SkinData).name,
             artist: (item.data as MapsetDataWithTags).artist,
             mapper: (item.data as MapsetDataWithTags).mapper,
             image_filename: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).image_filename : (item.data as SkinData).image_filename,
             audio_filename: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).audio_filename : null,
             has_guessed_current_round: false,
+            last_action_at: startedAt,
         }),
         { EX: 3600 },
     );
@@ -232,7 +363,9 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             throw new Error("Game is complete");
         }
 
-        const timeElapsed = gameState.has_guessed_current_round ? 0 : Math.floor((Date.now() - new Date(gameState.last_action_at).getTime()) / 1000);
+        const actionTimeMs = Date.now();
+        const timeElapsedMs = gameState.has_guessed_current_round ? 0 : Math.max(0, actionTimeMs - new Date(gameState.last_action_at).getTime());
+        const timeElapsed = Math.floor(timeElapsedMs / 1000);
         const rawTimeLeft = gameState.time_left - timeElapsed;
         const timeLeft = Math.max(0, rawTimeLeft);
 
@@ -288,7 +421,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
                 }
             } catch (error) {
                 if (!isDeathMode || !isNoGameContentError(error)) throw error;
-                await finishGameSession(sessionId, authSession.user.banchoId);
+                await finishGameSession(sessionId, authSession.user.banchoId, "content_exhausted");
                 return {
                     sessionId,
                     currentBeatmap: {
@@ -320,6 +453,38 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         }
 
         const newStreak = isNextRound ? gameState.current_streak : isCorrect ? gameState.current_streak + 1 : 0;
+        const resultType = isTimeout ? "timeout" : isSkipped ? "skip" : "guess";
+        const currentMapset = gameState.game_mode === GameMode.Skin ? null : (currentItem as MapsetDataWithTags);
+        const difficultySnapshot = currentMapset?.star_rating_max == null ? null : Number(currentMapset.star_rating_max);
+        const responseTimeMs = Math.min(timeElapsedMs, ROUND_TIME_MS);
+        const roundRecord: PersistedGameRound | null = isNextRound
+            ? null
+            : {
+                  round_number: gameState.current_round,
+                  item_type: gameState.game_mode === GameMode.Skin ? "skin" : "mapset",
+                  item_id: gameState.current_item_id,
+                  submitted_guess: resultType === "guess" ? (effectiveGuess ?? "") : null,
+                  answer_snapshot: currentAnswer,
+                  result_type: resultType,
+                  correct: isCorrect,
+                  response_time_ms: responseTimeMs,
+                  time_limit_ms: ROUND_TIME_MS,
+                  points_earned: points,
+                  streak_before: gameState.current_streak,
+                  streak_after: newStreak,
+                  difficulty_snapshot: Number.isFinite(difficultySnapshot) ? difficultySnapshot : null,
+                  content_snapshot:
+                      gameState.game_mode === GameMode.Skin
+                          ? { name: (currentItem as SkinData).name }
+                          : {
+                                title: currentMapset?.title,
+                                artist: currentMapset?.artist,
+                                mapper: currentMapset?.mapper,
+                                rankedAt: currentMapset?.ranked_at ?? null,
+                                starRatingMin: currentMapset?.star_rating_min ?? null,
+                                starRatingMax: currentMapset?.star_rating_max ?? null,
+                            },
+              };
 
         const updatedGameState = {
             ...gameState,
@@ -335,6 +500,8 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             current_round: gameState.current_round + (isNextRound ? 1 : 0),
             correct_guesses: gameState.correct_guesses + (isCorrect ? 1 : 0),
             total_time_used: gameState.total_time_used + (!isNextRound ? ROUND_TIME - timeLeft : 0),
+            total_response_time_ms: (gameState.total_response_time_ms ?? 0) + (roundRecord?.response_time_ms ?? 0),
+            round_history: roundRecord ? [...(gameState.round_history ?? []), roundRecord] : (gameState.round_history ?? []),
             has_guessed_current_round: isNextRound ? false : true,
             ...(nextBeatmap && {
                 title: "mapset_id" in nextBeatmap.data ? nextBeatmap.data.title : nextBeatmap.data.name,
@@ -358,7 +525,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         }
 
         if (deathFailed) {
-            await finishGameSession(sessionId, authSession.user.banchoId);
+            await finishGameSession(sessionId, authSession.user.banchoId, "failed");
         }
 
         return {
@@ -477,7 +644,7 @@ export async function endGameAction(sessionId: string): Promise<void> {
     if (!lock) throw new Error("Action in progress, please wait");
 
     try {
-        await finishGameSession(sessionId, authSession.user.banchoId);
+        await finishGameSession(sessionId, authSession.user.banchoId, "quit");
     } finally {
         await releaseSessionLock(lock);
     }

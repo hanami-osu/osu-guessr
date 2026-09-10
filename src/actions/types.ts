@@ -4,6 +4,10 @@ export enum GameMode {
     Skin = "skin"
 }
 export type GameVariant = "classic" | "death";
+export type GameRunType = "standard" | "daily" | "challenge" | "practice";
+export type GameEndReason = "completed" | "failed" | "quit" | "content_exhausted";
+export type GameRoundResult = "guess" | "skip" | "timeout";
+export type GameItemType = "mapset" | "skin";
 export type ReportType = "incorrect_title" | "inappropriate_content" | "wrong_audio" | "wrong_background" | "other";
 type ReportStatus = "pending" | "investigating" | "resolved" | "rejected";
 
@@ -26,6 +30,9 @@ export interface MapsetData {
     title: string;
     artist: string;
     mapper: string;
+    ranked_at?: Date | null;
+    star_rating_min?: number | null;
+    star_rating_max?: number | null;
 }
 
 export interface MapsetDataWithTags extends MapsetData, MapsetTags {}
@@ -91,10 +98,19 @@ export interface UserAchievement {
     user_id: number;
     game_mode: GameMode;
     variant: GameVariant;
+    ruleset_version: number;
+    pp_version: number;
     total_score: bigint;
     games_played: number;
+    rounds_played: number;
+    total_correct: number;
+    total_skips: number;
+    total_timeouts: number;
+    total_response_time_ms: bigint;
     highest_streak: number;
     highest_score: number;
+    best_run_pp: string | number;
+    profile_pp: string | number;
     last_played: Date;
 }
 
@@ -174,14 +190,41 @@ export interface DatabaseGameSession {
     last_points: number | null;
     correct_guesses: number;
     total_time_used: number;
+    total_response_time_ms: number;
     is_active: boolean;
     end_pending?: boolean;
+    end_reason?: GameEndReason;
     variant: GameVariant;
-    // Joined fields from mapset_data/mapset_tags or skins table
+    run_type: GameRunType;
+    challenge_id: string | null;
+    seed: string | null;
+    config_snapshot: Record<string, unknown> | null;
+    ranked: boolean;
+    ruleset_version: number;
+    pp_version: number;
+    started_at: string | Date;
+    round_history: PersistedGameRound[];
     title: string;
     artist: string;
     mapper: string;
     image_filename: string;
     audio_filename: string;
     has_guessed_current_round: boolean;
+}
+
+export interface PersistedGameRound {
+    round_number: number;
+    item_type: GameItemType;
+    item_id: number;
+    submitted_guess: string | null;
+    answer_snapshot: string;
+    result_type: GameRoundResult;
+    correct: boolean;
+    response_time_ms: number;
+    time_limit_ms: number;
+    points_earned: number;
+    streak_before: number;
+    streak_after: number;
+    difficulty_snapshot: number | null;
+    content_snapshot: Record<string, unknown> | null;
 }

@@ -18,6 +18,36 @@ enum GameVariant {
   death
 }
 
+enum GameRunType {
+  standard
+  daily
+  challenge
+  practice
+}
+
+enum GameEndReason {
+  completed
+  failed
+  quit
+  content_exhausted
+}
+
+enum GameRoundResult {
+  guess
+  skip
+  timeout
+}
+
+enum GameItemType {
+  mapset
+  skin
+}
+
+enum GameChallengeType {
+  daily
+  shared
+}
+
 enum ReportType {
   incorrect_title
   inappropriate_content
@@ -73,16 +103,25 @@ model ApiKey {
 }
 
 model UserAchievement {
-  userId        Int         @map("user_id")
-  gameMode      GameMode    @map("game_mode")
-  variant       GameVariant @default(classic)
-  totalScore    BigInt      @default(0) @map("total_score")
-  gamesPlayed   Int         @default(0) @map("games_played")
-  highestStreak Int         @default(0) @map("highest_streak")
-  highestScore  Int         @default(0) @map("highest_score")
-  lastPlayed    DateTime    @default(now()) @map("last_played") @db.Timestamp(0)
+  userId              Int         @map("user_id")
+  gameMode            GameMode    @map("game_mode")
+  variant             GameVariant @default(classic)
+  rulesetVersion      Int         @default(0) @map("ruleset_version") @db.UnsignedSmallInt
+  ppVersion           Int         @default(0) @map("pp_version") @db.UnsignedSmallInt
+  totalScore          BigInt      @default(0) @map("total_score")
+  gamesPlayed         Int         @default(0) @map("games_played") @db.UnsignedInt
+  roundsPlayed        Int         @default(0) @map("rounds_played") @db.UnsignedInt
+  totalCorrect        Int         @default(0) @map("total_correct") @db.UnsignedInt
+  totalSkips          Int         @default(0) @map("total_skips") @db.UnsignedInt
+  totalTimeouts       Int         @default(0) @map("total_timeouts") @db.UnsignedInt
+  totalResponseTimeMs BigInt      @default(0) @map("total_response_time_ms") @db.UnsignedBigInt
+  highestStreak       Int         @default(0) @map("highest_streak") @db.UnsignedInt
+  highestScore        Int         @default(0) @map("highest_score")
+  bestRunPp           Decimal     @default(0) @map("best_run_pp") @db.Decimal(12, 3)
+  profilePp           Decimal     @default(0) @map("profile_pp") @db.Decimal(12, 3)
+  lastPlayed          DateTime    @default(now()) @map("last_played") @db.DateTime(3)
 
-  @@unique([userId, gameMode, variant], map: "user_game_mode_variant")
+  @@unique([userId, gameMode, variant, rulesetVersion, ppVersion], map: "user_game_mode_variant_version")
   @@index([totalScore], map: "idx_user_achievements_score")
   @@index([userId, totalScore], map: "idx_achievements_user_score")
   @@index([gameMode, variant, totalScore], map: "idx_achievements_mode_variant_score")
@@ -90,19 +129,116 @@ model UserAchievement {
 }
 
 model Game {
-  sessionId String?     @unique(map: "unique_game_session") @map("session_id") @db.Char(36)
-  userId   Int         @map("user_id")
-  gameMode GameMode    @map("game_mode")
-  points   Int         @default(0)
-  streak   Int         @default(0)
-  variant  GameVariant @default(classic)
-  endedAt  DateTime    @default(now()) @map("ended_at") @db.Timestamp(0)
+  id                  BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  sessionId           String?       @unique(map: "unique_game_session") @map("session_id") @db.Char(36)
+  userId              Int           @map("user_id")
+  gameMode            GameMode      @map("game_mode")
+  points              Int           @default(0)
+  streak              Int           @default(0) @db.UnsignedInt
+  variant             GameVariant   @default(classic)
+  runType             GameRunType   @default(standard) @map("run_type")
+  challengeId         String?       @map("challenge_id") @db.Char(36)
+  seed                String?       @db.VarChar(128)
+  configSnapshot      Json?         @map("config_snapshot")
+  ranked              Boolean       @default(true)
+  rulesetVersion      Int           @default(0) @map("ruleset_version") @db.UnsignedSmallInt
+  ppVersion           Int           @default(0) @map("pp_version") @db.UnsignedSmallInt
+  pp                  Decimal       @default(0) @db.Decimal(12, 3)
+  roundsPlayed        Int           @default(0) @map("rounds_played") @db.UnsignedInt
+  correctCount        Int           @default(0) @map("correct_count") @db.UnsignedInt
+  skipCount           Int           @default(0) @map("skip_count") @db.UnsignedInt
+  timeoutCount        Int           @default(0) @map("timeout_count") @db.UnsignedInt
+  totalResponseTimeMs BigInt        @default(0) @map("total_response_time_ms") @db.UnsignedBigInt
+  startedAt           DateTime      @default(now()) @map("started_at") @db.DateTime(3)
+  endedAt             DateTime      @default(now()) @map("ended_at") @db.DateTime(3)
+  endReason           GameEndReason @default(completed) @map("end_reason")
 
   @@index([userId, gameMode], map: "idx_games_user_mode")
   @@index([endedAt], map: "idx_games_ended")
   @@index([gameMode, points], map: "idx_games_mode_points")
-  @@ignore
+  @@index([rulesetVersion, ranked, gameMode, variant], map: "idx_games_competitive")
+  @@index([challengeId], map: "idx_games_challenge")
   @@map("games")
+}
+
+model GameRound {
+  id                 BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  gameId             BigInt          @map("game_id") @db.UnsignedBigInt
+  roundNumber        Int             @map("round_number") @db.UnsignedInt
+  itemType           GameItemType    @map("item_type")
+  itemId             Int             @map("item_id") @db.UnsignedInt
+  submittedGuess     String?         @map("submitted_guess") @db.VarChar(500)
+  answerSnapshot     String          @map("answer_snapshot") @db.VarChar(500)
+  resultType         GameRoundResult @map("result_type")
+  correct            Boolean
+  responseTimeMs     Int             @map("response_time_ms") @db.UnsignedInt
+  timeLimitMs        Int?            @map("time_limit_ms") @db.UnsignedInt
+  pointsEarned       Int             @default(0) @map("points_earned")
+  streakBefore       Int             @default(0) @map("streak_before") @db.UnsignedInt
+  streakAfter        Int             @default(0) @map("streak_after") @db.UnsignedInt
+  difficultySnapshot Decimal?        @map("difficulty_snapshot") @db.Decimal(8, 4)
+  contentSnapshot    Json?           @map("content_snapshot")
+
+  @@unique([gameId, roundNumber], map: "game_round_number")
+  @@index([itemType, itemId], map: "idx_game_rounds_item")
+  @@index([correct, responseTimeMs], map: "idx_game_rounds_correct_time")
+  @@map("game_rounds")
+}
+
+model GameChallenge {
+  id             String            @id @db.Char(36)
+  challengeType  GameChallengeType @map("challenge_type")
+  creatorUserId  Int?              @map("creator_user_id")
+  sourceGameId   BigInt?           @map("source_game_id") @db.UnsignedBigInt
+  gameMode       GameMode          @map("game_mode")
+  variant        GameVariant       @default(classic)
+  rulesetVersion Int               @map("ruleset_version") @db.UnsignedSmallInt
+  ppVersion      Int               @map("pp_version") @db.UnsignedSmallInt
+  seed           String            @db.VarChar(128)
+  configSnapshot Json?             @map("config_snapshot")
+  roundCount     Int?              @map("round_count") @db.UnsignedInt
+  timerMs        Int?              @map("timer_ms") @db.UnsignedInt
+  ranked         Boolean           @default(true)
+  dailyDate      DateTime?         @map("daily_date") @db.Date
+  createdAt      DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@unique([dailyDate, gameMode, variant], map: "daily_challenge_mode_variant")
+  @@index([creatorUserId], map: "idx_game_challenges_creator")
+  @@index([sourceGameId], map: "idx_game_challenges_source_game")
+  @@map("game_challenges")
+}
+
+model GameChallengeRound {
+  challengeId       String       @map("challenge_id") @db.Char(36)
+  roundNumber       Int          @map("round_number") @db.UnsignedInt
+  itemType          GameItemType @map("item_type")
+  itemId            Int          @map("item_id") @db.UnsignedInt
+  answerSnapshot    String       @map("answer_snapshot") @db.VarChar(500)
+  difficultySnapshot Decimal?    @map("difficulty_snapshot") @db.Decimal(8, 4)
+  contentSnapshot   Json?        @map("content_snapshot")
+
+  @@id([challengeId, roundNumber])
+  @@index([itemType, itemId], map: "idx_game_challenge_rounds_item")
+  @@map("game_challenge_rounds")
+}
+
+model ContentStat {
+  gameMode            GameMode     @map("game_mode")
+  itemType            GameItemType @map("item_type")
+  itemId              Int          @map("item_id") @db.UnsignedInt
+  rulesetVersion      Int          @map("ruleset_version") @db.UnsignedSmallInt
+  ppVersion           Int          @map("pp_version") @db.UnsignedSmallInt
+  appearances         BigInt       @default(0) @db.UnsignedBigInt
+  correctCount        BigInt       @default(0) @map("correct_count") @db.UnsignedBigInt
+  skipCount           BigInt       @default(0) @map("skip_count") @db.UnsignedBigInt
+  timeoutCount        BigInt       @default(0) @map("timeout_count") @db.UnsignedBigInt
+  totalResponseTimeMs BigInt       @default(0) @map("total_response_time_ms") @db.UnsignedBigInt
+  fastestCorrectMs    Int?         @map("fastest_correct_ms") @db.UnsignedInt
+  empiricalDifficulty Decimal?     @map("empirical_difficulty") @db.Decimal(8, 4)
+  updatedAt           DateTime     @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@id([gameMode, itemType, itemId, rulesetVersion, ppVersion])
+  @@map("content_stats")
 }
 
 model MapsetTag {
@@ -114,14 +250,19 @@ model MapsetTag {
 }
 
 model MapsetData {
-  mapsetId Int     @id @map("mapset_id")
-  title    String? @db.VarChar(500)
-  artist   String? @db.VarChar(500)
-  mapper   String? @db.VarChar(500)
+  mapsetId      Int       @id @map("mapset_id")
+  title         String?   @db.VarChar(500)
+  artist        String?   @db.VarChar(500)
+  mapper        String?   @db.VarChar(500)
+  rankedAt      DateTime? @map("ranked_at") @db.DateTime(3)
+  starRatingMin Decimal?  @map("star_rating_min") @db.Decimal(6, 3)
+  starRatingMax Decimal?  @map("star_rating_max") @db.Decimal(6, 3)
 
   @@index([title], map: "idx_mapset_data_title")
   @@index([artist], map: "idx_mapset_data_artist")
   @@index([mapper], map: "idx_mapset_data_mapper")
+  @@index([rankedAt], map: "idx_mapset_data_ranked_at")
+  @@index([starRatingMin, starRatingMax], map: "idx_mapset_data_star_rating")
   @@map("mapset_data")
 }
 

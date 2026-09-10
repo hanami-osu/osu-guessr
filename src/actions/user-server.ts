@@ -5,6 +5,7 @@ import { z } from "zod";
 import { GameVariant } from "@/app/games/config";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserWithStats, UserBadge } from "./types";
 import { hasPlayedGame } from "@/lib/user-stats";
+import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 
 const gameModeSchema = z.nativeEnum(GameMode);
 const gameVariantSchema = z.enum(["classic", "death"]);
@@ -28,23 +29,19 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
     )) as UserBadge[];
 
     const achievements = (await query(
-        `SELECT g.user_id, g.game_mode, g.variant,
-                COUNT(*) as games_played,
-                MAX(CASE WHEN g.variant = 'classic' THEN g.points ELSE 0 END) as highest_score,
-                MAX(g.streak) as highest_streak,
-                SUM(CASE WHEN g.variant = 'classic' THEN g.points ELSE 0 END) as total_score,
-                MAX(g.ended_at) as last_played
-         FROM games g
-         WHERE g.user_id = ?
-         GROUP BY g.user_id, g.game_mode, g.variant`,
-        [banchoId]
+        `SELECT user_id, game_mode, variant, ruleset_version, pp_version, total_score, games_played, rounds_played,
+                total_correct, total_skips, total_timeouts, total_response_time_ms, highest_streak, highest_score,
+                best_run_pp, profile_pp, last_played
+         FROM user_achievements
+         WHERE user_id = ? AND ruleset_version = ? AND pp_version = ?`,
+        [banchoId, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION]
     )) as UserAchievement[];
 
     const globalClassicRankResult = (await query(
         `WITH RankedUsers AS (
             SELECT user_id, SUM(points) as total_score
             FROM games
-            WHERE variant = 'classic'
+            WHERE variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
             GROUP BY user_id
             ORDER BY total_score DESC
         )
@@ -53,16 +50,16 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
         WHERE r.total_score > (
             SELECT COALESCE(SUM(points), 0)
             FROM games
-            WHERE user_id = ? AND variant = 'classic'
+            WHERE user_id = ? AND variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
         )`,
-        [banchoId]
+        [CURRENT_RULESET_VERSION, banchoId, CURRENT_RULESET_VERSION]
     )) as [{ globalRank: number }];
 
     const globalDeathRankResult = (await query(
         `WITH RankedUsers AS (
             SELECT user_id, MAX(streak) as highest_streak
             FROM games
-            WHERE variant = 'death'
+            WHERE variant = 'death' AND ruleset_version = ? AND ranked = TRUE
             GROUP BY user_id
             ORDER BY highest_streak DESC
         )
@@ -71,9 +68,9 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
         WHERE r.highest_streak > (
             SELECT COALESCE(MAX(streak), 0)
             FROM games
-            WHERE user_id = ? AND variant = 'death'
+            WHERE user_id = ? AND variant = 'death' AND ruleset_version = ? AND ranked = TRUE
         )`,
-        [banchoId]
+        [CURRENT_RULESET_VERSION, banchoId, CURRENT_RULESET_VERSION]
     )) as [{ globalRank: number }];
 
     const modeRanks: { [key in GameMode]: { classic?: number; death?: number } } = {
@@ -87,7 +84,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
             `WITH RankedUsers AS (
                 SELECT user_id, SUM(points) as total_score
                 FROM games
-                WHERE game_mode = ? AND variant = 'classic'
+                WHERE game_mode = ? AND variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
                 GROUP BY user_id
                 ORDER BY total_score DESC
             )
@@ -96,16 +93,16 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
             WHERE r.total_score > (
                 SELECT COALESCE(SUM(points), 0)
                 FROM games
-                WHERE user_id = ? AND game_mode = ? AND variant = 'classic'
+                WHERE user_id = ? AND game_mode = ? AND variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
             )`,
-            [mode, banchoId, mode]
+            [mode, CURRENT_RULESET_VERSION, banchoId, mode, CURRENT_RULESET_VERSION]
         )) as [{ rank: number }];
 
         const deathRank = (await query(
             `WITH RankedUsers AS (
                 SELECT user_id, MAX(streak) as highest_streak
                 FROM games
-                WHERE game_mode = ? AND variant = 'death'
+                WHERE game_mode = ? AND variant = 'death' AND ruleset_version = ? AND ranked = TRUE
                 GROUP BY user_id
                 ORDER BY highest_streak DESC
             )
@@ -114,9 +111,9 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
             WHERE r.highest_streak > (
                 SELECT COALESCE(MAX(streak), 0)
                 FROM games
-                WHERE user_id = ? AND game_mode = ? AND variant = 'death'
+                WHERE user_id = ? AND game_mode = ? AND variant = 'death' AND ruleset_version = ? AND ranked = TRUE
             )`,
-            [mode, banchoId, mode]
+            [mode, CURRENT_RULESET_VERSION, banchoId, mode, CURRENT_RULESET_VERSION]
         )) as [{ rank: number }];
 
         modeRanks[mode] = {
@@ -142,11 +139,12 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
 export async function getUserStatsAction(banchoId: number, variant?: GameVariant): Promise<Array<UserAchievement>> {
     const validatedVariant = variant ? gameVariantSchema.parse(variant) : undefined;
     const result = (await query(
-        `SELECT user_id, game_mode, variant, total_score, games_played,
-                highest_streak, highest_score, last_played
+        `SELECT user_id, game_mode, variant, ruleset_version, pp_version, total_score, games_played, rounds_played,
+                total_correct, total_skips, total_timeouts, total_response_time_ms, highest_streak, highest_score,
+                best_run_pp, profile_pp, last_played
          FROM user_achievements
-         WHERE user_id = ?${validatedVariant ? " AND variant = ?" : ""}`,
-        validatedVariant ? [banchoId, validatedVariant] : [banchoId]
+         WHERE user_id = ? AND ruleset_version = ? AND pp_version = ?${validatedVariant ? " AND variant = ?" : ""}`,
+        validatedVariant ? [banchoId, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION, validatedVariant] : [banchoId, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION]
     )) as UserAchievement[];
     return result;
 }
@@ -164,14 +162,14 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
     let query_string = validatedMode
         ? `SELECT user_id, game_mode, points, streak, variant, ended_at
            FROM games
-           WHERE user_id = ? AND game_mode = ? AND variant = ?
+           WHERE user_id = ? AND game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
            ORDER BY ended_at DESC`
         : `SELECT user_id, game_mode, points, streak, variant, ended_at
            FROM games
-           WHERE user_id = ? AND variant = ?
+           WHERE user_id = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
            ORDER BY ended_at DESC`;
 
-    const params = validatedMode ? [banchoId, validatedMode, validatedVariant] : [banchoId, validatedVariant];
+    const params = validatedMode ? [banchoId, validatedMode, validatedVariant, CURRENT_RULESET_VERSION] : [banchoId, validatedVariant, CURRENT_RULESET_VERSION];
 
     if (pagination.limit) {
         query_string += " LIMIT ? OFFSET ?";
@@ -185,9 +183,9 @@ export async function getUserGamesCountAction(banchoId: number, gameMode?: GameM
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validatedVariant = gameVariantSchema.parse(variant);
     const queryString = validatedMode
-        ? `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND game_mode = ? AND variant = ?`
-        : `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND variant = ?`;
-    const params = validatedMode ? [banchoId, validatedMode, validatedVariant] : [banchoId, validatedVariant];
+        ? `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE`
+        : `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE`;
+    const params = validatedMode ? [banchoId, validatedMode, validatedVariant, CURRENT_RULESET_VERSION] : [banchoId, validatedVariant, CURRENT_RULESET_VERSION];
     const [row] = (await query(queryString, params)) as Array<{ total: number }>;
 
     return row?.total ?? 0;
@@ -202,16 +200,18 @@ export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMod
     const query_string = validatedMode
         ? `SELECT user_id, game_mode, points, streak, variant, ended_at
            FROM games
-           WHERE user_id = ? AND game_mode = ? AND variant = ?
+           WHERE user_id = ? AND game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
            ORDER BY ${orderBy} DESC, ended_at ASC
            LIMIT ?`
         : `SELECT user_id, game_mode, points, streak, variant, ended_at
            FROM games
-           WHERE user_id = ? AND variant = ?
+           WHERE user_id = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
            ORDER BY ${orderBy} DESC, ended_at ASC
            LIMIT ?`;
 
-    const params = validatedMode ? [banchoId, validatedMode, validated.variant, validated.limit] : [banchoId, validated.variant, validated.limit];
+    const params = validatedMode
+        ? [banchoId, validatedMode, validated.variant, CURRENT_RULESET_VERSION, validated.limit]
+        : [banchoId, validated.variant, CURRENT_RULESET_VERSION, validated.limit];
 
     return query(query_string, params);
 }
@@ -230,7 +230,7 @@ export async function getTopPlayersAction(gamemode: GameMode, variant: GameVaria
                     ${validated.variant === "death" ? "0" : "SUM(points)"} AS total_score,
                     MIN(ended_at) AS earliest_ended_at
              FROM games
-             WHERE game_mode = ? AND variant = ?
+             WHERE game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
              GROUP BY user_id
          ), badge_stats AS (
              SELECT ub.user_id, GROUP_CONCAT(CONCAT(b.name, ':', b.color)) AS badges
@@ -244,7 +244,7 @@ export async function getTopPlayersAction(gamemode: GameMode, variant: GameVaria
          LEFT JOIN badge_stats bs ON u.bancho_id = bs.user_id
          ORDER BY gs.${orderColumn} DESC, gs.earliest_ended_at ASC
          LIMIT ? OFFSET ?`,
-        [validated.gamemode, validated.variant, validated.limit, validated.offset],
+        [validated.gamemode, validated.variant, CURRENT_RULESET_VERSION, validated.limit, validated.offset],
     );
 
     return results.map((player) => ({
@@ -278,8 +278,8 @@ export async function getHighestStatsAction(variant: GameVariant = "classic"): P
                 ELSE COALESCE(MAX(streak), 0)
             END as highest_score
          FROM games
-         WHERE variant = ?`,
-        [variant, variant]
+         WHERE variant = ? AND ruleset_version = ? AND ranked = TRUE`,
+        [variant, variant, CURRENT_RULESET_VERSION]
     )) as [{ total_users: number; total_games: number; highest_score: number }];
 
     return {

@@ -48,12 +48,17 @@ interface BeatmapData {
     title: string;
     artist: string;
     creator: string;
+    rankedAt: Date | null;
+    starRatingMin: number | null;
+    starRatingMax: number | null;
 }
 
 interface OsuApiResponse {
     title: string;
     artist: string;
     creator: string;
+    approved_date?: string | null;
+    difficultyrating?: string | null;
 }
 
 interface ArchiveEntryMetadata {
@@ -138,10 +143,15 @@ async function getBeatmapData(mapsetId: number): Promise<BeatmapData | null> {
             return null;
         }
 
+        const starRatings = data.map((beatmap) => Number(beatmap.difficultyrating)).filter(Number.isFinite);
+
         return {
             title: data[0].title,
             artist: data[0].artist,
             creator: data[0].creator,
+            rankedAt: data[0].approved_date ? new Date(data[0].approved_date) : null,
+            starRatingMin: starRatings.length > 0 ? Math.min(...starRatings) : null,
+            starRatingMax: starRatings.length > 0 ? Math.max(...starRatings) : null,
         };
     } catch (error) {
         console.error(`Failed to fetch beatmap data for ${mapsetId}:`, error);
@@ -288,13 +298,16 @@ async function extractAudio(mapsetId: number, mapsetDir: string): Promise<string
 async function saveMapsetToDatabase(mapsetId: number, beatmapData: BeatmapData, imageFilename: string, audioFilename: string): Promise<void> {
     await transaction(async (query) => {
         await query(
-            `INSERT INTO mapset_data (mapset_id, title, artist, mapper)
-             VALUES (?, ?, ?, ?)
+            `INSERT INTO mapset_data (mapset_id, title, artist, mapper, ranked_at, star_rating_min, star_rating_max)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                title = VALUES(title),
                artist = VALUES(artist),
-               mapper = VALUES(mapper)`,
-            [mapsetId, beatmapData.title, beatmapData.artist, beatmapData.creator],
+               mapper = VALUES(mapper),
+               ranked_at = VALUES(ranked_at),
+               star_rating_min = VALUES(star_rating_min),
+               star_rating_max = VALUES(star_rating_max)`,
+            [mapsetId, beatmapData.title, beatmapData.artist, beatmapData.creator, beatmapData.rankedAt, beatmapData.starRatingMin, beatmapData.starRatingMax],
         );
 
         await query(

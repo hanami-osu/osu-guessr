@@ -63,7 +63,10 @@ async function getRandomMapset(filenameColumn: "audio_filename" | "image_filenam
     if (!mapset) return null;
 
     if (!storedMapset) {
-        await query("INSERT INTO mapset_data (mapset_id, title, artist, mapper) VALUES (?, ?, ?, ?)", [mapset.mapset_id, mapset.title, mapset.artist, mapset.mapper]);
+        await query(
+            "INSERT INTO mapset_data (mapset_id, title, artist, mapper, ranked_at, star_rating_min, star_rating_max) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [mapset.mapset_id, mapset.title, mapset.artist, mapset.mapper, mapset.ranked_at ?? null, mapset.star_rating_min ?? null, mapset.star_rating_max ?? null],
+        );
     }
 
     return { ...tags, ...mapset };
@@ -76,8 +79,26 @@ async function getMapsetById(mapsetId: number): Promise<MapsetData | null> {
         return null;
     }
 
-    const data = (await res.json())[0];
-    return { mapset_id: data.beatmapset_id, title: data.title, artist: data.artist, mapper: data.creator };
+    const data = (await res.json()) as Array<{
+        beatmapset_id: string;
+        title: string;
+        artist: string;
+        creator: string;
+        approved_date?: string | null;
+        difficultyrating?: string | null;
+    }>;
+    if (data.length === 0) return null;
+
+    const ratings = data.map((beatmap) => Number(beatmap.difficultyrating)).filter(Number.isFinite);
+    return {
+        mapset_id: Number(data[0].beatmapset_id),
+        title: data[0].title,
+        artist: data[0].artist,
+        mapper: data[0].creator,
+        ranked_at: data[0].approved_date ? new Date(data[0].approved_date) : null,
+        star_rating_min: ratings.length > 0 ? Math.min(...ratings) : null,
+        star_rating_max: ratings.length > 0 ? Math.max(...ratings) : null,
+    };
 }
 
 export async function getRandomSkinAction(sessionId?: string) {
