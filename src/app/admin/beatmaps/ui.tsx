@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowLeft, ExternalLink, Loader2, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -10,6 +11,7 @@ import { listMapsets, removeMapset, fetchBackgroundImage, Mapset } from "../acti
 export default function BeatmapsAdmin() {
     const [mapsets, setMapsets] = useState<Mapset[]>([]);
     const [selected, setSelected] = useState<Record<number, boolean>>({});
+    const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState("");
@@ -20,6 +22,7 @@ export default function BeatmapsAdmin() {
     const fetchMapsets = async (p = 1, q = "") => {
         setIsLoading(true);
         setOutput("Loading mapsets...");
+        setSelected({});
         try {
             setImages({});
             const list = await listMapsets(p, limit, q);
@@ -28,16 +31,16 @@ export default function BeatmapsAdmin() {
 
             const imgs: Record<number, string | null> = {};
             await Promise.all(
-                (list || []).map(async (m: Mapset) => {
-                    if (m.image_filename) {
+                (list || []).map(async (mapset: Mapset) => {
+                    if (mapset.image_filename) {
                         try {
-                            const data = await fetchBackgroundImage(m.image_filename);
-                            imgs[m.mapset_id] = data;
+                            const data = await fetchBackgroundImage(mapset.image_filename);
+                            imgs[mapset.mapset_id] = data;
                         } catch {
-                            imgs[m.mapset_id] = null;
+                            imgs[mapset.mapset_id] = null;
                         }
                     } else {
-                        imgs[m.mapset_id] = null;
+                        imgs[mapset.mapset_id] = null;
                     }
                 })
             );
@@ -53,6 +56,23 @@ export default function BeatmapsAdmin() {
         fetchMapsets(page, search);
     }, [page, search]);
 
+    const handleSearch = (event: FormEvent) => {
+        event.preventDefault();
+        const nextSearch = searchInput.trim();
+        if (page === 1 && nextSearch === search) {
+            fetchMapsets(1, nextSearch);
+            return;
+        }
+        setPage(1);
+        setSearch(nextSearch);
+    };
+
+    const handleClearSearch = () => {
+        setSearchInput("");
+        setPage(1);
+        setSearch("");
+    };
+
     const handleDelete = async (id: number) => {
         if (!confirm(`Delete mapset ${id}? This will remove audio/image and db records.`)) return;
         setIsLoading(true);
@@ -60,7 +80,7 @@ export default function BeatmapsAdmin() {
         try {
             await removeMapset(id);
             setOutput(`Removed ${id}`);
-            await fetchMapsets(page);
+            await fetchMapsets(page, search);
         } catch (err) {
             setOutput(`Failed to remove ${id}: ${String(err)}`);
         } finally {
@@ -69,24 +89,25 @@ export default function BeatmapsAdmin() {
     };
 
     const handleToggle = (id: number) => {
-        setSelected((s) => ({ ...s, [id]: !s[id] }));
+        setSelected((current) => ({ ...current, [id]: !current[id] }));
     };
 
     const handleSelectAll = () => {
-        const allOn = mapsets.every((m) => selected[m.mapset_id]);
+        const allOn = mapsets.length > 0 && mapsets.every((mapset) => selected[mapset.mapset_id]);
         if (allOn) {
             setSelected({});
-        } else {
-            const next: Record<number, boolean> = {};
-            mapsets.forEach((m) => (next[m.mapset_id] = true));
-            setSelected(next);
+            return;
         }
+
+        const next: Record<number, boolean> = {};
+        mapsets.forEach((mapset) => (next[mapset.mapset_id] = true));
+        setSelected(next);
     };
 
     const handleBulkDelete = async () => {
         const ids = Object.keys(selected)
-            .filter((k) => selected[Number(k)])
-            .map((k) => Number(k));
+            .filter((key) => selected[Number(key)])
+            .map((key) => Number(key));
         if (ids.length === 0) return;
         if (!confirm(`Delete ${ids.length} selected mapset(s)? This will remove audio/image and db records.`)) return;
         setIsLoading(true);
@@ -96,7 +117,6 @@ export default function BeatmapsAdmin() {
                 await removeMapset(id);
             }
             setOutput(`Removed ${ids.length} mapsets`);
-            setSelected({});
             await fetchMapsets(page, search);
         } catch (err) {
             setOutput(`Bulk delete failed: ${String(err)}`);
@@ -105,91 +125,99 @@ export default function BeatmapsAdmin() {
         }
     };
 
-    const prevPage = () => setPage((p) => Math.max(1, p - 1));
-    const nextPage = () => setPage((p) => p + 1);
+    const selectedCount = Object.values(selected).filter(Boolean).length;
+    const allSelected = mapsets.length > 0 && mapsets.every((mapset) => selected[mapset.mapset_id]);
 
     return (
-        <div className="space-y-6 p-4 sm:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-4">
-                    <Link href="/admin">
-                        <Button variant="ghost" size="sm">
-                            Back
-                        </Button>
-                    </Link>
-                    <h1 className="text-2xl font-bold">Beatmaps</h1>
+        <div className="container mx-auto max-w-6xl px-4 py-6 md:py-10">
+            <header className="flex flex-col gap-5 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <Button asChild variant="ghost" size="sm" className="mb-3 -ml-3 text-muted-foreground">
+                        <Link href="/admin"><ArrowLeft /> Admin</Link>
+                    </Button>
+                    <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Beatmaps</h1>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">Search, inspect, and remove imported mapsets.</p>
                 </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {isLoading && <Loader2 className="size-4 animate-spin" />}
+                    <span>{output}</span>
+                </div>
+            </header>
 
-                <div className="text-sm text-muted-foreground break-words lg:text-right">{output}</div>
-            </div>
+            <form onSubmit={handleSearch} className="sticky top-0 z-10 -mx-2 flex flex-col gap-3 border-b border-border/60 bg-background/95 px-2 py-4 backdrop-blur sm:flex-row sm:items-center">
+                <div className="relative min-w-0 flex-1 sm:max-w-md">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input aria-label="Search beatmaps" className="pl-9" placeholder="Search artist or title" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Button type="submit" size="sm" disabled={isLoading}>Search</Button>
+                    {search && <Button type="button" size="sm" variant="ghost" onClick={handleClearSearch} disabled={isLoading}>Clear</Button>}
+                    <Button type="button" size="sm" variant="outline" onClick={handleSelectAll} disabled={isLoading || mapsets.length === 0}>
+                        {allSelected ? "Unselect page" : "Select page"}
+                    </Button>
+                    <Button type="button" size="sm" variant="destructive" onClick={handleBulkDelete} disabled={isLoading || selectedCount === 0}>
+                        <Trash2 />
+                        Delete {selectedCount > 0 ? selectedCount : "selected"}
+                    </Button>
+                </div>
+            </form>
 
-            <div className="flex flex-col gap-3 border-y border-border/60 py-4 sm:flex-row sm:flex-wrap sm:items-center">
-                <Input className="sm:max-w-xs" placeholder="Search artist or title" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <Button size="sm" onClick={() => fetchMapsets(1, search)}>
-                    Search
-                </Button>
-                <Button size="sm" onClick={handleSelectAll}>
-                    {mapsets.every((m) => selected[m.mapset_id]) ? "Unselect all" : "Select all"}
-                </Button>
-                <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
-                    Delete selected
-                </Button>
-            </div>
+            <div className="divide-y divide-border/60 border-b border-border/60">
+                {mapsets.map((mapset) => (
+                    <div key={mapset.mapset_id} className="grid gap-4 py-4 sm:grid-cols-[auto_8rem_minmax(0,1fr)_auto] sm:items-center">
+                        <input
+                            type="checkbox"
+                            aria-label={`Select ${mapset.title}`}
+                            checked={!!selected[mapset.mapset_id]}
+                            onChange={() => handleToggle(mapset.mapset_id)}
+                            className="size-4 accent-primary"
+                        />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {mapsets.map((m) => (
-                    <div key={m.mapset_id} className="border-t border-border/60 py-4 flex flex-col">
-                        <div className="flex items-start gap-4">
-                            <div>
-                                <input type="checkbox" checked={!!selected[m.mapset_id]} onChange={() => handleToggle(m.mapset_id)} />
-                            </div>
-                            <div className="w-28 h-16 relative rounded overflow-hidden bg-muted shrink-0">
-                                {images[m.mapset_id] ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={images[m.mapset_id] as string} alt={m.title} className="w-full h-full object-cover" />
-                                ) : m.image_filename ? (
-                                    <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">Loading image...</div>
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">No image</div>
-                                )}
-                            </div>
+                        <div className="h-[4.5rem] w-32 overflow-hidden rounded-md bg-muted sm:w-full">
+                            {images[mapset.mapset_id] ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={images[mapset.mapset_id] as string} alt="" className="h-full w-full object-cover" />
+                            ) : mapset.image_filename ? (
+                                <div className="flex h-full items-center justify-center px-2 text-center text-xs text-muted-foreground">Loading image...</div>
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No image</div>
+                            )}
+                        </div>
 
-                            <div className="flex-1 min-w-0">
-                                <div className="font-semibold">{m.title}</div>
-                                <div className="text-sm text-muted-foreground">
-                                    {m.artist} / {m.mapper}
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-1">ID: {m.mapset_id}</div>
+                        <div className="min-w-0">
+                            <div className="truncate font-medium">{mapset.title}</div>
+                            <div className="mt-1 truncate text-sm text-muted-foreground">{mapset.artist}</div>
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>mapped by {mapset.mapper}</span>
+                                <span>ID {mapset.mapset_id}</span>
                             </div>
                         </div>
 
-                        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                            <Button variant="destructive" size="sm" onClick={() => handleDelete(m.mapset_id)}>
-                                Delete
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <Button asChild size="sm" variant="ghost">
+                                <a href={`https://osu.ppy.sh/beatmapsets/${mapset.mapset_id}`} target="_blank" rel="noreferrer">
+                                    Open <ExternalLink />
+                                </a>
                             </Button>
-                            <a href={`https://osu.ppy.sh/beatmapsets/${m.mapset_id}`} target="_blank" rel="noreferrer" className="sm:w-auto">
-                                <Button size="sm" className="w-full sm:w-auto">
-                                    Open osu!
-                                </Button>
-                            </a>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(mapset.mapset_id)} disabled={isLoading} className="text-destructive hover:text-destructive">
+                                <Trash2 /> Remove
+                            </Button>
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className="flex justify-center">
-                <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={prevPage} disabled={page === 1}>
-                        Prev
-                    </Button>
-                    <div className="text-sm">Page {page}</div>
-                    <Button size="sm" onClick={nextPage}>
-                        Next
-                    </Button>
-                </div>
-            </div>
+            {mapsets.length === 0 && !isLoading && (
+                <div className="py-16 text-center text-sm text-muted-foreground">{search ? `No mapsets found for “${search}”.` : "No mapsets found."}</div>
+            )}
 
-            {mapsets.length === 0 && !isLoading && <div className="text-muted-foreground">No mapsets found.</div>}
+            <footer className="flex items-center justify-between gap-4 py-5">
+                <span className="text-sm text-muted-foreground">Page {page}</span>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={isLoading || page === 1}>Previous</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPage((current) => current + 1)} disabled={isLoading || mapsets.length < limit}>Next</Button>
+                </div>
+            </footer>
         </div>
     );
 }

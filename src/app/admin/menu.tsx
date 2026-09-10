@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Activity, BadgeCheck, Disc3, ExternalLink, FileText, Languages, Loader2, Megaphone, Paintbrush, RefreshCw, ShieldAlert, UserRoundCog } from "lucide-react";
 
 import { addMapset, removeMapset, listMapsets, Mapset, addMapsetFromList } from "./actions/mapsets";
 import { syncUserAchievements } from "./actions/update-outofsync-users";
@@ -15,7 +18,7 @@ import { listAnnouncements, addAnnouncement, removeAnnouncement } from "@/action
 import { listSkins, removeSkin, addSkinById, addSkinsFromList } from "./actions/skins";
 import { adminSetLock, adminUnlock, adminGetLock } from "./actions/lockdown";
 
-import { CollapsibleSection } from "./ui";
+import { AdminGroup, CollapsibleSection } from "./ui";
 import Link from "next/link";
 
 export default function AdminMenu() {
@@ -26,7 +29,6 @@ export default function AdminMenu() {
 
     const [badgeUserId, setBadgeUserId] = useState("");
     const [badgeTitle, setBadgeTitle] = useState("");
-    const [badgeColor, setBadgeColor] = useState("");
     const [newBadgeName, setNewBadgeName] = useState("");
     const [newBadgeColor, setNewBadgeColor] = useState("#000000");
     const [availableBadges, setAvailableBadges] = useState<Record<string, string>>({});
@@ -54,6 +56,11 @@ export default function AdminMenu() {
         setOutput((prev) => prev + "\n" + text);
     };
 
+    useEffect(() => {
+        const consoleElement = consoleDivRef.current;
+        if (consoleElement) consoleElement.scrollTop = consoleElement.scrollHeight;
+    }, [output]);
+
     const loadAvailableBadges = useCallback(async () => {
         try {
             const badges = (await getBadges()) as Array<{ name: string; color: string }>;
@@ -71,7 +78,6 @@ export default function AdminMenu() {
         const languages = await getAllLanguages();
         setAvailableLanguages(languages);
     }, []);
-
 
     const handleAddBadgeType = async () => {
         if (!newBadgeName || !newBadgeColor) return;
@@ -180,10 +186,6 @@ export default function AdminMenu() {
     };
 
     const handleListMapsets = async () => {
-        consoleDivRef.current?.scrollIntoView({
-            behavior: "smooth",
-        });
-
         setIsLoading(true);
         appendOutput("Listing mapsets...");
         try {
@@ -203,10 +205,6 @@ export default function AdminMenu() {
     };
 
     const handleBulkUpload = async () => {
-        consoleDivRef.current?.scrollIntoView({
-            behavior: "smooth",
-        });
-
         if (!bulkFile) return;
 
         setIsLoading(true);
@@ -239,10 +237,6 @@ export default function AdminMenu() {
     };
 
     const handleSyncUsers = async () => {
-        consoleDivRef.current?.scrollIntoView({
-            behavior: "smooth",
-        });
-
         setIsLoading(true);
         appendOutput("Syncing user achievements...");
         try {
@@ -255,10 +249,6 @@ export default function AdminMenu() {
     };
 
     const handleCheckTranslation = async () => {
-        consoleDivRef.current?.scrollIntoView({
-            behavior: "smooth",
-        });
-
         if (!languageCode) return;
         setIsLoading(true);
         appendOutput(`Checking translations for language: ${languageCode}`);
@@ -305,10 +295,6 @@ export default function AdminMenu() {
     };
 
     const handleCheckAllLanguages = async () => {
-        consoleDivRef.current?.scrollIntoView({
-            behavior: "smooth",
-        });
-
         setIsLoading(true);
         appendOutput("Checking all translations...");
 
@@ -522,346 +508,412 @@ export default function AdminMenu() {
         setIsLoading(false);
     };
 
+    const handleListReports = async () => {
+        setIsLoading(true);
+        appendOutput("Listing reports...");
+        try {
+            const reports = await listReports();
+            if (reports.length > 0) {
+                appendOutput("Reports:");
+                reports.forEach((report) => {
+                    appendOutput(`${report.id} | ${report.user_id} | ${report.mapset_id} | ${report.report_type} | ${report.status} | ${new Date(report.created_at).toLocaleString()}`);
+                });
+            } else {
+                appendOutput("No reports found");
+            }
+        } catch (error) {
+            appendOutput(`Error: ${error}`);
+        }
+        setIsLoading(false);
+    };
+
+    const handleUpdateReportStatus = async () => {
+        if (!reportId) return;
+        setIsLoading(true);
+        appendOutput(`Updating report ${reportId} to ${reportStatus}...`);
+        try {
+            await updateReportStatus(parseInt(reportId), reportStatus);
+            appendOutput(`Report ${reportId} updated`);
+        } catch (error) {
+            appendOutput(`Error: ${error}`);
+        }
+        setIsLoading(false);
+    };
+
     return (
-        <div className="container mx-auto px-4 py-6 md:py-8 space-y-4">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold">Admin Panel</h1>
+        <div className="container mx-auto max-w-7xl px-4 py-6 md:py-10">
+            <header className="flex flex-col gap-5 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <Button className="bg-green-600 hover:bg-green-700 mr-2">
-                        <Link href={"/admin/beatmaps"}>Beatmapsets</Link>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Owner tools</p>
+                    <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Administration</h1>
+                    <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Manage game content, moderation, and maintenance from one workspace.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                    {isLoading && (
+                        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="size-4 animate-spin" />
+                            Working
+                        </span>
+                    )}
+                    <Button asChild variant="outline">
+                        <Link href="/admin/beatmaps">
+                            Browse beatmaps
+                            <ExternalLink />
+                        </Link>
                     </Button>
                 </div>
-            </div>
+            </header>
 
-            <CollapsibleSection title="Mapset Management">
-                <div className="space-y-8">
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Single Mapset</h3>
-                        <div className="flex gap-4">
-                            <Input type="number" placeholder="Mapset ID" value={mapsetId} onChange={(e) => setMapsetId(e.target.value)} />
-                            <Button onClick={handleAddMapset} disabled={isLoading}>
-                                Add Mapset
-                            </Button>
-                            <Button onClick={handleRemoveMapset} disabled={isLoading} variant="destructive">
-                                Remove Mapset
-                            </Button>
-                            <Button onClick={handleListMapsets} disabled={isLoading} variant="outline">
-                                List Mapsets
-                            </Button>
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
+                <main className="min-w-0">
+                    <CollapsibleSection id="mapsets" title="Mapsets" description="Import, remove, and inspect the beatmapsets used by the game." icon={<Disc3 />} defaultOpen>
+                        <div className="space-y-7">
+                            <AdminGroup title="Single mapset" description="Use an osu! beatmapset ID for a quick import or removal.">
+                                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mapset-id">Mapset ID</Label>
+                                        <Input id="mapset-id" type="number" placeholder="1234567" value={mapsetId} onChange={(e) => setMapsetId(e.target.value)} />
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button onClick={handleAddMapset} disabled={isLoading || !mapsetId}>
+                                            Add
+                                        </Button>
+                                        <Button onClick={handleRemoveMapset} disabled={isLoading || !mapsetId} variant="destructive">
+                                            Remove
+                                        </Button>
+                                        <Button onClick={handleListMapsets} disabled={isLoading} variant="outline">
+                                            List all
+                                        </Button>
+                                    </div>
+                                </div>
+                            </AdminGroup>
+
+                            <AdminGroup title="Bulk import" description="Upload a text file containing osu! beatmap URLs.">
+                                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mapset-file">Beatmap URL list</Label>
+                                        <Input id="mapset-file" type="file" accept=".txt" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} />
+                                    </div>
+                                    <Button onClick={handleBulkUpload} disabled={isLoading || !bulkFile}>
+                                        Import file
+                                    </Button>
+                                </div>
+                            </AdminGroup>
                         </div>
-                    </div>
+                    </CollapsibleSection>
 
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Bulk Upload Mapsets</h3>
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <Input type="file" accept=".txt" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} className="flex-1" />
-                                <Button onClick={handleBulkUpload} disabled={isLoading || !bulkFile}>
-                                    Upload Mapsets
+                    <CollapsibleSection id="skins" title="Skins" description="Maintain the random skin pool and import skin records by ID." icon={<Paintbrush />}>
+                        <div className="space-y-7">
+                            <AdminGroup title="Skin library">
+                                <Button onClick={handleListSkins} disabled={isLoading} variant="outline">
+                                    List skins
                                 </Button>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                                <p>Upload a text file containing osu! beatmap URLs</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </CollapsibleSection>
+                            </AdminGroup>
 
-            <CollapsibleSection title="Skins Management">
-                <div className="space-y-4">
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Random Skin</h3>
-                        <div className="flex gap-4">
-                            <Button onClick={handleListSkins} disabled={isLoading} variant="outline">
-                                List Skins
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Add Skin by ID or List</h3>
-                        <div className="space-y-4">
-                            <div className="flex gap-4">
-                                <Input placeholder="Skin ID" value={skinSingleId} onChange={(e) => setSkinSingleId(e.target.value)} />
-                                <Button onClick={handleAddSkinById} disabled={isLoading}>
-                                    Add Skin by ID
-                                </Button>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                <Input type="file" accept=".txt" onChange={(e) => setSkinListFile(e.target.files?.[0] || null)} className="flex-1" />
-                                <Button onClick={handleAddSkinsFromFile} disabled={isLoading || !skinListFile}>
-                                    Upload Skin IDs
-                                </Button>
-                            </div>
-
-                            <div className="text-sm text-muted-foreground">
-                                <p>Upload a .txt file with one skin ID per line, or enter an ID above.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Remove Skin</h3>
-                        <div className="flex gap-4">
-                            <Input placeholder="Skin ID" value={skinRemoveId} onChange={(e) => setSkinRemoveId(e.target.value)} />
-                            <Button onClick={handleRemoveSkin} disabled={isLoading} variant="destructive">
-                                Remove Skin
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </CollapsibleSection>
-
-            <CollapsibleSection title="Badge Management">
-                <div className="space-y-8">
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Assign User Badges</h3>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input type="number" placeholder="User ID" value={badgeUserId} onChange={(e) => setBadgeUserId(e.target.value)} />
-                                <select
-                                    className="rounded-md border border-input bg-transparent px-3 py-1"
-                                    value={badgeTitle}
-                                    onChange={(e) => {
-                                        setBadgeTitle(e.target.value);
-                                        setBadgeColor(availableBadges[e.target.value] || "");
-                                    }}
-                                >
-                                    <option value="">Select Badge Type</option>
-                                    {Object.keys(availableBadges).map((badge) => (
-                                        <option key={badge} value={badge}>
-                                            {badge}
-                                        </option>
-                                    ))}
-                                </select>
-                                <Input type="text" placeholder="Badge Color (hex)" value={badgeColor} onChange={(e) => setBadgeColor(e.target.value)} />
-                            </div>
-                            <div className="flex gap-4">
-                                <Button onClick={handleAddBadge} disabled={isLoading}>
-                                    Add Badge
-                                </Button>
-                                <Button onClick={handleRemoveBadge} disabled={isLoading} variant="destructive">
-                                    Remove Badge
-                                </Button>
-                                <Button onClick={handleListBadges} disabled={isLoading} variant="outline">
-                                    List Badges
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Manage Badge Types</h3>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input type="text" placeholder="Badge Name" value={newBadgeName} onChange={(e) => setNewBadgeName(e.target.value)} />
-                                <Input type="color" value={newBadgeColor} onChange={(e) => setNewBadgeColor(e.target.value)} className="h-9 w-full" />
-                            </div>
-                            <Button onClick={handleAddBadgeType} disabled={isLoading || !newBadgeName || !newBadgeColor}>
-                                Add New Badge Type
-                            </Button>
-
-                            <div className="mt-4">
-                                <h4 className="text-md font-medium mb-2">Available Badge Types</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {Object.entries(availableBadges).map(([name, color]) => (
-                                        <div key={name} className="flex items-center justify-between p-2 bg-background/50 rounded-md">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
-                                                <span>{name}</span>
-                                            </div>
-                                            <Button variant="destructive" size="sm" onClick={() => handleRemoveBadgeType(name)} disabled={isLoading}>
-                                                Remove
-                                            </Button>
+                            <AdminGroup title="Import skins" description="Add one skin directly, or upload a text file with one skin ID per line.">
+                                <div className="space-y-4">
+                                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="skin-id">Skin ID</Label>
+                                            <Input id="skin-id" type="number" placeholder="12345" value={skinSingleId} onChange={(e) => setSkinSingleId(e.target.value)} />
                                         </div>
-                                    ))}
+                                        <Button onClick={handleAddSkinById} disabled={isLoading || !skinSingleId}>
+                                            Add skin
+                                        </Button>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="skin-list-file">Skin ID list</Label>
+                                            <Input id="skin-list-file" type="file" accept=".txt" onChange={(e) => setSkinListFile(e.target.files?.[0] || null)} />
+                                        </div>
+                                        <Button onClick={handleAddSkinsFromFile} disabled={isLoading || !skinListFile}>
+                                            Import file
+                                        </Button>
+                                    </div>
+                                </div>
+                            </AdminGroup>
+
+                            <AdminGroup title="Remove skin">
+                                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="remove-skin-id">Skin ID</Label>
+                                        <Input id="remove-skin-id" type="number" placeholder="12345" value={skinRemoveId} onChange={(e) => setSkinRemoveId(e.target.value)} />
+                                    </div>
+                                    <Button onClick={handleRemoveSkin} disabled={isLoading || !skinRemoveId} variant="destructive">
+                                        Remove skin
+                                    </Button>
+                                </div>
+                            </AdminGroup>
+                        </div>
+                    </CollapsibleSection>
+
+                    <CollapsibleSection id="badges" title="Badges" description="Assign existing badges to users and manage the badge types themselves." icon={<BadgeCheck />}>
+                        <div className="space-y-7">
+                            <AdminGroup title="User badge">
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="badge-user-id">User ID</Label>
+                                        <Input id="badge-user-id" type="number" placeholder="123456" value={badgeUserId} onChange={(e) => setBadgeUserId(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Badge type</Label>
+                                        <Select value={badgeTitle} onValueChange={setBadgeTitle}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Choose a badge" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {Object.keys(availableBadges).map((badge) => (
+                                                    <SelectItem key={badge} value={badge}>
+                                                        {badge}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                {badgeTitle && (
+                                    <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span className="size-3 rounded-full border border-border" style={{ backgroundColor: availableBadges[badgeTitle] }} />
+                                        {availableBadges[badgeTitle]}
+                                    </div>
+                                )}
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <Button onClick={handleAddBadge} disabled={isLoading || !badgeUserId || !badgeTitle}>
+                                        Assign badge
+                                    </Button>
+                                    <Button onClick={handleRemoveBadge} disabled={isLoading || !badgeUserId || !badgeTitle} variant="destructive">
+                                        Remove badge
+                                    </Button>
+                                    <Button onClick={handleListBadges} disabled={isLoading} variant="outline">
+                                        List assignments
+                                    </Button>
+                                </div>
+                            </AdminGroup>
+
+                            <AdminGroup title="Badge types">
+                                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_4rem_auto] sm:items-end">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="badge-name">Badge name</Label>
+                                        <Input id="badge-name" placeholder="Contributor" value={newBadgeName} onChange={(e) => setNewBadgeName(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="badge-color">Color</Label>
+                                        <Input id="badge-color" type="color" value={newBadgeColor} onChange={(e) => setNewBadgeColor(e.target.value)} className="h-9 w-16 p-1" />
+                                    </div>
+                                    <Button onClick={handleAddBadgeType} disabled={isLoading || !newBadgeName || !newBadgeColor}>
+                                        Add type
+                                    </Button>
+                                </div>
+
+                                <div className="mt-5 divide-y divide-border/50 border-y border-border/50">
+                                    {Object.entries(availableBadges).length === 0 ? (
+                                        <p className="py-4 text-sm text-muted-foreground">No badge types found.</p>
+                                    ) : (
+                                        Object.entries(availableBadges).map(([name, color]) => (
+                                            <div key={name} className="flex items-center justify-between gap-4 py-3">
+                                                <div className="flex min-w-0 items-center gap-3">
+                                                    <span className="size-3 shrink-0 rounded-full border border-border" style={{ backgroundColor: color }} />
+                                                    <span className="truncate text-sm font-medium">{name}</span>
+                                                    <span className="hidden text-xs text-muted-foreground sm:inline">{color}</span>
+                                                </div>
+                                                <Button variant="ghost" size="sm" onClick={() => handleRemoveBadgeType(name)} disabled={isLoading} className="text-destructive hover:text-destructive">
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </AdminGroup>
+                        </div>
+                    </CollapsibleSection>
+
+                    <CollapsibleSection id="translations" title="Translations" description="Check locale coverage and optionally repair missing or extra keys." icon={<Languages />}>
+                        <div className="space-y-6">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <label htmlFor="auto-fill" className="flex cursor-pointer items-start gap-3 border-b border-border/40 pb-4 sm:border-b-0 sm:pb-0">
+                                    <Switch id="auto-fill" checked={autoFill} onCheckedChange={setAutoFill} />
+                                    <span>
+                                        <span className="block text-sm font-medium">Fill missing keys</span>
+                                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">Copy the English value into missing entries.</span>
+                                    </span>
+                                </label>
+                                <label htmlFor="remove-extra" className="flex cursor-pointer items-start gap-3">
+                                    <Switch id="remove-extra" checked={removeExtra} onCheckedChange={setRemoveExtra} />
+                                    <span>
+                                        <span className="block text-sm font-medium">Remove extra keys</span>
+                                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">Delete keys that do not exist in English.</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                <div className="space-y-2">
+                                    <Label>Language</Label>
+                                    <Select value={languageCode} onValueChange={setLanguageCode}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Choose a language" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableLanguages.map((lang) => (
+                                                <SelectItem key={lang} value={lang}>
+                                                    {lang}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <Button onClick={handleCheckTranslation} disabled={isLoading || !languageCode}>
+                                        Check language
+                                    </Button>
+                                    <Button onClick={handleCheckAllLanguages} disabled={isLoading} variant="outline">
+                                        Check all
+                                    </Button>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </CollapsibleSection>
+                    </CollapsibleSection>
 
-            <CollapsibleSection title="User">
-                <div className="border-t border-border/40 pt-5">
-                    <Button onClick={handleSyncUsers} disabled={isLoading}>
-                        Sync User Achievements
-                    </Button>
-                </div>
-            </CollapsibleSection>
-
-            <CollapsibleSection title="Translation Management">
-                <div className="border-t border-border/40 pt-5">
-                    <div className="space-y-4">
-                        <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-2">
-                                <Switch id="auto-fill" checked={autoFill} onCheckedChange={setAutoFill} />
-                                <Label htmlFor="auto-fill">Auto-fill missing translations</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Switch id="remove-extra" checked={removeExtra} onCheckedChange={setRemoveExtra} />
-                                <Label htmlFor="remove-extra">Remove extra keys</Label>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <select className="rounded-md border border-input bg-transparent px-3 py-1 flex-1" value={languageCode} onChange={(e) => setLanguageCode(e.target.value)}>
-                                <option value="">Select Language</option>
-                                {availableLanguages.map((lang) => (
-                                    <option key={lang} value={lang}>
-                                        {lang}
-                                    </option>
-                                ))}
-                            </select>
-                            <Button onClick={handleCheckTranslation} disabled={isLoading || !languageCode}>
-                                Check Translation
-                            </Button>
-                            <Button onClick={handleCheckAllLanguages} disabled={isLoading} variant="outline">
-                                Check All Languages
-                            </Button>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                            <p>Check for missing translations. Auto-fill copies missing values from English.</p>
-                        </div>
-                    </div>
-                </div>
-            </CollapsibleSection>
-
-            <CollapsibleSection title="Report Management">
-                <div className="space-y-4">
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Reports</h3>
-                        <Button
-                            onClick={async () => {
-                                setIsLoading(true);
-                                appendOutput("Listing reports...");
-                                try {
-                                    const reports = await listReports();
-                                    if (reports.length > 0) {
-                                        appendOutput("Reports:");
-                                        reports.forEach((r) => {
-                                            appendOutput(`${r.id} | ${r.user_id} | ${r.mapset_id} | ${r.report_type} | ${r.status} | ${new Date(r.created_at).toLocaleString()}`);
-                                        });
-                                    } else {
-                                        appendOutput("No reports found");
-                                    }
-                                } catch (error) {
-                                    appendOutput(`Error: ${error}`);
-                                }
-                                setIsLoading(false);
-                            }}
-                            disabled={isLoading}
-                            variant="outline"
-                        >
-                            List Reports
-                        </Button>
-                    </div>
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Update Report Status</h3>
-                        <div className="flex gap-4">
-                            <Input type="number" placeholder="Report ID" onChange={(e) => setReportId(e.target.value)} className="w-1/4" />
-                            <select className="rounded-md border border-input bg-transparent px-3 py-1 w-1/4" onChange={(e) => setReportStatus(e.target.value)}>
-                                <option value="pending">pending</option>
-                                <option value="investigating">investigating</option>
-                                <option value="resolved">resolved</option>
-                                <option value="rejected">rejected</option>
-                            </select>
-                            <Button
-                                onClick={async () => {
-                                    setIsLoading(true);
-                                    appendOutput(`Updating report ${reportId} to ${reportStatus}...`);
-                                    try {
-                                        await updateReportStatus(parseInt(reportId), reportStatus);
-                                        appendOutput(`Report ${reportId} updated`);
-                                    } catch (error) {
-                                        appendOutput(`Error: ${error}`);
-                                    }
-                                    setIsLoading(false);
-                                }}
-                                disabled={isLoading}
-                            >
-                                Update Status
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </CollapsibleSection>
-
-            <CollapsibleSection title="Announcements">
-                <div className="space-y-4">
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Create Announcement</h3>
-                        <div className="space-y-4">
-                            <Input placeholder="Title" value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} />
-                            <textarea
-                                placeholder="Content"
-                                value={announcementContent}
-                                onChange={(e) => setAnnouncementContent(e.target.value)}
-                                className="w-full rounded-md border border-input bg-transparent px-3 py-2"
-                                rows={4}
-                            />
-                            <div className="flex gap-4">
-                                <Button onClick={handleAddAnnouncement} disabled={isLoading || !announcementTitle || !announcementContent}>
-                                    Add Announcement
+                    <CollapsibleSection id="reports" title="Reports" description="Review submitted reports and move them through the moderation workflow." icon={<FileText />}>
+                        <div className="space-y-7">
+                            <AdminGroup title="Report queue">
+                                <Button onClick={handleListReports} disabled={isLoading} variant="outline">
+                                    List reports
                                 </Button>
-                                <Button onClick={loadAnnouncements} disabled={isLoading} variant="outline">
-                                    Refresh
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
+                            </AdminGroup>
 
-                    <div className="border-t border-border/40 pt-5">
-                        <h3 className="text-lg font-medium mb-4">Existing Announcements</h3>
-                        <div className="space-y-2">
-                            {announcementsList.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No announcements</p>
-                            ) : (
-                                announcementsList.map((a) => (
-                                    <div key={a.id} className="flex items-center justify-between p-2 bg-background/50 rounded-md">
-                                        <div>
-                                            <div className="font-medium">{a.title}</div>
-                                            <div className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button variant="destructive" size="sm" onClick={() => handleRemoveAnnouncement(a.id)} disabled={isLoading}>
-                                                Remove
-                                            </Button>
-                                        </div>
+                            <AdminGroup title="Update status">
+                                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="report-id">Report ID</Label>
+                                        <Input id="report-id" type="number" placeholder="42" value={reportId} onChange={(e) => setReportId(e.target.value)} />
                                     </div>
-                                ))
-                            )}
+                                    <div className="space-y-2">
+                                        <Label>Status</Label>
+                                        <Select value={reportStatus} onValueChange={setReportStatus}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="pending">Pending</SelectItem>
+                                                <SelectItem value="investigating">Investigating</SelectItem>
+                                                <SelectItem value="resolved">Resolved</SelectItem>
+                                                <SelectItem value="rejected">Rejected</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Button onClick={handleUpdateReportStatus} disabled={isLoading || !reportId}>
+                                        Update
+                                    </Button>
+                                </div>
+                            </AdminGroup>
                         </div>
-                    </div>
-                </div>
-            </CollapsibleSection>
+                    </CollapsibleSection>
 
-            <CollapsibleSection title="Server Lockdown">
-                <div className="border-t border-border/40 pt-5">
-                    <h3 className="text-lg font-medium mb-4">Temporarily lock the server</h3>
-                    <div className="flex items-center gap-4">
-                        <Input type="number" className="w-24" value={String(lockMinutes)} onChange={(e) => setLockMinutes(Number(e.target.value))} />
-                        <Button onClick={handleSetLock} disabled={isLoading} className="bg-red-600 hover:bg-red-700">
-                            Lock Server (minutes)
-                        </Button>
-                        <Button onClick={handleUnlock} disabled={isLoading} variant="destructive">
-                            Unlock Server
-                        </Button>
-                        <Button onClick={handleGetLock} disabled={isLoading} variant="outline">
-                            Get Lock State
+                    <CollapsibleSection id="announcements" title="Announcements" description="Publish notices shown to users and remove old ones." icon={<Megaphone />}>
+                        <div className="space-y-7">
+                            <AdminGroup title="Create announcement">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="announcement-title">Title</Label>
+                                        <Input id="announcement-title" placeholder="Service update" value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="announcement-content">Content</Label>
+                                        <Textarea id="announcement-content" placeholder="What should users know?" value={announcementContent} onChange={(e) => setAnnouncementContent(e.target.value)} rows={5} />
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button onClick={handleAddAnnouncement} disabled={isLoading || !announcementTitle || !announcementContent}>
+                                            Publish
+                                        </Button>
+                                        <Button onClick={loadAnnouncements} disabled={isLoading} variant="outline">
+                                            <RefreshCw /> Refresh list
+                                        </Button>
+                                    </div>
+                                </div>
+                            </AdminGroup>
+
+                            <AdminGroup title="Published announcements">
+                                <div className="divide-y divide-border/50 border-y border-border/50">
+                                    {announcementsList.length === 0 ? (
+                                        <p className="py-4 text-sm text-muted-foreground">No announcements.</p>
+                                    ) : (
+                                        announcementsList.map((announcement) => (
+                                            <div key={announcement.id} className="flex items-center justify-between gap-4 py-3">
+                                                <div className="min-w-0">
+                                                    <div className="truncate text-sm font-medium">{announcement.title}</div>
+                                                    <div className="mt-1 text-xs text-muted-foreground">{new Date(announcement.created_at).toLocaleString()}</div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveAnnouncement(announcement.id)}
+                                                    disabled={isLoading}
+                                                    className="text-destructive hover:text-destructive"
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </AdminGroup>
+                        </div>
+                    </CollapsibleSection>
+
+                    <CollapsibleSection id="maintenance" title="User maintenance" description="Run owner-only maintenance tasks against user data." icon={<UserRoundCog />}>
+                        <AdminGroup title="Achievements" description="Recalculate and synchronize user achievement state.">
+                            <Button onClick={handleSyncUsers} disabled={isLoading}>
+                                Sync user achievements
+                            </Button>
+                        </AdminGroup>
+                    </CollapsibleSection>
+
+                    <CollapsibleSection id="lockdown" title="Server lockdown" description="Temporarily block access while maintenance or recovery work is in progress." icon={<ShieldAlert />}>
+                        <AdminGroup title="Access control">
+                            <div className="mb-5 flex items-center gap-2 text-sm">
+                                <span className={`size-2 rounded-full ${lockInfo ? "bg-destructive" : "bg-emerald-500"}`} />
+                                <span className="font-medium">{lockInfo ?? "Server is unlocked"}</span>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-[8rem_auto] sm:items-end">
+                                <div className="space-y-2">
+                                    <Label htmlFor="lock-minutes">Minutes</Label>
+                                    <Input id="lock-minutes" type="number" min={1} value={String(lockMinutes)} onChange={(e) => setLockMinutes(Number(e.target.value))} />
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <Button onClick={handleSetLock} disabled={isLoading || lockMinutes < 1} variant="destructive">
+                                        Lock server
+                                    </Button>
+                                    <Button onClick={handleUnlock} disabled={isLoading} variant="outline">
+                                        Unlock
+                                    </Button>
+                                    <Button onClick={handleGetLock} disabled={isLoading} variant="ghost">
+                                        <RefreshCw /> Refresh state
+                                    </Button>
+                                </div>
+                            </div>
+                        </AdminGroup>
+                    </CollapsibleSection>
+                </main>
+
+                <aside className="pt-5 lg:sticky lg:top-6 lg:self-start">
+                    <div className="border-l border-border/60 pl-5">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <Activity className="size-4 text-primary" />
+                                <h2 className="font-semibold">Activity</h2>
+                            </div>
+                            {isLoading && <span className="text-xs text-muted-foreground">Running</span>}
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">Results from admin actions appear here and stay visible while you work.</p>
+                        <div ref={consoleDivRef} className="mt-4 h-80 overflow-y-auto border-y border-border/50 py-3 scrollbar-thin lg:h-[30rem]">
+                            <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-5 text-muted-foreground">{output.trim() || "No admin activity yet."}</pre>
+                        </div>
+                        <Button onClick={() => setOutput("")} disabled={!output} variant="ghost" size="sm" className="mt-2 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground">
+                            Clear activity
                         </Button>
                     </div>
-                    {lockInfo && <p className="mt-4 text-sm text-muted-foreground">{lockInfo}</p>}
-                </div>
-            </CollapsibleSection>
-
-            <div className="border-t border-border/60 pt-6" ref={consoleDivRef}>
-                <h2 className="text-xl font-semibold mb-4">Console Output</h2>
-                <pre className="bg-background p-4 rounded-md h-64 overflow-y-auto whitespace-pre-wrap">{output}</pre>
-                <Button onClick={() => setOutput("")} variant="outline" className="mt-2">
-                    Clear Console
-                </Button>
+                </aside>
             </div>
         </div>
     );
