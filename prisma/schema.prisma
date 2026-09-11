@@ -122,6 +122,8 @@ model UserAchievement {
   lastPlayed          DateTime    @default(now()) @map("last_played") @db.DateTime(3)
 
   @@unique([userId, gameMode, variant, rulesetVersion, ppVersion], map: "user_game_mode_variant_version")
+  @@index([gameMode, variant, rulesetVersion, ppVersion, profilePp], map: "idx_achievements_mode_pp")
+  @@index([variant, rulesetVersion, ppVersion, profilePp], map: "idx_achievements_global_pp")
   @@index([totalScore], map: "idx_user_achievements_score")
   @@index([userId, totalScore], map: "idx_achievements_user_score")
   @@index([gameMode, variant, totalScore], map: "idx_achievements_mode_variant_score")
@@ -157,6 +159,7 @@ model Game {
   @@index([endedAt], map: "idx_games_ended")
   @@index([gameMode, points], map: "idx_games_mode_points")
   @@index([rulesetVersion, ranked, gameMode, variant], map: "idx_games_competitive")
+  @@index([userId, gameMode, variant, rulesetVersion, ppVersion, ranked, pp], map: "idx_games_user_performance")
   @@index([challengeId], map: "idx_games_challenge")
   @@map("games")
 }

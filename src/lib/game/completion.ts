@@ -4,6 +4,7 @@ interface PersistableGameState {
     variant: GameState["variant"];
     currentRound: number;
     hasGuessedCurrentRound: boolean;
+    highestStreak: number;
 }
 
 export function isClassicGameIncomplete(gameState: GameState): boolean {
@@ -11,5 +12,5 @@ export function isClassicGameIncomplete(gameState: GameState): boolean {
 }
 
 export function canPersistGameResult(state: PersistableGameState, maxRounds: number): boolean {
-    return state.variant === "death" || (state.currentRound === maxRounds && state.hasGuessedCurrentRound);
+    return state.variant === "death" ? state.highestStreak > 0 : state.currentRound === maxRounds && state.hasGuessedCurrentRound;
 }

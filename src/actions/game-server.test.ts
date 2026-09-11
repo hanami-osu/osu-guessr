@@ -6,11 +6,46 @@ const sessionId = "00000000-0000-4000-8000-000000000000";
 const userId = 123;
 const answer = "Test Map";
 
-const queryMock = mock(async (sql: string) => {
-    void sql;
-    return [] as unknown[];
+const contentStatFindManyMock = mock(async () => [] as Array<{ itemId: number; appearances: bigint; correctCount: bigint; totalResponseTimeMs: bigint }>);
+const contentStatFindUniqueMock = mock(async () => null as { appearances: bigint; correctCount: bigint; totalResponseTimeMs: bigint; fastestCorrectMs: number | null } | null);
+const contentStatUpsertMock = mock(async () => ({}));
+const gameFindUniqueMock = mock(async () => null as { id: bigint } | null);
+const gameCreateMock = mock(async (args: { data: { pp: number; [key: string]: unknown } }) => ({ id: 1n, endedAt: new Date(), ...args.data }));
+const gameFindManyMock = mock(async () => [{ pp: 50 }]);
+const gameRoundCreateManyMock = mock(async (args: { data: Array<{ difficultySnapshot: number | null; [key: string]: unknown }> }) => {
+    void args;
+    return { count: 1 };
 });
-const transactionMock = mock(async (operation: (query: typeof queryMock) => Promise<unknown>) => operation(queryMock));
+const userAchievementFindUniqueMock = mock(async () => null as { highestStreak: number; highestScore: number; bestRunPp: number } | null);
+const userAchievementUpsertMock = mock(async (args: { create: { profilePp: number; [key: string]: unknown }; [key: string]: unknown }) => {
+    void args;
+    return {};
+});
+const mapsetDataFindUniqueMock = mock(async () => ({
+    mapsetId: 1,
+    title: answer,
+    artist: "Artist",
+    mapper: "Mapper",
+    rankedAt: null,
+    starRatingMin: null,
+    starRatingMax: null,
+}));
+const mapsetDataFindManyMock = mock(async () => [] as Array<{ title: string | null }>);
+const skinFindUniqueMock = mock(async () => null);
+const skinFindManyMock = mock(async () => [] as Array<{ name: string }>);
+const txMock = {
+    contentStat: { findUnique: contentStatFindUniqueMock, upsert: contentStatUpsertMock },
+    game: { findUnique: gameFindUniqueMock, create: gameCreateMock, findMany: gameFindManyMock },
+    gameRound: { createMany: gameRoundCreateManyMock },
+    userAchievement: { findUnique: userAchievementFindUniqueMock, upsert: userAchievementUpsertMock },
+};
+const transactionMock = mock(async (operation: (tx: typeof txMock) => Promise<unknown>) => operation(txMock));
+const prismaMock = {
+    contentStat: { findMany: contentStatFindManyMock },
+    mapsetData: { findUnique: mapsetDataFindUniqueMock, findMany: mapsetDataFindManyMock },
+    skin: { findUnique: skinFindUniqueMock, findMany: skinFindManyMock },
+    $transaction: transactionMock,
+};
 const getRandomActionMock = mock(async () => ({
     data: {
         mapset_id: 2,
@@ -46,7 +81,7 @@ mock.module("./mapsets-server", () => ({
     getRandomSkinAction: getRandomActionMock,
 }));
 mock.module("./media", () => ({ getMediaData: getMediaDataMock }));
-mock.module("@/lib/database", () => ({ query: queryMock, transaction: transactionMock }));
+mock.module("@/lib/database/prisma", () => ({ prisma: prismaMock }));
 mock.module("@/lib/redis", () => ({ default: redisClientMock }));
 
 const { endGameAction, getGameStateAction, startGameAction, submitGuessAction } = await import("./game-server");
@@ -96,23 +131,28 @@ function putSession(session: DatabaseGameSession): void {
 
 beforeEach(() => {
     redisValues.clear();
-    queryMock.mockReset().mockImplementation(async (sql) =>
-        sql.includes("ROW_COUNT()")
-            ? [{ inserted: 1 }]
-            : sql.includes("SELECT id FROM games")
-              ? [{ id: 1n }]
-            : [
-                  {
-                      mapset_id: 1,
-                      title: answer,
-                      artist: "Artist",
-                      mapper: "Mapper",
-                      image_filename: "current.webp",
-                      audio_filename: "current.mp3",
-                  },
-              ],
-    );
-    transactionMock.mockReset().mockImplementation(async (operation) => operation(queryMock));
+    contentStatFindManyMock.mockReset().mockResolvedValue([]);
+    contentStatFindUniqueMock.mockReset().mockResolvedValue(null);
+    contentStatUpsertMock.mockReset().mockResolvedValue({});
+    gameFindUniqueMock.mockReset().mockResolvedValue(null);
+    gameCreateMock.mockReset().mockImplementation(async (args) => ({ id: 1n, endedAt: new Date(), ...args.data }));
+    gameFindManyMock.mockReset().mockResolvedValue([{ pp: 50 }]);
+    gameRoundCreateManyMock.mockReset().mockImplementation(async () => ({ count: 1 }));
+    userAchievementFindUniqueMock.mockReset().mockResolvedValue(null);
+    userAchievementUpsertMock.mockReset().mockImplementation(async () => ({}));
+    mapsetDataFindUniqueMock.mockReset().mockResolvedValue({
+        mapsetId: 1,
+        title: answer,
+        artist: "Artist",
+        mapper: "Mapper",
+        rankedAt: null,
+        starRatingMin: null,
+        starRatingMax: null,
+    });
+    mapsetDataFindManyMock.mockReset().mockResolvedValue([]);
+    skinFindUniqueMock.mockReset().mockResolvedValue(null);
+    skinFindManyMock.mockReset().mockResolvedValue([]);
+    transactionMock.mockReset().mockImplementation(async (operation) => operation(txMock));
     getRandomActionMock.mockReset().mockResolvedValue({
         data: {
             mapset_id: 2,
@@ -154,8 +194,13 @@ describe("game server lifecycle", () => {
 
         expect(finished.gameStatus).toBe("finished");
         expect(transactionMock).toHaveBeenCalledTimes(1);
-        expect(queryMock.mock.calls.some(([sql]) => sql.includes("INSERT INTO game_rounds"))).toBe(true);
-        expect(queryMock.mock.calls.some(([sql]) => sql.includes("INSERT INTO content_stats"))).toBe(true);
+        expect(gameCreateMock).toHaveBeenCalledTimes(1);
+        expect(Number(gameCreateMock.mock.calls[0]?.[0].data.pp)).toBeGreaterThan(0);
+        expect(gameRoundCreateManyMock).toHaveBeenCalledTimes(1);
+        expect(gameRoundCreateManyMock.mock.calls[0]?.[0].data[0]?.difficultySnapshot).toBe(1);
+        expect(contentStatUpsertMock).toHaveBeenCalledTimes(1);
+        expect(userAchievementUpsertMock).toHaveBeenCalledTimes(1);
+        expect(Number(userAchievementUpsertMock.mock.calls[0]?.[0].create.profilePp)).toBeGreaterThan(0);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
     });
 
@@ -215,8 +260,22 @@ describe("game server lifecycle", () => {
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
     });
 
-    test("keeps a failed finalization pending and retries it safely", async () => {
+    test("does not persist a death run that fails on the first map", async () => {
         putSession(makeSession({ variant: "death" }));
+
+        const finished = await submitGuessAction(sessionId, "wrong answer");
+
+        expect(finished.gameStatus).toBe("finished");
+        expect(finished.score.highestStreak).toBe(0);
+        expect(transactionMock).not.toHaveBeenCalled();
+        expect(gameCreateMock).not.toHaveBeenCalled();
+        expect(userAchievementUpsertMock).not.toHaveBeenCalled();
+        expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
+        expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
+    });
+
+    test("keeps a failed finalization pending and retries it safely", async () => {
+        putSession(makeSession({ variant: "death", highest_streak: 1 }));
         transactionMock.mockRejectedValueOnce(new Error("database unavailable"));
 
         await expect(endGameAction(sessionId)).rejects.toThrow("database unavailable");
@@ -226,47 +285,68 @@ describe("game server lifecycle", () => {
         await endGameAction(sessionId);
 
         expect(transactionMock).toHaveBeenCalledTimes(2);
-        expect(queryMock).toHaveBeenCalledTimes(4);
+        expect(gameCreateMock).toHaveBeenCalledTimes(1);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
     });
 
     test("recovers an ambiguously committed finalization without counting it twice", async () => {
-        putSession(makeSession({ variant: "death", is_active: false, end_pending: true }));
-        queryMock.mockImplementation(async (sql) => {
-            if (sql.includes("ROW_COUNT()")) return [{ inserted: 0 }];
-            if (sql.includes("FROM mapset_data")) {
-                return [
-                    {
-                        mapset_id: 1,
-                        title: answer,
-                        artist: "Artist",
-                        mapper: "Mapper",
-                        image_filename: "current.webp",
-                        audio_filename: "current.mp3",
-                    },
-                ];
-            }
-            return [];
-        });
+        putSession(makeSession({ variant: "death", is_active: false, end_pending: true, highest_streak: 1 }));
+        gameFindUniqueMock.mockResolvedValueOnce({ id: 1n });
 
         const recovered = await getGameStateAction(sessionId);
 
         expect(recovered.gameStatus).toBe("finished");
         expect(transactionMock).toHaveBeenCalledTimes(1);
-        expect(queryMock.mock.calls.map(([sql]) => sql)).toEqual([
-            expect.stringContaining("INSERT IGNORE INTO games"),
-            "SELECT ROW_COUNT() AS inserted",
-        ]);
+        expect(gameCreateMock).not.toHaveBeenCalled();
+        expect(gameRoundCreateManyMock).not.toHaveBeenCalled();
+        expect(userAchievementUpsertMock).not.toHaveBeenCalled();
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
     });
 
+    test("keeps a frozen difficulty snapshot while retrying finalization", async () => {
+        putSession(
+            makeSession({
+                variant: "death",
+                is_active: false,
+                end_pending: true,
+                has_guessed_current_round: true,
+                correct_guesses: 1,
+                highest_streak: 1,
+                total_response_time_ms: 5000,
+                round_history: [
+                    {
+                        round_number: 1,
+                        item_type: "mapset",
+                        item_id: 1,
+                        submitted_guess: answer,
+                        answer_snapshot: answer,
+                        result_type: "guess",
+                        correct: true,
+                        response_time_ms: 5000,
+                        time_limit_ms: 30000,
+                        points_earned: 0,
+                        streak_before: 0,
+                        streak_after: 1,
+                        difficulty_snapshot: 1.234,
+                        content_snapshot: null,
+                    },
+                ],
+            }),
+        );
+        contentStatFindManyMock.mockResolvedValueOnce([{ itemId: 1, appearances: 100n, correctCount: 0n, totalResponseTimeMs: 3_000_000n }]);
+
+        await getGameStateAction(sessionId);
+
+        expect(gameRoundCreateManyMock.mock.calls[0]?.[0].data[0]?.difficultySnapshot).toBe(1.234);
+    });
+
     test("persists an ended session only once", async () => {
-        putSession(makeSession({ variant: "death" }));
+        putSession(makeSession({ variant: "death", highest_streak: 1 }));
 
         await Promise.allSettled([endGameAction(sessionId), endGameAction(sessionId)]);
 
         expect(transactionMock).toHaveBeenCalledTimes(1);
-        expect(queryMock).toHaveBeenCalledTimes(4);
+        expect(gameCreateMock).toHaveBeenCalledTimes(1);
     });
 });

@@ -1,11 +1,12 @@
 "use server";
 
-import { query } from "@/lib/database";
-import { z } from "zod";
 import { GameVariant } from "@/app/games/config";
-import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserWithStats, UserBadge } from "./types";
-import { hasPlayedGame } from "@/lib/user-stats";
+import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
+import { calculateProfilePp } from "@/lib/game/performance-points";
+import { hasPlayedGame } from "@/lib/user-stats";
+import { z } from "zod";
+import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserWithStats } from "./types";
 
 const gameModeSchema = z.nativeEnum(GameMode);
 const gameVariantSchema = z.enum(["classic", "death"]);
@@ -14,122 +15,148 @@ const searchSchema = z.object({
     limit: z.number().min(1).max(100).default(10),
 });
 
+type UserRow = Awaited<ReturnType<typeof prisma.user.findFirstOrThrow>>;
+type AchievementRow = Awaited<ReturnType<typeof prisma.userAchievement.findFirstOrThrow>>;
+type GameRow = Awaited<ReturnType<typeof prisma.game.findFirstOrThrow>>;
+
+function mapUser(user: UserRow, badges: UserBadge[] = []): User {
+    return {
+        bancho_id: user.banchoId,
+        username: user.username,
+        avatar_url: user.avatarUrl,
+        created_at: user.createdAt,
+        badges,
+    };
+}
+
+function mapAchievement(achievement: AchievementRow): UserAchievement {
+    return {
+        user_id: achievement.userId,
+        game_mode: achievement.gameMode as GameMode,
+        variant: achievement.variant,
+        ruleset_version: achievement.rulesetVersion,
+        pp_version: achievement.ppVersion,
+        total_score: achievement.totalScore,
+        games_played: achievement.gamesPlayed,
+        rounds_played: achievement.roundsPlayed,
+        total_correct: achievement.totalCorrect,
+        total_skips: achievement.totalSkips,
+        total_timeouts: achievement.totalTimeouts,
+        total_response_time_ms: achievement.totalResponseTimeMs,
+        highest_streak: achievement.highestStreak,
+        highest_score: achievement.highestScore,
+        best_run_pp: Number(achievement.bestRunPp),
+        profile_pp: Number(achievement.profilePp),
+        last_played: achievement.lastPlayed,
+    };
+}
+
+function mapGame(game: GameRow): Game {
+    return {
+        user_id: game.userId,
+        game_mode: game.gameMode as GameMode,
+        points: game.points,
+        streak: game.streak,
+        variant: game.variant,
+        pp: Number(game.pp),
+        ended_at: game.endedAt,
+    };
+}
+
+async function getBadgesForUsers(userIds: number[]): Promise<Map<number, UserBadge[]>> {
+    if (userIds.length === 0) return new Map();
+
+    const assignments = await prisma.userBadge.findMany({ where: { userId: { in: userIds } } });
+    const badgeNames = [...new Set(assignments.map((assignment) => assignment.badgeName))];
+    const badges = badgeNames.length === 0 ? [] : await prisma.badge.findMany({ where: { name: { in: badgeNames } } });
+    const badgeByName = new Map(badges.map((badge) => [badge.name, badge]));
+    const result = new Map<number, UserBadge[]>();
+
+    for (const assignment of assignments) {
+        const badge = badgeByName.get(assignment.badgeName);
+        if (!badge) continue;
+        const userBadges = result.get(assignment.userId) ?? [];
+        userBadges.push({ name: badge.name, color: badge.color, assigned_at: assignment.assignedAt });
+        result.set(assignment.userId, userBadges);
+    }
+
+    return result;
+}
+
+async function getGlobalRank(userId: number, variant: GameVariant): Promise<number> {
+    const achievements = await prisma.userAchievement.findMany({
+        where: {
+            variant,
+            rulesetVersion: CURRENT_RULESET_VERSION,
+            ppVersion: CURRENT_PP_VERSION,
+        },
+        select: {
+            userId: true,
+            profilePp: true,
+        },
+    });
+
+    const ppByUser = new Map<number, number[]>();
+    for (const achievement of achievements) {
+        const values = ppByUser.get(achievement.userId) ?? [];
+        values.push(Number(achievement.profilePp));
+        ppByUser.set(achievement.userId, values);
+    }
+
+    const weightedTotals = [...ppByUser.entries()].map(([rankedUserId, values]) => ({
+        userId: rankedUserId,
+        pp: calculateProfilePp(values),
+    }));
+    const userPp = weightedTotals.find((entry) => entry.userId === userId)?.pp ?? 0;
+    return weightedTotals.filter((entry) => entry.pp > userPp).length + 1;
+}
+
 export async function getUserByIdAction(banchoId: number): Promise<UserWithStats | null> {
-    const userResult = (await query(`SELECT * FROM users WHERE bancho_id = ?`, [banchoId])) as User[];
+    const userRow = await prisma.user.findUnique({ where: { banchoId } });
+    if (!userRow) return null;
 
-    if (!userResult[0]) return null;
-    const user = userResult[0];
-
-    const badges = (await query(
-        `SELECT b.name, b.color, ub.assigned_at
-         FROM user_badges ub
-         JOIN badges b ON ub.badge_name = b.name
-         WHERE ub.user_id = ?`,
-        [banchoId]
-    )) as UserBadge[];
-
-    const achievements = (await query(
-        `SELECT user_id, game_mode, variant, ruleset_version, pp_version, total_score, games_played, rounds_played,
-                total_correct, total_skips, total_timeouts, total_response_time_ms, highest_streak, highest_score,
-                best_run_pp, profile_pp, last_played
-         FROM user_achievements
-         WHERE user_id = ? AND ruleset_version = ? AND pp_version = ?`,
-        [banchoId, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION]
-    )) as UserAchievement[];
-
-    const globalClassicRankResult = (await query(
-        `WITH RankedUsers AS (
-            SELECT user_id, SUM(points) as total_score
-            FROM games
-            WHERE variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
-            GROUP BY user_id
-            ORDER BY total_score DESC
-        )
-        SELECT COUNT(*) as globalRank
-        FROM RankedUsers r
-        WHERE r.total_score > (
-            SELECT COALESCE(SUM(points), 0)
-            FROM games
-            WHERE user_id = ? AND variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
-        )`,
-        [CURRENT_RULESET_VERSION, banchoId, CURRENT_RULESET_VERSION]
-    )) as [{ globalRank: number }];
-
-    const globalDeathRankResult = (await query(
-        `WITH RankedUsers AS (
-            SELECT user_id, MAX(streak) as highest_streak
-            FROM games
-            WHERE variant = 'death' AND ruleset_version = ? AND ranked = TRUE
-            GROUP BY user_id
-            ORDER BY highest_streak DESC
-        )
-        SELECT COUNT(*) as globalRank
-        FROM RankedUsers r
-        WHERE r.highest_streak > (
-            SELECT COALESCE(MAX(streak), 0)
-            FROM games
-            WHERE user_id = ? AND variant = 'death' AND ruleset_version = ? AND ranked = TRUE
-        )`,
-        [CURRENT_RULESET_VERSION, banchoId, CURRENT_RULESET_VERSION]
-    )) as [{ globalRank: number }];
-
+    const achievementRows = await prisma.userAchievement.findMany({
+        where: {
+            userId: banchoId,
+            rulesetVersion: CURRENT_RULESET_VERSION,
+            ppVersion: CURRENT_PP_VERSION,
+        },
+    });
+    const achievements = achievementRows.map(mapAchievement);
+    const badgesByUser = await getBadgesForUsers([banchoId]);
+    const [classicGlobalRank, deathGlobalRank] = await Promise.all([getGlobalRank(banchoId, "classic"), getGlobalRank(banchoId, "death")]);
     const modeRanks: { [key in GameMode]: { classic?: number; death?: number } } = {
         [GameMode.Background]: {},
         [GameMode.Audio]: {},
         [GameMode.Skin]: {},
     };
 
-    for (const mode of Object.keys(modeRanks) as GameMode[]) {
-        const classicRank = (await query(
-            `WITH RankedUsers AS (
-                SELECT user_id, SUM(points) as total_score
-                FROM games
-                WHERE game_mode = ? AND variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
-                GROUP BY user_id
-                ORDER BY total_score DESC
-            )
-            SELECT COUNT(*) as rank
-            FROM RankedUsers r
-            WHERE r.total_score > (
-                SELECT COALESCE(SUM(points), 0)
-                FROM games
-                WHERE user_id = ? AND game_mode = ? AND variant = 'classic' AND ruleset_version = ? AND ranked = TRUE
-            )`,
-            [mode, CURRENT_RULESET_VERSION, banchoId, mode, CURRENT_RULESET_VERSION]
-        )) as [{ rank: number }];
-
-        const deathRank = (await query(
-            `WITH RankedUsers AS (
-                SELECT user_id, MAX(streak) as highest_streak
-                FROM games
-                WHERE game_mode = ? AND variant = 'death' AND ruleset_version = ? AND ranked = TRUE
-                GROUP BY user_id
-                ORDER BY highest_streak DESC
-            )
-            SELECT COUNT(*) as rank
-            FROM RankedUsers r
-            WHERE r.highest_streak > (
-                SELECT COALESCE(MAX(streak), 0)
-                FROM games
-                WHERE user_id = ? AND game_mode = ? AND variant = 'death' AND ruleset_version = ? AND ranked = TRUE
-            )`,
-            [mode, CURRENT_RULESET_VERSION, banchoId, mode, CURRENT_RULESET_VERSION]
-        )) as [{ rank: number }];
-
-        modeRanks[mode] = {
-            classic: hasPlayedGame(achievements, "classic", mode) ? classicRank[0].rank + 1 : undefined,
-            death: hasPlayedGame(achievements, "death", mode) ? deathRank[0].rank + 1 : undefined,
-        };
-    }
+    await Promise.all(
+        (Object.keys(modeRanks) as GameMode[]).flatMap((mode) =>
+            (["classic", "death"] as const).map(async (variant) => {
+                const achievement = achievementRows.find((row) => row.gameMode === mode && row.variant === variant);
+                if (!achievement || achievement.gamesPlayed === 0) return;
+                const rank = await prisma.userAchievement.count({
+                    where: {
+                        gameMode: mode,
+                        variant,
+                        rulesetVersion: CURRENT_RULESET_VERSION,
+                        ppVersion: CURRENT_PP_VERSION,
+                        profilePp: { gt: achievement.profilePp },
+                    },
+                });
+                modeRanks[mode][variant] = rank + 1;
+            }),
+        ),
+    );
 
     return {
-        ...user,
-        badges,
+        ...mapUser(userRow, badgesByUser.get(banchoId) ?? []),
         achievements,
         ranks: {
             globalRank: {
-                classic: hasPlayedGame(achievements, "classic") ? globalClassicRankResult[0].globalRank + 1 : undefined,
-                death: hasPlayedGame(achievements, "death") ? globalDeathRankResult[0].globalRank + 1 : undefined,
+                classic: hasPlayedGame(achievements, "classic") ? classicGlobalRank : undefined,
+                death: hasPlayedGame(achievements, "death") ? deathGlobalRank : undefined,
             },
             modeRanks,
         },
@@ -138,15 +165,15 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
 
 export async function getUserStatsAction(banchoId: number, variant?: GameVariant): Promise<Array<UserAchievement>> {
     const validatedVariant = variant ? gameVariantSchema.parse(variant) : undefined;
-    const result = (await query(
-        `SELECT user_id, game_mode, variant, ruleset_version, pp_version, total_score, games_played, rounds_played,
-                total_correct, total_skips, total_timeouts, total_response_time_ms, highest_streak, highest_score,
-                best_run_pp, profile_pp, last_played
-         FROM user_achievements
-         WHERE user_id = ? AND ruleset_version = ? AND pp_version = ?${validatedVariant ? " AND variant = ?" : ""}`,
-        validatedVariant ? [banchoId, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION, validatedVariant] : [banchoId, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION]
-    )) as UserAchievement[];
-    return result;
+    const rows = await prisma.userAchievement.findMany({
+        where: {
+            userId: banchoId,
+            rulesetVersion: CURRENT_RULESET_VERSION,
+            ppVersion: CURRENT_PP_VERSION,
+            ...(validatedVariant ? { variant: validatedVariant } : {}),
+        },
+    });
+    return rows.map(mapAchievement);
 }
 
 export async function getUserLatestGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit?: number, offset: number = 0): Promise<Array<Game>> {
@@ -158,133 +185,154 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
             offset: z.number().int().min(0).default(0),
         })
         .parse({ limit, offset });
-
-    let query_string = validatedMode
-        ? `SELECT user_id, game_mode, points, streak, variant, ended_at
-           FROM games
-           WHERE user_id = ? AND game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
-           ORDER BY ended_at DESC`
-        : `SELECT user_id, game_mode, points, streak, variant, ended_at
-           FROM games
-           WHERE user_id = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
-           ORDER BY ended_at DESC`;
-
-    const params = validatedMode ? [banchoId, validatedMode, validatedVariant, CURRENT_RULESET_VERSION] : [banchoId, validatedVariant, CURRENT_RULESET_VERSION];
-
-    if (pagination.limit) {
-        query_string += " LIMIT ? OFFSET ?";
-        params.push(pagination.limit, pagination.offset);
-    }
-
-    return query(query_string, params);
+    const rows = await prisma.game.findMany({
+        where: {
+            userId: banchoId,
+            variant: validatedVariant,
+            ranked: true,
+            ...(validatedMode ? { gameMode: validatedMode } : {}),
+        },
+        orderBy: { endedAt: "desc" },
+        ...(pagination.limit ? { take: pagination.limit, skip: pagination.offset } : {}),
+    });
+    return rows.map(mapGame);
 }
 
 export async function getUserGamesCountAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic"): Promise<number> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validatedVariant = gameVariantSchema.parse(variant);
-    const queryString = validatedMode
-        ? `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE`
-        : `SELECT COUNT(*) as total FROM games WHERE user_id = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE`;
-    const params = validatedMode ? [banchoId, validatedMode, validatedVariant, CURRENT_RULESET_VERSION] : [banchoId, validatedVariant, CURRENT_RULESET_VERSION];
-    const [row] = (await query(queryString, params)) as Array<{ total: number }>;
+    return prisma.game.count({
+        where: {
+            userId: banchoId,
+            variant: validatedVariant,
+            ranked: true,
+            ...(validatedMode ? { gameMode: validatedMode } : {}),
+        },
+    });
+}
 
-    return row?.total ?? 0;
+export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode: GameMode, variant: GameVariant = "classic"): Promise<UserLifetimeModeStats> {
+    const validatedMode = gameModeSchema.parse(gameMode);
+    const validatedVariant = gameVariantSchema.parse(variant);
+    const stats = await prisma.game.aggregate({
+        where: {
+            userId: banchoId,
+            gameMode: validatedMode,
+            variant: validatedVariant,
+            ranked: true,
+        },
+        _count: { _all: true },
+        _sum: { points: true },
+        _max: {
+            points: true,
+            streak: true,
+            endedAt: true,
+        },
+    });
+
+    return {
+        games_played: stats._count._all,
+        total_score: BigInt(stats._sum.points ?? 0),
+        highest_score: stats._max.points ?? 0,
+        highest_streak: stats._max.streak ?? 0,
+        last_played: stats._max.endedAt,
+    };
 }
 
 export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit: number = 5): Promise<Array<Game>> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validated = z.object({ variant: gameVariantSchema, limit: z.number().int().min(1).max(100) }).parse({ variant, limit });
-
-    const orderBy = validated.variant === "classic" ? "points" : "streak";
-
-    const query_string = validatedMode
-        ? `SELECT user_id, game_mode, points, streak, variant, ended_at
-           FROM games
-           WHERE user_id = ? AND game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
-           ORDER BY ${orderBy} DESC, ended_at ASC
-           LIMIT ?`
-        : `SELECT user_id, game_mode, points, streak, variant, ended_at
-           FROM games
-           WHERE user_id = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
-           ORDER BY ${orderBy} DESC, ended_at ASC
-           LIMIT ?`;
-
-    const params = validatedMode
-        ? [banchoId, validatedMode, validated.variant, CURRENT_RULESET_VERSION, validated.limit]
-        : [banchoId, validated.variant, CURRENT_RULESET_VERSION, validated.limit];
-
-    return query(query_string, params);
+    const rows = await prisma.game.findMany({
+        where: {
+            userId: banchoId,
+            variant: validated.variant,
+            rulesetVersion: CURRENT_RULESET_VERSION,
+            ppVersion: CURRENT_PP_VERSION,
+            ranked: true,
+            ...(validatedMode ? { gameMode: validatedMode } : {}),
+        },
+        orderBy: [{ pp: "desc" }, { endedAt: "asc" }],
+        take: validated.limit,
+    });
+    return rows.map(mapGame);
 }
 
-export async function getTopPlayersAction(gamemode: GameMode, variant: GameVariant = "classic", limit: number = 10, orderMetric: "total" | "highest" = "highest", offset: number = 0): Promise<Array<TopPlayer>> {
+export async function getTopPlayersAction(
+    gamemode: GameMode,
+    variant: GameVariant = "classic",
+    limit: number = 10,
+    orderMetricOrOffset: "total" | "highest" | number = "highest",
+    offset: number = 0,
+): Promise<Array<TopPlayer>> {
+    const resolvedOffset = typeof orderMetricOrOffset === "number" ? orderMetricOrOffset : offset;
     const validated = z
-        .object({ gamemode: gameModeSchema, variant: gameVariantSchema, limit: z.number().int().min(1).max(100), orderMetric: z.enum(["total", "highest"]), offset: z.number().int().min(0) })
-        .parse({ gamemode, variant, limit, orderMetric, offset });
-    const orderColumn = validated.variant === "death" ? "highest_streak" : validated.orderMetric === "highest" ? "highest_score" : "total_score";
-    const results = await query<Omit<TopPlayer, "badges"> & { badges: string | null }>(
-        `WITH game_stats AS (
-             SELECT user_id,
-                    COUNT(*) AS games_played,
-                    MAX(streak) AS highest_streak,
-                    ${validated.variant === "death" ? "0" : "MAX(points)"} AS highest_score,
-                    ${validated.variant === "death" ? "0" : "SUM(points)"} AS total_score,
-                    MIN(ended_at) AS earliest_ended_at
-             FROM games
-             WHERE game_mode = ? AND variant = ? AND ruleset_version = ? AND ranked = TRUE
-             GROUP BY user_id
-         ), badge_stats AS (
-             SELECT ub.user_id, GROUP_CONCAT(CONCAT(b.name, ':', b.color)) AS badges
-             FROM user_badges ub
-             JOIN badges b ON ub.badge_name = b.name
-             GROUP BY ub.user_id
-         )
-         SELECT u.*, gs.games_played, gs.highest_streak, gs.highest_score, gs.total_score, gs.earliest_ended_at, bs.badges
-         FROM game_stats gs
-         JOIN users u ON gs.user_id = u.bancho_id
-         LEFT JOIN badge_stats bs ON u.bancho_id = bs.user_id
-         ORDER BY gs.${orderColumn} DESC, gs.earliest_ended_at ASC
-         LIMIT ? OFFSET ?`,
-        [validated.gamemode, validated.variant, CURRENT_RULESET_VERSION, validated.limit, validated.offset],
-    );
+        .object({ gamemode: gameModeSchema, variant: gameVariantSchema, limit: z.number().int().min(1).max(100), offset: z.number().int().min(0) })
+        .parse({ gamemode, variant, limit, offset: resolvedOffset });
+    const achievements = await prisma.userAchievement.findMany({
+        where: {
+            gameMode: validated.gamemode,
+            variant: validated.variant,
+            rulesetVersion: CURRENT_RULESET_VERSION,
+            ppVersion: CURRENT_PP_VERSION,
+        },
+        orderBy: [{ profilePp: "desc" }, { bestRunPp: "desc" }, { lastPlayed: "asc" }, { userId: "asc" }],
+        take: validated.limit,
+        skip: validated.offset,
+    });
+    const userIds = achievements.map((achievement) => achievement.userId);
+    const [users, badgesByUser] = await Promise.all([
+        userIds.length === 0 ? [] : prisma.user.findMany({ where: { banchoId: { in: userIds } } }),
+        getBadgesForUsers(userIds),
+    ]);
+    const usersById = new Map(users.map((user) => [user.banchoId, user]));
 
-    return results.map((player) => ({
-        ...player,
-        badges: player.badges?.split(",").map((badge) => {
-            const [name, color] = badge.split(":");
-            return { name, color };
-        }) ?? [],
-    }));
+    return achievements.flatMap((achievement) => {
+        const user = usersById.get(achievement.userId);
+        if (!user) return [];
+        return [
+            {
+                ...mapUser(user),
+                badges: (badgesByUser.get(user.banchoId) ?? []).map(({ name, color }) => ({ name, color })),
+                total_score: achievement.totalScore,
+                games_played: achievement.gamesPlayed,
+                highest_streak: achievement.highestStreak,
+                highest_score: achievement.highestScore,
+                best_run_pp: Number(achievement.bestRunPp),
+                profile_pp: Number(achievement.profilePp),
+                last_played: achievement.lastPlayed,
+            },
+        ];
+    });
 }
 
 export async function searchUsersAction(searchTerm: string, limit: number = 10): Promise<Array<User>> {
     const validated = searchSchema.parse({ term: searchTerm, limit });
-    return query(
-        `SELECT bancho_id, username, avatar_url, created_at
-         FROM users
-         WHERE username LIKE ?
-         ORDER BY username
-         LIMIT ?`,
-        [`%${validated.term}%`, validated.limit]
-    );
+    const users = await prisma.user.findMany({
+        where: { username: { contains: validated.term } },
+        orderBy: { username: "asc" },
+        take: validated.limit,
+    });
+    return users.map((user) => mapUser(user));
 }
 
 export async function getHighestStatsAction(variant: GameVariant = "classic"): Promise<HighestStats> {
-    const result = (await query(
-        `SELECT
-            (SELECT COUNT(*) FROM users) as total_users,
-            COUNT(*) as total_games,
-            CASE
-                WHEN ? = 'classic' THEN COALESCE(MAX(points), 0)
-                ELSE COALESCE(MAX(streak), 0)
-            END as highest_score
-         FROM games
-         WHERE variant = ? AND ruleset_version = ? AND ranked = TRUE`,
-        [variant, variant, CURRENT_RULESET_VERSION]
-    )) as [{ total_users: number; total_games: number; highest_score: number }];
+    const validatedVariant = gameVariantSchema.parse(variant);
+    const competitiveWhere = {
+        variant: validatedVariant,
+        rulesetVersion: CURRENT_RULESET_VERSION,
+        ppVersion: CURRENT_PP_VERSION,
+        ranked: true,
+    } as const;
+    const [totalUsers, totalGames, maxima] = await Promise.all([
+        prisma.user.count(),
+        prisma.game.count({ where: { variant: validatedVariant, ranked: true } }),
+        prisma.game.aggregate({ where: competitiveWhere, _max: { points: true, streak: true, pp: true } }),
+    ]);
 
     return {
-        total_users: Number(result[0].total_users),
-        total_games: Number(result[0].total_games),
-        highest_points: Number(result[0].highest_score),
+        total_users: totalUsers,
+        total_games: totalGames,
+        highest_points: validatedVariant === "classic" ? maxima._max.points ?? 0 : maxima._max.streak ?? 0,
+        highest_run_pp: Number(maxima._max.pp ?? 0),
     };
 }

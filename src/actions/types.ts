@@ -53,6 +53,7 @@ type GuessResult = {
 
 export interface GameState {
     sessionId: string;
+    pp?: number;
     currentBeatmap: {
         imageUrl?: string;
         audioUrl?: string;
@@ -138,7 +139,16 @@ export interface Game {
     points: number;
     streak: number;
     variant: GameVariant;
+    pp: string | number;
     ended_at: Date;
+}
+
+export interface UserLifetimeModeStats {
+    games_played: number;
+    total_score: bigint;
+    highest_score: number;
+    highest_streak: number;
+    last_played: Date | null;
 }
 
 export interface TopPlayer extends Omit<User, "badges"> {
@@ -147,11 +157,14 @@ export interface TopPlayer extends Omit<User, "badges"> {
     games_played: number;
     highest_streak: number;
     highest_score: number;
-    earliest_ended_at: Date;
+    best_run_pp: string | number;
+    profile_pp: string | number;
+    last_played: Date;
 }
 
 export interface HighestStats {
     highest_points: number;
+    highest_run_pp: number;
     total_games: number;
     total_users: number;
 }
@@ -176,6 +189,7 @@ export interface Announcement {
 
 export interface DatabaseGameSession {
     id: string;
+    pp?: number;
     user_id: number;
     game_mode: GameMode;
     total_points: number;

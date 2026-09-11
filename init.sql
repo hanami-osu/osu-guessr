@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS user_achievements (
     profile_pp DECIMAL(12, 3) NOT NULL DEFAULT 0,
     last_played DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
     UNIQUE KEY user_game_mode_variant_version (user_id, game_mode, variant, ruleset_version, pp_version),
+    INDEX idx_achievements_mode_pp (game_mode, variant, ruleset_version, pp_version, profile_pp),
+    INDEX idx_achievements_global_pp (variant, ruleset_version, pp_version, profile_pp),
     FOREIGN KEY (user_id) REFERENCES users (bancho_id) ON DELETE CASCADE
 );
 
@@ -97,6 +99,7 @@ CREATE TABLE IF NOT EXISTS games (
     ended_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     end_reason ENUM ('completed', 'failed', 'quit', 'content_exhausted') NOT NULL DEFAULT 'completed',
     UNIQUE KEY unique_game_session (session_id),
+    INDEX idx_games_user_performance (user_id, game_mode, variant, ruleset_version, pp_version, ranked, pp),
     FOREIGN KEY (user_id) REFERENCES users (bancho_id) ON DELETE CASCADE
 );
 

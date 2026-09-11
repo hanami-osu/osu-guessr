@@ -1,7 +1,7 @@
 "use server";
 
 import { getAuthSession } from "./server";
-import { query, transaction } from "@/lib/database";
+import { prisma } from "@/lib/database/prisma";
 import redisClient from "@/lib/redis";
 import { z } from "zod";
 import { BASE_POINTS, STREAK_BONUS, TIME_BONUS_MULTIPLIER, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, type GameVariant } from "../app/games/config";
@@ -12,6 +12,8 @@ import { checkGuess, GuessDifficulty } from "@/lib/guess-checker";
 import { isNoGameContentError } from "@/lib/game/content-errors";
 import { canPersistGameResult } from "@/lib/game/completion";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
+import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp, type ContentPerformanceStats } from "@/lib/game/performance-points";
+import { Prisma } from "@/generated/prisma/client";
 
 const GRACE_PERIOD = 1;
 const SESSION_LOCK_TTL_MS = 30_000;
@@ -39,6 +41,14 @@ type SessionLock = {
     key: string;
     token: string;
 };
+
+type ContentStatRow = ContentPerformanceStats & {
+    item_id: number;
+};
+
+function toPrismaJson(value: Record<string, unknown> | null): Prisma.InputJsonValue | undefined {
+    return value ? (JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue) : undefined;
+}
 
 async function acquireSessionLock(sessionId: string, timeoutMs: number = SESSION_LOCK_TTL_MS): Promise<SessionLock | null> {
     const key = `game_session_lock:${sessionId}`;
@@ -95,157 +105,244 @@ function resolveEndReason(gameState: DatabaseGameSession, requestedReason?: Game
     return gameState.variant === "classic" ? "completed" : "quit";
 }
 
-async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<void> {
+async function resolveRoundDifficulties(gameState: DatabaseGameSession, rounds: PersistedGameRound[]): Promise<PersistedGameRound[]> {
+    if (rounds.length === 0) return rounds;
+
+    const itemType = rounds[0].item_type;
+    const itemIds = [...new Set(rounds.map((round) => round.item_id))];
+    const rows = await prisma.contentStat.findMany({
+        where: {
+            gameMode: gameState.game_mode,
+            itemType,
+            rulesetVersion: gameState.ruleset_version ?? 0,
+            ppVersion: gameState.pp_version ?? 0,
+            itemId: { in: itemIds },
+        },
+        select: {
+            itemId: true,
+            appearances: true,
+            correctCount: true,
+            totalResponseTimeMs: true,
+        },
+    });
+    const stats: ContentStatRow[] = rows.map((row) => ({
+        item_id: row.itemId,
+        appearances: Number(row.appearances),
+        correct_count: Number(row.correctCount),
+        total_response_time_ms: Number(row.totalResponseTimeMs),
+    }));
+    const contentStats = new Map(stats.map((row) => [row.item_id, row]));
+
+    return rounds.map((round) => ({
+        ...round,
+        difficulty_snapshot: round.difficulty_snapshot ?? calculateEmpiricalDifficulty(contentStats.get(round.item_id)),
+    }));
+}
+
+async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<number | null> {
     const cacheKey = `game_session:${sessionId}`;
     const gameState = await getGameSession(sessionId, userId);
-    if (!gameState.is_active && !gameState.end_pending) return;
+    if (!gameState.is_active && !gameState.end_pending) return gameState.pp ?? null;
 
     const endReason = resolveEndReason(gameState, requestedReason);
     const pendingState = { ...gameState, is_active: false, end_pending: true, end_reason: endReason };
     await redisClient.set(cacheKey, JSON.stringify(pendingState), { EX: 3600 });
 
-    if (!canPersistGameResult({ variant: gameState.variant, currentRound: gameState.current_round, hasGuessedCurrentRound: gameState.has_guessed_current_round }, MAX_ROUNDS)) {
+    if (
+        !canPersistGameResult(
+            {
+                variant: gameState.variant,
+                currentRound: gameState.current_round,
+                hasGuessedCurrentRound: gameState.has_guessed_current_round,
+                highestStreak: gameState.highest_streak,
+            },
+            MAX_ROUNDS,
+        )
+    ) {
         await redisClient.set(cacheKey, JSON.stringify({ ...pendingState, end_pending: false }), { EX: 120 });
-        return;
+        return null;
     }
 
     const points = gameState.variant === "death" ? 0 : gameState.total_points;
-    const roundHistory = gameState.round_history ?? [];
+    const recordedRounds = gameState.round_history ?? [];
+    const roundHistory = await resolveRoundDifficulties(gameState, recordedRounds);
     const skipCount = roundHistory.filter((round) => round.result_type === "skip").length;
     const timeoutCount = roundHistory.filter((round) => round.result_type === "timeout").length;
     const totalResponseTimeMs = gameState.total_response_time_ms ?? roundHistory.reduce((total, round) => total + round.response_time_ms, 0);
     const rulesetVersion = gameState.ruleset_version ?? 0;
     const ppVersion = gameState.pp_version ?? 0;
+    const ranked = gameState.ranked ?? true;
+    const runPp = calculateRunPp(roundHistory, gameState.variant);
+    const finalizingState = { ...pendingState, round_history: roundHistory, pp: runPp };
+    await redisClient.set(cacheKey, JSON.stringify(finalizingState), { EX: 3600 });
 
-    await transaction(async (query) => {
-        await query(
-            `INSERT IGNORE INTO games
-             (session_id, user_id, game_mode, points, streak, variant, run_type, challenge_id, seed, config_snapshot,
-              ranked, ruleset_version, pp_version, pp, rounds_played, correct_count, skip_count, timeout_count,
-              total_response_time_ms, started_at, ended_at, end_reason)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), ?)`,
-            [
-                sessionId,
-                userId,
-                gameState.game_mode,
-                points,
-                gameState.highest_streak,
-                gameState.variant,
-                gameState.run_type ?? "standard",
-                gameState.challenge_id ?? null,
-                gameState.seed ?? null,
-                gameState.config_snapshot ? JSON.stringify(gameState.config_snapshot) : null,
-                gameState.ranked ?? true,
-                rulesetVersion,
-                ppVersion,
-                roundHistory.length,
-                gameState.correct_guesses,
-                skipCount,
-                timeoutCount,
-                totalResponseTimeMs,
-                gameState.started_at ?? new Date().toISOString(),
-                endReason,
-            ],
-        );
-        const [{ inserted }] = await query<{ inserted: number }>("SELECT ROW_COUNT() AS inserted");
-        if (inserted === 1) {
-            const [persistedGame] = await query<{ id: bigint }>("SELECT id FROM games WHERE session_id = ? LIMIT 1", [sessionId]);
-            if (!persistedGame) throw new Error("Persisted game could not be resolved");
+    const persistedPp = await prisma.$transaction(
+        async (tx) => {
+            const existingGame = await tx.game.findUnique({ where: { sessionId } });
+            if (existingGame) return Number(existingGame.pp);
 
-            for (const round of roundHistory) {
-                await query(
-                    `INSERT INTO game_rounds
-                     (game_id, round_number, item_type, item_id, submitted_guess, answer_snapshot, result_type, correct,
-                      response_time_ms, time_limit_ms, points_earned, streak_before, streak_after, difficulty_snapshot, content_snapshot)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        persistedGame.id,
-                        round.round_number,
-                        round.item_type,
-                        round.item_id,
-                        round.submitted_guess,
-                        round.answer_snapshot,
-                        round.result_type,
-                        round.correct,
-                        round.response_time_ms,
-                        round.time_limit_ms,
-                        round.points_earned,
-                        round.streak_before,
-                        round.streak_after,
-                        round.difficulty_snapshot,
-                        round.content_snapshot ? JSON.stringify(round.content_snapshot) : null,
-                    ],
-                );
-
-                await query(
-                    `INSERT INTO content_stats
-                     (game_mode, item_type, item_id, ruleset_version, pp_version, appearances, correct_count, skip_count,
-                      timeout_count, total_response_time_ms, fastest_correct_ms)
-                     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
-                     ON DUPLICATE KEY UPDATE
-                       appearances = appearances + 1,
-                       correct_count = correct_count + VALUES(correct_count),
-                       skip_count = skip_count + VALUES(skip_count),
-                       timeout_count = timeout_count + VALUES(timeout_count),
-                       total_response_time_ms = total_response_time_ms + VALUES(total_response_time_ms),
-                       fastest_correct_ms = CASE
-                           WHEN VALUES(fastest_correct_ms) IS NULL THEN fastest_correct_ms
-                           WHEN fastest_correct_ms IS NULL THEN VALUES(fastest_correct_ms)
-                           ELSE LEAST(fastest_correct_ms, VALUES(fastest_correct_ms))
-                       END`,
-                    [
-                        gameState.game_mode,
-                        round.item_type,
-                        round.item_id,
-                        rulesetVersion,
-                        ppVersion,
-                        round.correct ? 1 : 0,
-                        round.result_type === "skip" ? 1 : 0,
-                        round.result_type === "timeout" ? 1 : 0,
-                        round.response_time_ms,
-                        round.correct ? round.response_time_ms : null,
-                    ],
-                );
-            }
-
-            await query(
-                `INSERT INTO user_achievements
-                 (user_id, game_mode, variant, ruleset_version, pp_version, total_score, games_played, rounds_played,
-                  total_correct, total_skips, total_timeouts, total_response_time_ms, highest_streak, highest_score, best_run_pp, profile_pp)
-                 VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 0, 0)
-                 ON DUPLICATE KEY UPDATE
-                   total_score = total_score + VALUES(total_score),
-                   games_played = games_played + 1,
-                   rounds_played = rounds_played + VALUES(rounds_played),
-                   total_correct = total_correct + VALUES(total_correct),
-                   total_skips = total_skips + VALUES(total_skips),
-                   total_timeouts = total_timeouts + VALUES(total_timeouts),
-                   total_response_time_ms = total_response_time_ms + VALUES(total_response_time_ms),
-                   highest_streak = GREATEST(highest_streak, VALUES(highest_streak)),
-                   highest_score = GREATEST(highest_score, VALUES(highest_score)),
-                   best_run_pp = GREATEST(best_run_pp, VALUES(best_run_pp)),
-                   profile_pp = VALUES(profile_pp),
-                   last_played = CURRENT_TIMESTAMP(3)`,
-                [
+            const persistedGame = await tx.game.create({
+                data: {
+                    sessionId,
                     userId,
-                    gameState.game_mode,
-                    gameState.variant,
+                    gameMode: gameState.game_mode,
+                    points,
+                    streak: gameState.highest_streak,
+                    variant: gameState.variant,
+                    runType: gameState.run_type ?? "standard",
+                    challengeId: gameState.challenge_id ?? null,
+                    seed: gameState.seed ?? null,
+                    configSnapshot: toPrismaJson(gameState.config_snapshot),
+                    ranked,
                     rulesetVersion,
                     ppVersion,
-                    points,
-                    roundHistory.length,
-                    gameState.correct_guesses,
+                    pp: runPp,
+                    roundsPlayed: roundHistory.length,
+                    correctCount: gameState.correct_guesses,
                     skipCount,
                     timeoutCount,
                     totalResponseTimeMs,
-                    gameState.highest_streak,
-                    points,
-                ],
-            );
-        }
-    });
+                    startedAt: new Date(gameState.started_at ?? Date.now()),
+                    endReason,
+                },
+            });
 
-    await redisClient.set(cacheKey, JSON.stringify({ ...pendingState, end_pending: false }), { EX: 120 });
+            if (roundHistory.length > 0) {
+                await tx.gameRound.createMany({
+                    data: roundHistory.map((round) => ({
+                        gameId: persistedGame.id,
+                        roundNumber: round.round_number,
+                        itemType: round.item_type,
+                        itemId: round.item_id,
+                        submittedGuess: round.submitted_guess,
+                        answerSnapshot: round.answer_snapshot,
+                        resultType: round.result_type,
+                        correct: round.correct,
+                        responseTimeMs: round.response_time_ms,
+                        timeLimitMs: round.time_limit_ms,
+                        pointsEarned: round.points_earned,
+                        streakBefore: round.streak_before,
+                        streakAfter: round.streak_after,
+                        difficultySnapshot: round.difficulty_snapshot,
+                        contentSnapshot: toPrismaJson(round.content_snapshot),
+                    })),
+                });
+            }
+
+            if (!ranked) return runPp;
+
+            for (const round of roundHistory) {
+                const statKey = {
+                    gameMode: gameState.game_mode,
+                    itemType: round.item_type,
+                    itemId: round.item_id,
+                    rulesetVersion,
+                    ppVersion,
+                };
+                const persistedStats = await tx.contentStat.findUnique({
+                    where: { gameMode_itemType_itemId_rulesetVersion_ppVersion: statKey },
+                    select: {
+                        appearances: true,
+                        correctCount: true,
+                        totalResponseTimeMs: true,
+                        fastestCorrectMs: true,
+                    },
+                });
+                const nextDifficulty = calculateEmpiricalDifficulty({
+                    appearances: Number(persistedStats?.appearances ?? 0) + 1,
+                    correct_count: Number(persistedStats?.correctCount ?? 0) + (round.correct ? 1 : 0),
+                    total_response_time_ms: Number(persistedStats?.totalResponseTimeMs ?? 0) + round.response_time_ms,
+                });
+                const fastestCorrectMs = round.correct ? Math.min(persistedStats?.fastestCorrectMs ?? round.response_time_ms, round.response_time_ms) : undefined;
+
+                await tx.contentStat.upsert({
+                    where: { gameMode_itemType_itemId_rulesetVersion_ppVersion: statKey },
+                    create: {
+                        ...statKey,
+                        appearances: 1,
+                        correctCount: round.correct ? 1 : 0,
+                        skipCount: round.result_type === "skip" ? 1 : 0,
+                        timeoutCount: round.result_type === "timeout" ? 1 : 0,
+                        totalResponseTimeMs: round.response_time_ms,
+                        fastestCorrectMs: round.correct ? round.response_time_ms : null,
+                        empiricalDifficulty: nextDifficulty,
+                    },
+                    update: {
+                        appearances: { increment: 1 },
+                        correctCount: { increment: round.correct ? 1 : 0 },
+                        skipCount: { increment: round.result_type === "skip" ? 1 : 0 },
+                        timeoutCount: { increment: round.result_type === "timeout" ? 1 : 0 },
+                        totalResponseTimeMs: { increment: round.response_time_ms },
+                        ...(fastestCorrectMs === undefined ? {} : { fastestCorrectMs }),
+                        empiricalDifficulty: nextDifficulty,
+                    },
+                });
+            }
+
+            const achievementKey = {
+                userId,
+                gameMode: gameState.game_mode,
+                variant: gameState.variant,
+                rulesetVersion,
+                ppVersion,
+            };
+            const [existingAchievement, topRuns] = await Promise.all([
+                tx.userAchievement.findUnique({
+                    where: { userId_gameMode_variant_rulesetVersion_ppVersion: achievementKey },
+                }),
+                tx.game.findMany({
+                    where: {
+                        ...achievementKey,
+                        ranked: true,
+                        pp: { gt: 0 },
+                    },
+                    select: { pp: true },
+                    orderBy: [{ pp: "desc" }, { endedAt: "asc" }],
+                    take: 100,
+                }),
+            ]);
+            const profilePp = calculateProfilePp(topRuns.map(({ pp }) => Number(pp)));
+
+            await tx.userAchievement.upsert({
+                where: { userId_gameMode_variant_rulesetVersion_ppVersion: achievementKey },
+                create: {
+                    ...achievementKey,
+                    totalScore: points,
+                    gamesPlayed: 1,
+                    roundsPlayed: roundHistory.length,
+                    totalCorrect: gameState.correct_guesses,
+                    totalSkips: skipCount,
+                    totalTimeouts: timeoutCount,
+                    totalResponseTimeMs,
+                    highestStreak: gameState.highest_streak,
+                    highestScore: points,
+                    bestRunPp: runPp,
+                    profilePp,
+                    lastPlayed: persistedGame.endedAt,
+                },
+                update: {
+                    totalScore: { increment: points },
+                    gamesPlayed: { increment: 1 },
+                    roundsPlayed: { increment: roundHistory.length },
+                    totalCorrect: { increment: gameState.correct_guesses },
+                    totalSkips: { increment: skipCount },
+                    totalTimeouts: { increment: timeoutCount },
+                    totalResponseTimeMs: { increment: totalResponseTimeMs },
+                    highestStreak: Math.max(existingAchievement?.highestStreak ?? 0, gameState.highest_streak),
+                    highestScore: Math.max(existingAchievement?.highestScore ?? 0, points),
+                    bestRunPp: Math.max(Number(existingAchievement?.bestRunPp ?? 0), runPp),
+                    profilePp,
+                    lastPlayed: persistedGame.endedAt,
+                },
+            });
+
+            return runPp;
+        },
+        { isolationLevel: "Serializable" },
+    );
+
+    await redisClient.set(cacheKey, JSON.stringify({ ...finalizingState, pp: persistedPp, end_pending: false }), { EX: 120 });
+    return persistedPp;
 }
 
 export async function startGameAction(gameMode: GameMode, variant: GameVariant = "classic"): Promise<GameState> {
@@ -383,11 +480,29 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
 
         let currentItem: MapsetDataWithTags | SkinData;
         if (gameState.game_mode === GameMode.Skin) {
-            const [skin]: Array<SkinData> = await query(`SELECT * FROM skins WHERE id = ?`, [gameState.current_item_id]);
-            currentItem = skin;
+            const skin = await prisma.skin.findUnique({ where: { id: gameState.current_item_id } });
+            if (!skin) throw new Error("Current skin could not be resolved");
+            currentItem = {
+                id: skin.id,
+                name: skin.name,
+                image_filename: skin.imageFilename,
+                created_at: skin.createdAt,
+                updated_at: skin.updatedAt,
+            };
         } else {
-            const [beatmap]: Array<MapsetDataWithTags> = await query(`SELECT * FROM mapset_data WHERE mapset_id = ?`, [gameState.current_item_id]);
-            currentItem = beatmap;
+            const beatmap = await prisma.mapsetData.findUnique({ where: { mapsetId: gameState.current_item_id } });
+            if (!beatmap) throw new Error("Current mapset could not be resolved");
+            currentItem = {
+                mapset_id: beatmap.mapsetId,
+                title: beatmap.title ?? "",
+                artist: beatmap.artist ?? "",
+                mapper: beatmap.mapper ?? "",
+                ranked_at: beatmap.rankedAt,
+                star_rating_min: beatmap.starRatingMin == null ? null : Number(beatmap.starRatingMin),
+                star_rating_max: beatmap.starRatingMax == null ? null : Number(beatmap.starRatingMax),
+                image_filename: gameState.image_filename,
+                audio_filename: gameState.audio_filename,
+            };
         }
 
         const currentMedia: { backgroundData?: string; audioData?: string; skinData?: string } = {};
@@ -421,9 +536,10 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
                 }
             } catch (error) {
                 if (!isDeathMode || !isNoGameContentError(error)) throw error;
-                await finishGameSession(sessionId, authSession.user.banchoId, "content_exhausted");
+                const pp = await finishGameSession(sessionId, authSession.user.banchoId, "content_exhausted");
                 return {
                     sessionId,
+                    pp: pp ?? undefined,
                     currentBeatmap: {
                         imageUrl: gameState.game_mode === GameMode.Background ? currentMedia.backgroundData : gameState.game_mode === GameMode.Skin ? currentMedia.skinData : undefined,
                         audioUrl: gameState.game_mode === GameMode.Audio ? currentMedia.audioData : undefined,
@@ -455,7 +571,6 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         const newStreak = isNextRound ? gameState.current_streak : isCorrect ? gameState.current_streak + 1 : 0;
         const resultType = isTimeout ? "timeout" : isSkipped ? "skip" : "guess";
         const currentMapset = gameState.game_mode === GameMode.Skin ? null : (currentItem as MapsetDataWithTags);
-        const difficultySnapshot = currentMapset?.star_rating_max == null ? null : Number(currentMapset.star_rating_max);
         const responseTimeMs = Math.min(timeElapsedMs, ROUND_TIME_MS);
         const roundRecord: PersistedGameRound | null = isNextRound
             ? null
@@ -472,7 +587,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
                   points_earned: points,
                   streak_before: gameState.current_streak,
                   streak_after: newStreak,
-                  difficulty_snapshot: Number.isFinite(difficultySnapshot) ? difficultySnapshot : null,
+                  difficulty_snapshot: null,
                   content_snapshot:
                       gameState.game_mode === GameMode.Skin
                           ? { name: (currentItem as SkinData).name }
@@ -524,12 +639,11 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             await redisClient.expire(sessionItemsKey, 3600);
         }
 
-        if (deathFailed) {
-            await finishGameSession(sessionId, authSession.user.banchoId, "failed");
-        }
+        const pp = deathFailed ? await finishGameSession(sessionId, authSession.user.banchoId, "failed") : null;
 
         return {
             sessionId,
+            pp: pp ?? undefined,
             currentBeatmap: {
                 imageUrl:
                     gameState.game_mode === GameMode.Background
@@ -603,6 +717,7 @@ export async function getGameStateAction(sessionId: string): Promise<GameState> 
 
     return {
         sessionId,
+        pp: gameState.pp,
         currentBeatmap: {
             imageUrl: gameState.game_mode === GameMode.Background ? mediaData : gameState.game_mode === GameMode.Skin ? mediaData : undefined,
             audioUrl: gameState.game_mode === GameMode.Audio ? mediaData : undefined,
@@ -637,14 +752,14 @@ export async function getGameStateAction(sessionId: string): Promise<GameState> 
     };
 }
 
-export async function endGameAction(sessionId: string): Promise<void> {
+export async function endGameAction(sessionId: string): Promise<number | null> {
     sessionId = z.string().uuid().parse(sessionId);
     const authSession = await getAuthSession();
     const lock = await acquireSessionLock(sessionId);
     if (!lock) throw new Error("Action in progress, please wait");
 
     try {
-        await finishGameSession(sessionId, authSession.user.banchoId, "quit");
+        return await finishGameSession(sessionId, authSession.user.banchoId, "quit");
     } finally {
         await releaseSessionLock(lock);
     }
@@ -653,22 +768,33 @@ export async function endGameAction(sessionId: string): Promise<void> {
 export async function getSuggestionsAction(str: string, gamemode: GameMode): Promise<string[]> {
     if (!str || str.length < 2) return [];
 
+    const needle = str.toLocaleLowerCase();
+    const sortSuggestions = (values: string[]) =>
+        values
+            .sort((a, b) => {
+                const normalizedA = a.toLocaleLowerCase();
+                const normalizedB = b.toLocaleLowerCase();
+                const prefixDifference = Number(!normalizedA.startsWith(needle)) - Number(!normalizedB.startsWith(needle));
+                if (prefixDifference !== 0) return prefixDifference;
+                const positionDifference = normalizedA.indexOf(needle) - normalizedB.indexOf(needle);
+                return positionDifference !== 0 ? positionDifference : normalizedA.localeCompare(normalizedB);
+            })
+            .slice(0, 5);
+
     if (gamemode === GameMode.Skin) {
-        const queryStr = `SELECT DISTINCT name AS title
-                          FROM skins
-                          WHERE LOWER(name) LIKE CONCAT('%', LOWER(?), '%')
-                          ORDER BY (LOWER(name) LIKE CONCAT(LOWER(?), '%')) DESC, LOCATE(LOWER(?), LOWER(name)) ASC
-                          LIMIT 5;`;
-        const results: Array<{ title: string }> = await query(queryStr, [str, str, str]);
-        return results.map((r) => r.title);
+        const results = await prisma.skin.findMany({
+            where: { name: { contains: str } },
+            select: { name: true },
+            distinct: ["name"],
+        });
+        return sortSuggestions(results.map(({ name }) => name));
     } else {
-        const queryStr = `SELECT DISTINCT title
-                          FROM mapset_data
-                          WHERE LOWER(title) LIKE CONCAT('%', LOWER(?), '%')
-                          ORDER BY (LOWER(title) LIKE CONCAT(LOWER(?), '%')) DESC, LOCATE(LOWER(?), LOWER(title)) ASC
-                          LIMIT 5;`;
-        const results: Array<{ title: string }> = await query(queryStr, [str, str, str]);
-        return results.map((r) => r.title);
+        const results = await prisma.mapsetData.findMany({
+            where: { title: { contains: str } },
+            select: { title: true },
+            distinct: ["title"],
+        });
+        return sortSuggestions(results.flatMap(({ title }) => (title ? [title] : [])));
     }
 }
 
