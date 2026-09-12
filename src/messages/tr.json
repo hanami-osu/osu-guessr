@@ -24,9 +24,9 @@
                 "title": "Oynanan Oyunlar",
                 "description": "Toplam tamamlanan oyunlar"
             },
-            "highScore": {
-                "title": "En Yüksek Skor",
-                "description": "Tek oyunda alınan en yüksek skor"
+            "profilePp": {
+                "title": "En Yüksek pp",
+                "description": "Tek bir oyundaki en yüksek pp"
             }
         },
         "supporters": {
@@ -87,8 +87,8 @@
                     "description": "Her turda {seconds} saniyen var. Cevabını yaz veya önerilerden birini seç."
                 },
                 "3": {
-                    "title": "Puan Kazan",
-                    "description": "Doğru cevaplar puan kazandırır. Hızlı cevaplar ve seriler ek puan verir."
+                    "title": "Puan ve pp Kazan",
+                    "description": "Doğru cevaplar puan kazandırır. Sıralamalı koşular doğruluk, hız, zorluk ve tutarlılığa göre pp de kazandırır."
                 }
             }
         },
@@ -103,13 +103,18 @@
             "gameInfo": {
                 "length": "Oyun Uzunluğu: {rounds} tur",
                 "time": "Tur Süresi: {seconds} saniye"
+            },
+            "pp": {
+                "title": "pp",
+                "description": "Sıralamalı koşular doğruluk, cevap hızı, içerik zorluğu ve tutarlılığa göre pp kazandırır. Hayatta kalma modu ayrıca daha uzun başarılı koşuları ödüllendirir.",
+                "profile": "Mod pp'si en iyi 100 sıralamalı koşunu birleştirir ve her alt koşuyu bir öncekine göre %95 ağırlıkla sayar. Liderlik tablosu mod pp'sine göre sıralanır."
             }
         },
         "features": {
             "title": "Özellikler",
             "leaderboards": {
                 "title": "Sıralama Tabloları",
-                "description": "Oyun moduna göre puanları ve serileri karşılaştır."
+                "description": "Mod pp'sine göre sıralama, skorlar ve seriler."
             },
             "autoComplete": {
                 "title": "Otomatik Tamamlama",
@@ -210,14 +215,15 @@
             "howToPlay": {
                 "title": "Nasıl Oynanır",
                 "classic": {
-                    "rounds": "{count} tur tahmin tamamla",
-                    "time": "Her turda şarkı başlığını {seconds} saniye içinde tahmin etmeye çalış",
+                    "rounds": "{count} tur",
+                    "time": "Her turda {seconds} saniye",
                     "points": "Hız ve doğruluğa göre puan kazan",
                     "streak": "Bonus puanlar için seri yap"
                 },
                 "death": {
-                    "continuous": "Hata yapana kadar oynamaya devam et",
-                    "time": "Her turda şarkı başlığını {seconds} saniye içinde tahmin etmeye çalış"
+                    "continuous": "Koşuyu tamamlamak için tüm haritaları doğru tahmin et",
+                    "time": "Her turda {seconds} saniye",
+                    "mistakes": "3 hata yapabilirsin; dördüncü hata koşuyu bitirir"
                 }
             },
             "scoring": {
@@ -226,12 +232,13 @@
                     "base": "Temel Puan: {points}",
                     "timeBonus": "Zaman Bonusu: Kalan saniye başına {points} puan",
                     "streakBonus": "Seri Bonusu: Seri seviyesi başına {points} puan",
-                    "skipPenalty": "Atlama Cezası: {points} puan"
+                    "skipPenalty": "Atlama Cezası: {points} puan",
+                    "pp": "Sıralamalı koşular doğruluk, hız, zorluk ve tutarlılığa göre pp de kazandırır"
                 },
                 "death": {
-                    "streakOnly": "Sadece seri sayınız önemli",
-                    "noPoints": "Bu modda puanlar kaydedilmez",
-                    "compete": "Sıralamada en uzun serin kullanılır"
+                    "score": "Arcade skoru Klasik Mod ile aynı puan formülünü kullanır",
+                    "streakOnly": "pp değeri doğruluk, hız, zorluk, tutarlılık ve seri uzunluğuna göre hesaplanır",
+                    "compete": "Sıralama mod pp'sine göre yapılır"
                 }
             },
             "modes": {
@@ -240,13 +247,13 @@
                     "description": "10 tur"
                 },
                 "death": {
-                    "title": "Ölüm Modu",
-                    "description": "Tek can"
+                    "title": "Hayatta Kalma Modu",
+                    "description": "3 hata hakkı"
                 }
             },
             "warning": {
-                "title": "Skor kaydı",
-                "description": "Skorunu kaydetmek için {rounds} turun tamamını bitir. Erken çıkarsan ilerlemen kaybolur."
+                "title": "Koşuyu kaydetme",
+                "description": "pp'ni kaydetmek için {rounds} turun tamamını bitir. Erken çıkarsan ilerlemen kaydedilmez."
             },
             "actions": {
                 "startGame": "Oyunu Başlat",
@@ -255,9 +262,12 @@
         },
         "input": {
             "placeholder": "Şarkı adı...",
+            "skinPlaceholder": "Skin adı...",
+            "skipDeath": "Atla",
             "title": "Tahmininizi girin:",
+            "yourGuess": "Tahmininiz:",
             "submit": "Gönder",
-            "skip": "Atla (-50 puan)"
+            "skip": "Atla"
         },
         "status": {
             "loading": "Sonraki tur yükleniyor..."
@@ -268,8 +278,8 @@
                 "description": "10 tur"
             },
             "death": {
-                "title": "Ölüm Modu",
-                "description": "Tek can"
+                "title": "Hayatta Kalma Modu",
+                "description": "3 hata hakkı"
             }
         },
         "header": {
@@ -285,7 +295,8 @@
                     "gameOver": "Oyun Bitti"
                 },
                 "currentStreak": "Mevcut Seri: {count}",
-                "maxStreak": "En Yüksek Seri: {count}"
+                "maxStreak": "En Yüksek Seri: {count}",
+                "mistakes": "Hata: {current}/{limit}"
             },
             "timeLeft": "{seconds}sn"
         },
@@ -300,16 +311,19 @@
             "death": {
                 "title": {
                     "died": "Oyun Bitti!",
-                    "completed": "Oyun Tamamlandı"
+                    "completed": "Oyun Tamamlandı",
+                    "ended": "Koşu Bitti"
                 },
                 "maxStreak": "Maksimum Seri",
                 "totalCorrect": "Toplam Doğru",
                 "averageTime": "Ortalama Süre",
-                "diedMessage": "Bir hata yaptın."
+                "diedMessage": "4 hata yaptın.",
+                "mistakes": "Hata"
             },
             "labels": {
                 "averageTime": "Ortalama Süre",
-                "correctGuesses": "Doğru Tahminler"
+                "correctGuesses": "Doğru Tahminler",
+                "runPp": "pp"
             },
             "actions": {
                 "tryAgain": "Tekrar Dene",
@@ -348,7 +362,8 @@
             },
             "variant": {
                 "classic": "Klasik Mod",
-                "death": "Ölüm Modu"
+                "death": "Ölüm Modu",
+                "survival": "Hayatta Kalma Modu"
             }
         },
         "table": {
@@ -357,17 +372,32 @@
             "totalScore": "Toplam Puan",
             "gamesPlayed": "Oynanan Oyun",
             "hiScore": "En Yüksek Skor",
-            "bestStreak": "En İyi Seri"
+            "bestStreak": "En İyi Seri",
+            "profilePp": "pp",
+            "bestRunPp": "En İyi pp Oyunu"
         },
         "empty": "Bu oyun modu için oyuncu bulunamadı.",
-        "loading": "Yükleniyor..."
+        "loading": "Yükleniyor...",
+        "description": "Seçili modun pp değerine göre sıralanır."
     },
     "user": {
         "profile": {
+            "loadFailed": "Profil yüklenemedi",
+            "totalGamesScope": "{count} dereceli oyun · tüm modlar ve varyantlar",
+            "viewOsuProfile": "osu! profilini görüntüle",
+            "variantLabel": "Oyun varyantı",
+            "allModes": "Tüm modlar",
+            "modeLabel": "Oyun modu",
+            "runsLabel": "Oyunlar",
+            "recentScope": "Son 24 saat",
+            "showMore": "Daha fazla göster",
             "stats": {
                 "hiScore": "En Yüksek Skor",
                 "totalGames": "Toplam Oyun",
-                "globalRank": "Küresel Sıralama"
+                "globalRank": "Küresel Sıralama",
+                "profilePp": "Genel pp",
+                "playtime": "Oynama süresi",
+                "rankHistory": "Sıralama geçmişi"
             },
             "noPlays": "Henüz oyun yok",
             "gameStats": {
@@ -377,16 +407,23 @@
                 "highestScore": "En Yüksek Skor",
                 "bestStreak": "En İyi Seri",
                 "lastPlayed": "Son Oynama",
-                "modeRank": "Mode Rank"
+                "modeRank": "Mode Rank",
+                "profilePp": "pp",
+                "bestRunPp": "En İyi pp Oyunu",
+                "guessAccuracy": "Tahmin doğruluğu",
+                "totalGuesses": "Toplam tahmin",
+                "averageCombo": "Ortalama kombo"
             },
             "topGames": {
-                "title": "En İyi Oyunlar",
+                "title": "En İyi Skorlar",
                 "points": "{points} puan",
-                "streak": "{count}x seri"
+                "streak": "{count}x seri",
+                "pp": "{pp} pp",
+                "empty": "Henüz pp koşusu yok"
             },
             "recentGames": {
-                "title": "Son Oyunlar",
-                "noGames": "Son 24 saatte oynanmış oyun yok"
+                "title": "Son Skorlar",
+                "noGames": "Yakın zamanda skor yok"
             }
         },
         "notFound": {
@@ -561,16 +598,16 @@
         "auth": {
             "required": {
                 "title": "Giriş Yapmanız Gerekiyor",
-                "description": "{osu_guessr} oynamak için Hanami ile giriş yap.",
+                "description": "Devam etmek için Hanami ile giriş yap.",
                 "noAccount": "Bir {osu_base} hesabınız yok mu? Buradan oluşturun"
             }
         }
     },
     "confirmations": {
         "exitGame": {
-            "classic": "Çıkılsın mı? Tüm turları bitirmeden skorun kaydedilmez.",
-            "classicComplete": "Çıkmak istediğinizden emin misiniz? Skorunuz kaydedilecek.",
-            "death": "Oyunu sonlandırmak istediğinizden emin misiniz? En yüksek seriniz kaydedilecek."
+            "classic": "Çıkılsın mı? Tüm turları bitirmeden bu koşu kaydedilmez.",
+            "classicComplete": "Çıkılsın mı? Koşun ve pp'n kaydedilecek.",
+            "death": "Koşu bitirilsin mi? Koşun ve pp'n kaydedilecek."
         }
     },
     "notifications": {

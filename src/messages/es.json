@@ -24,9 +24,9 @@
                 "title": "Partidas jugadas",
                 "description": "Total de partidas completadas"
             },
-            "highScore": {
-                "title": "Puntuación más alta",
-                "description": "La puntuación más alta en una partida actualmente"
+            "profilePp": {
+                "title": "pp más alto",
+                "description": "Mayor pp de una sola partida"
             }
         },
         "supporters": {
@@ -87,8 +87,8 @@
                     "description": "Tienes {seconds} segundos por ronda. Escribe tu respuesta o elige una sugerencia."
                 },
                 "3": {
-                    "title": "Puntos",
-                    "description": "Las respuestas correctas dan puntos. La rapidez y las rachas añaden bonificaciones."
+                    "title": "Consigue puntos y pp",
+                    "description": "Las respuestas correctas dan puntos. Las partidas clasificadas también dan pp según precisión, velocidad, dificultad y consistencia."
                 }
             }
         },
@@ -103,13 +103,18 @@
             "gameInfo": {
                 "length": "Duración de la partida: {rounds} rondas",
                 "time": "Tiempo por ronda: {seconds} segundos"
+            },
+            "pp": {
+                "title": "pp",
+                "description": "Las partidas clasificadas otorgan pp según la precisión, la velocidad de respuesta, la dificultad del contenido y la consistencia. El modo supervivencia también premia las partidas exitosas más largas.",
+                "profile": "El pp del modo combina tus 100 mejores partidas clasificadas, y cada partida inferior pesa un 95 % de la anterior. Las clasificaciones se ordenan por pp del modo."
             }
         },
         "features": {
             "title": "Características",
             "leaderboards": {
                 "title": "Tablas de clasificación",
-                "description": "Compara puntuaciones y rachas por modo de juego."
+                "description": "Clasificaciones por pp del modo, junto con puntuaciones y rachas."
             },
             "autoComplete": {
                 "title": "Autocompletado",
@@ -210,14 +215,15 @@
             "howToPlay": {
                 "title": "Cómo jugar",
                 "classic": {
-                    "rounds": "Completa {count} rondas de adivinanzas",
-                    "time": "Intenta adivinar el título de la canción en {seconds} segundos por ronda",
+                    "rounds": "{count} rondas",
+                    "time": "{seconds} segundos por ronda",
                     "points": "Gana puntos en función de la velocidad y la precisión",
                     "streak": "Consigue una racha para obtener puntos extra"
                 },
                 "death": {
-                    "continuous": "Sigue jugando hasta que cometas un error",
-                    "time": "Intenta adivinar el título de la canción en {seconds} segundos por ronda"
+                    "continuous": "Acierta todos los mapas para completar la partida",
+                    "time": "{seconds} segundos por ronda",
+                    "mistakes": "Puedes cometer 3 errores; el cuarto termina la partida"
                 }
             },
             "scoring": {
@@ -226,12 +232,13 @@
                     "base": "Puntos de base: {points}",
                     "timeBonus": "Bonificación de tiempo: {points} puntos por segundo restante",
                     "streakBonus": "Bonificación por racha: {points} puntos por nivel de racha",
-                    "skipPenalty": "Penalización por omitir: {points} puntos"
+                    "skipPenalty": "Penalización por omitir: {points} puntos",
+                    "pp": "Las partidas clasificadas también dan pp según precisión, velocidad, dificultad y consistencia"
                 },
                 "death": {
-                    "streakOnly": "Solo tu racha importa",
-                    "noPoints": "No se registran puntos en este modo",
-                    "compete": "La clasificación usa tu mejor racha"
+                    "score": "La puntuación arcade usa la misma fórmula de puntos que el modo clásico",
+                    "streakOnly": "El pp depende de la precisión, velocidad, dificultad, consistencia y longitud de la racha",
+                    "compete": "La clasificación usa el pp del modo"
                 }
             },
             "modes": {
@@ -240,13 +247,13 @@
                     "description": "10 rondas"
                 },
                 "death": {
-                    "title": "Modo muerte",
-                    "description": "Una vida"
+                    "title": "Modo supervivencia",
+                    "description": "3 errores permitidos"
                 }
             },
             "warning": {
-                "title": "Guardar puntuaciones",
-                "description": "Completa las {rounds} rondas para guardar tu puntuación. Si sales antes, perderás tu progreso."
+                "title": "Guardar la partida",
+                "description": "Completa las {rounds} rondas para guardar tu pp. Si sales antes, perderás el progreso."
             },
             "actions": {
                 "startGame": "Comenzar el juego",
@@ -259,8 +266,8 @@
                 "description": "10 rondas"
             },
             "death": {
-                "title": "Modo Muerte",
-                "description": "Una vida"
+                "title": "Modo supervivencia",
+                "description": "3 errores permitidos"
             }
         },
         "status": {
@@ -268,9 +275,12 @@
         },
         "input": {
             "placeholder": "Título de la canción...",
+            "skinPlaceholder": "Nombre de la skin...",
+            "skipDeath": "Saltar",
             "title": "Introduce tu suposición:",
+            "yourGuess": "Tu respuesta:",
             "submit": "Enviar",
-            "skip": "Omitir (-50 puntos)"
+            "skip": "Omitir"
         },
         "header": {
             "title": "Adivina el {mode}",
@@ -285,7 +295,8 @@
                     "gameOver": "Se acabó el juego"
                 },
                 "currentStreak": "Racha actual: {count}",
-                "maxStreak": "Racha máxima: {count}"
+                "maxStreak": "Racha máxima: {count}",
+                "mistakes": "Errores: {current}/{limit}"
             },
             "timeLeft": "{seconds}s"
         },
@@ -300,16 +311,19 @@
             "death": {
                 "title": {
                     "died": "¡Se acabó el juego!",
-                    "completed": "Partida completada"
+                    "completed": "Partida completada",
+                    "ended": "Partida terminada"
                 },
                 "maxStreak": "Racha máxima",
                 "totalCorrect": "Aciertos totales",
                 "averageTime": "Tiempo promedio",
-                "diedMessage": "Cometiste un error."
+                "diedMessage": "Cometiste 4 errores.",
+                "mistakes": "Errores"
             },
             "labels": {
                 "averageTime": "Tiempo promedio",
-                "correctGuesses": "Suposiciones correctas"
+                "correctGuesses": "Suposiciones correctas",
+                "runPp": "pp"
             },
             "actions": {
                 "tryAgain": "Inténtalo de nuevo",
@@ -348,7 +362,8 @@
             },
             "variant": {
                 "classic": "Modo clásico",
-                "death": "Modo muerte"
+                "death": "Modo muerte",
+                "survival": "Modo supervivencia"
             }
         },
         "table": {
@@ -357,36 +372,58 @@
             "totalScore": "Puntuación total",
             "gamesPlayed": "Partidas jugadas",
             "hiScore": "Puntuación más alta",
-            "bestStreak": "Mejor racha"
+            "bestStreak": "Mejor racha",
+            "profilePp": "pp",
+            "bestRunPp": "Mejor partida de pp"
         },
         "empty": "No se han encontrado jugadores para este modo de juego.",
-        "loading": "Cargando..."
+        "loading": "Cargando...",
+        "description": "Clasificación por pp del modo seleccionado."
     },
     "user": {
         "profile": {
+            "loadFailed": "No se pudo cargar este perfil",
+            "totalGamesScope": "{count} partidas clasificadas · todos los modos y variantes",
+            "viewOsuProfile": "Ver perfil de osu!",
+            "variantLabel": "Variante de juego",
+            "allModes": "Todos los modos",
+            "modeLabel": "Modo de juego",
+            "runsLabel": "Partidas",
+            "recentScope": "Últimas 24 horas",
+            "showMore": "Mostrar más",
             "stats": {
                 "hiScore": "Puntuación más alta",
                 "totalGames": "Partidas totales",
-                "globalRank": "Clasificación global"
+                "globalRank": "Clasificación global",
+                "profilePp": "pp totales",
+                "playtime": "Tiempo de juego",
+                "rankHistory": "Historial de clasificación"
             },
             "noPlays": "Aún no hay jugadas",
             "gameStats": {
                 "title": "Estadísticas del juego",
-                "totalScore": "Puntuación total",
+                "totalScore": "Puntos totales",
                 "gamesPlayed": "Partidas jugadas",
                 "highestScore": "Puntuación más alta",
                 "bestStreak": "Mejor racha",
                 "lastPlayed": "Última partida",
-                "modeRank": "Clasificación de modo"
+                "modeRank": "Clasificación de modo",
+                "profilePp": "pp",
+                "bestRunPp": "Mejor partida de pp",
+                "guessAccuracy": "Precisión de respuestas",
+                "totalGuesses": "Respuestas totales",
+                "averageCombo": "Combo promedio"
             },
             "topGames": {
-                "title": "Mejores partidas",
+                "title": "Mejores puntuaciones",
                 "points": "{points} puntos",
-                "streak": "{count}x racha"
+                "streak": "{count}x racha",
+                "pp": "{pp} pp",
+                "empty": "Aún no hay partidas con pp"
             },
             "recentGames": {
-                "title": "Partidas recientes",
-                "noGames": "No se ha jugado ninguna partida en las últimas 24 horas"
+                "title": "Puntuaciones recientes",
+                "noGames": "No hay puntuaciones recientes"
             }
         },
         "notFound": {
@@ -561,16 +598,16 @@
         "auth": {
             "required": {
                 "title": "Inicio de sesión obligatorio",
-                "description": "Inicia sesión con Hanami para jugar a {osu_guessr}.",
+                "description": "Inicia sesión con Hanami para continuar.",
                 "noAccount": "¿No tienes una cuenta de {osu_base}? Crea una aquí"
             }
         }
     },
     "confirmations": {
         "exitGame": {
-            "classic": "¿Salir? Tu puntuación no se guardará hasta completar todas las rondas.",
-            "classicComplete": "¿Seguro que quieres salir? Se guardará tu puntuación.",
-            "death": "¿Estás seguro de que quieres terminar tu racha? Tu racha más larga se guardará."
+            "classic": "¿Salir? Esta partida no se guardará hasta completar todas las rondas.",
+            "classicComplete": "¿Salir? Se guardarán tu partida y pp.",
+            "death": "¿Terminar esta partida? Se guardarán la partida y el pp."
         }
     },
     "notifications": {

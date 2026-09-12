@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Headphones, Loader2 } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
 import { MapsetResult } from "../../shared/components/MapsetResult";
 import { useTranslationsContext } from "@/context/translations-provider";
@@ -78,8 +78,9 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo }: Ga
     }, [isRevealed]);
 
     return (
-        <div className="relative overflow-hidden">
-            <div className="p-6">
+        <div className="relative flex min-h-56 flex-col justify-center overflow-hidden md:min-h-72">
+            <div className={isRevealed ? "px-5 pt-4" : "p-5"}>
+                {!isRevealed && <Headphones aria-hidden="true" className="mx-auto mb-5 h-10 w-10 text-primary" />}
                 {isLoading && (
                     <div className="flex justify-center items-center h-[50px] mb-4">
                         <Loader2 className="h-6 w-6 animate-spin" />
@@ -100,7 +101,7 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo }: Ga
                 {!isRevealed && <p className="text-center text-muted-foreground">{t.game.audio.instructions}</p>}
             </div>
             {isRevealed && result && songInfo && (
-                <div className="bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center px-5 pb-5 text-center">
                     <MapsetResult result={result} songInfo={songInfo} />
                 </div>
             )}

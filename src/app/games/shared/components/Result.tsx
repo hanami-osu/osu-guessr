@@ -15,7 +15,7 @@ export const ResultMessage = ({ result }: { result: GameMediaProps["result"] }) 
         case "guess":
             if (result.correct) {
                 message = t.game.result.correct;
-                colorClass = "text-green-500";
+                colorClass = "text-success";
             } else {
                 message = t.game.result.wrong;
                 colorClass = "text-destructive";
@@ -23,7 +23,7 @@ export const ResultMessage = ({ result }: { result: GameMediaProps["result"] }) 
             break;
         case "skip":
             message = t.game.result.skipped;
-            colorClass = "text-yellow-500";
+            colorClass = "text-warning";
             break;
         case "timeout":
             message = t.game.result.timeout;
@@ -32,7 +32,7 @@ export const ResultMessage = ({ result }: { result: GameMediaProps["result"] }) 
     }
 
     return (
-        <div className={`text-2xl font-bold mb-4 ${colorClass}`} role="status" aria-live="polite">
+        <div className={`text-xl font-bold mb-3 ${colorClass}`} role="status" aria-live="polite">
             {message}
         </div>
     );

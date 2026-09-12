@@ -9,12 +9,10 @@ export default function GameImage({ mediaUrl, isRevealed, result, songInfo }: Ga
     const { t } = useTranslationsContext();
 
     return (
-        <div className="relative overflow-hidden">
-            <div className="aspect-video">
-                <Image src={mediaUrl || "/placeholder.svg"} alt={t.game.media.backgroundAlt} fill className="object-cover" />
-            </div>
+        <div className="relative aspect-video max-h-[42dvh] overflow-hidden">
+            <Image src={mediaUrl || "/placeholder.svg"} alt={t.game.media.backgroundAlt} fill className="object-contain" />
             {isRevealed && result && songInfo && (
-                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 p-4 text-center backdrop-blur-sm">
                     <MapsetResult result={result} songInfo={songInfo} />
                 </div>
             )}

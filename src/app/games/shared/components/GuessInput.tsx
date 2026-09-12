@@ -1,20 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useId, useRef } from "react";
+import { GameMode, type GameVariant } from "@/actions/types";
 import { GameClient } from "@/lib/game/client";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { createLatestRequestGate } from "@/lib/latest-request";
 
 interface GuessInputProps {
+    gameMode: GameMode;
+    gameVariant: GameVariant;
     guess: string;
     setGuess: (guess: string) => void;
     isRevealed: boolean;
+    revealedGuess: string;
     isBusy: boolean;
     onGuess: () => void;
     onSkip: () => void;
+    onNextRound: () => void;
+    nextRoundLabel: string;
     gameClient: GameClient;
 }
 
-export default function GuessInput({ guess, setGuess, isRevealed, isBusy, onGuess, onSkip, gameClient }: GuessInputProps) {
+export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isRevealed, revealedGuess, isBusy, onGuess, onSkip, onNextRound, nextRoundLabel, gameClient }: GuessInputProps) {
     const { t } = useTranslationsContext();
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -154,9 +160,29 @@ export default function GuessInput({ guess, setGuess, isRevealed, isBusy, onGues
         }
     };
 
+    if (isRevealed) {
+        return (
+            <div className="motion-fade-up">
+                <h2 className="mb-3 text-base font-semibold tracking-tight lg:text-lg">{t.game.input.yourGuess}</h2>
+                <input
+                    type="text"
+                    value={revealedGuess}
+                    readOnly
+                    aria-label={t.game.input.yourGuess}
+                    className="w-full rounded-md border border-border bg-muted/30 px-3 py-3 text-base text-foreground outline-none lg:py-3.5 lg:text-lg"
+                />
+                <div className="mt-3">
+                    <Button className="h-11 w-full lg:h-12 lg:text-base" onClick={onNextRound} disabled={isBusy}>
+                        {nextRoundLabel}
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="motion-fade-up py-2">
-            <h2 className="text-xl font-semibold mb-4">{t.game.input.title}</h2>
+        <div className="motion-fade-up">
+            <h2 className="mb-3 text-base font-semibold tracking-tight lg:text-lg">{t.game.input.title}</h2>
             <div className="relative">
                 <input
                     type="text"
@@ -172,8 +198,8 @@ export default function GuessInput({ guess, setGuess, isRevealed, isBusy, onGues
                             }
                         });
                     }}
-                    className="w-full p-3 rounded-lg bg-secondary text-foreground border border-border/50 transition-[border-color,box-shadow,background-color,opacity] duration-150 ease-[var(--ease-out-smooth)] focus:outline-none focus:border-primary/55 focus:ring-2 focus:ring-primary focus:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)] disabled:opacity-60"
-                    placeholder={t.game.input.placeholder}
+                    className="w-full rounded-md border border-border bg-background px-3 py-3 text-base text-foreground transition-[border-color,opacity] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 disabled:opacity-60 lg:py-3.5 lg:text-lg"
+                    placeholder={gameMode === GameMode.Skin ? t.game.input.skinPlaceholder : t.game.input.placeholder}
                     disabled={isRevealed || isBusy}
                     role="combobox"
                     aria-label={t.game.input.title}
@@ -184,16 +210,16 @@ export default function GuessInput({ guess, setGuess, isRevealed, isBusy, onGues
                 />
 
                 {showSuggestions && suggestions.length > 0 && (
-                    <div id={listboxId} role="listbox" aria-label={t.game.input.suggestions} className="motion-scale-in absolute w-full mt-1 bg-card border border-border/50 rounded-lg shadow-lg overflow-hidden z-50 origin-top">
-                        <div className="max-h-[300px] overflow-y-auto backdrop-blur-sm">
+                    <div id={listboxId} role="listbox" aria-label={t.game.input.suggestions} className="motion-scale-in absolute z-50 mt-1 w-full origin-top overflow-hidden border border-border/60 bg-background shadow-lg">
+                        <div className="max-h-[min(240px,35dvh)] divide-y divide-border/40 overflow-y-auto backdrop-blur-sm">
                             {suggestions.map((suggestion, index) => (
                                 <div
                                     key={suggestion}
                                     id={`${listboxId}-option-${index}`}
                                     role="option"
                                     aria-selected={index === selectedIndex}
-                                    className={`px-4 py-2 cursor-pointer transition-[background-color,color] duration-150 ease-[var(--ease-out-smooth)]
-                                               ${index === selectedIndex ? "bg-primary/10 text-primary font-medium" : "hover:bg-secondary/50"}`}
+                                    className={`cursor-pointer px-4 py-2.5 transition-[background-color,color] duration-150 ease-smooth
+                                               ${index === selectedIndex ? "bg-primary/10 font-medium text-primary" : "hover:bg-secondary/50"}`}
                                     onMouseDown={() => {
                                         clickingRef.current = true;
                                     }}
@@ -213,15 +239,13 @@ export default function GuessInput({ guess, setGuess, isRevealed, isBusy, onGues
             <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                 {announcement}
             </span>
-            <div className="flex gap-4 mt-4">
-                <Button className="flex-1" onClick={onGuess} disabled={!guess.trim() || isRevealed || isBusy}>
+            <div className="mt-3 flex gap-2">
+                <Button className="h-11 min-w-0 flex-1 lg:h-12 lg:text-base" onClick={onGuess} disabled={!guess.trim() || isBusy}>
                     {t.game.input.submit}
                 </Button>
-                <div className="flex-1">
-                    <Button variant="outline" onClick={onSkip} disabled={isRevealed || isBusy} className="w-full hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors">
-                        {t.game.input.skip}
-                    </Button>
-                </div>
+                <Button variant="ghost" onClick={onSkip} disabled={isBusy} className="h-11 min-w-0 flex-1 border border-border/60 transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive lg:h-12 lg:text-base">
+                    {gameVariant === "survival" ? t.game.input.skipDeath : t.game.input.skip}
+                </Button>
             </div>
         </div>
     );

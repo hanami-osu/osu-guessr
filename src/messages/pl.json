@@ -24,9 +24,9 @@
                 "title": "Rozegrane Gry",
                 "description": "Ilość ukończonych gier"
             },
-            "highScore": {
-                "title": "Najwyższy wynik",
-                "description": "Aktualny najwyższy wynik w jednej grze"
+            "profilePp": {
+                "title": "Najwyższe pp",
+                "description": "Najwyższe pp z jednej rozgrywki"
             }
         },
         "supporters": {
@@ -153,8 +153,8 @@
                     "description": "Masz {seconds} sekund na rundę. Wpisz odpowiedź lub wybierz podpowiedź."
                 },
                 "3": {
-                    "title": "Zdobywaj Punkty",
-                    "description": "Poprawne odpowiedzi dają punkty. Szybkie odpowiedzi i serie dają premie."
+                    "title": "Zdobywaj punkty i pp",
+                    "description": "Poprawne odpowiedzi dają punkty. Rankingowe rozgrywki dają też pp za celność, szybkość, trudność i regularność."
                 }
             }
         },
@@ -169,13 +169,18 @@
             "gameInfo": {
                 "length": "Długość Gry: {rounds} rund",
                 "time": "Czas rundy: {seconds} sekund"
+            },
+            "pp": {
+                "title": "pp",
+                "description": "Rankingowe rozgrywki przyznają pp za celność, szybkość odpowiedzi, trudność zawartości i regularność. Tryb przetrwania dodatkowo nagradza dłuższe udane rozgrywki.",
+                "profile": "pp trybu łączy 100 najlepszych rankingowych rozgrywek, a każda kolejna ma 95% wagi poprzedniej. Rankingi są sortowane według pp trybu."
             }
         },
         "features": {
             "title": "Cechy Gry",
             "leaderboards": {
                 "title": "Rankingi",
-                "description": "Porównuj wyniki i serie według trybu gry."
+                "description": "Ranking według pp trybu, wraz z wynikami i seriami."
             },
             "autoComplete": {
                 "title": "Automatyczne Uzupełnianie",
@@ -276,14 +281,15 @@
             "howToPlay": {
                 "title": "Jak Grać",
                 "classic": {
-                    "rounds": "Ukończ {count} rund zgadywania",
-                    "time": "Spróbuj odgadnąć tytuł piosenki w {seconds} sekund na każdą rundę",
+                    "rounds": "{count} rund",
+                    "time": "{seconds} sekund na rundę",
                     "points": "Zdobywaj punkty na podstawie dokładności i szybkości",
                     "streak": "Zdobądź serię dobrych odpowiedzi aby uzyskać bonusowe punkty"
                 },
                 "death": {
-                    "continuous": "Graj, dopóki nie zrobisz błędu",
-                    "time": "Spróbuj odgadnąć tytuł piosenki w {seconds} sekund na każdą rundę"
+                    "continuous": "Zgadnij poprawnie wszystkie mapy, aby ukończyć grę",
+                    "time": "{seconds} sekund na rundę",
+                    "mistakes": "Możesz popełnić 3 błędy; czwarty kończy grę"
                 }
             },
             "scoring": {
@@ -292,12 +298,13 @@
                     "base": "Punkty Podstawowe: {points} za każdą dobrą odpowiedź",
                     "timeBonus": "Bonus Czasu: {multiplier} × pozostałe sekundy",
                     "streakBonus": "Bonus Za Serię: {bonus} × aktualna seria",
-                    "skipPenalty": "Kara Za Pominięcie: {penalty} punktów"
+                    "skipPenalty": "Kara Za Pominięcie: {penalty} punktów",
+                    "pp": "Rankingowe rozgrywki dają też pp za celność, szybkość, trudność i regularność"
                 },
                 "death": {
-                    "streakOnly": "Liczy się tylko ilość dobrych odpowiedzi z rzędu",
-                    "noPoints": "Punkty nie są liczone w tym trybie",
-                    "compete": "Ranking uwzględnia twoją najdłuższą serię"
+                    "score": "Wynik arcade używa tego samego systemu punktów co tryb klasyczny",
+                    "streakOnly": "pp zależy od celności, szybkości, trudności, regularności i długości serii",
+                    "compete": "Ranking jest ustalany według pp trybu"
                 }
             },
             "modes": {
@@ -306,13 +313,13 @@
                     "description": "10 rund"
                 },
                 "death": {
-                    "title": "Tryb Śmierci",
-                    "description": "Jedno życie"
+                    "title": "Tryb Przetrwania",
+                    "description": "3 błędy dozwolone"
                 }
             },
             "warning": {
-                "title": "Zapisywanie wyników",
-                "description": "Ukończ wszystkie {rounds} rund, aby zapisać wynik. Wcześniejsze wyjście usuwa postęp."
+                "title": "Zapisywanie rozgrywki",
+                "description": "Ukończ wszystkie {rounds} rund, aby zapisać pp. Wcześniejsze wyjście odrzuci postęp."
             },
             "actions": {
                 "startGame": "Rozpocznij Grę",
@@ -325,8 +332,8 @@
                 "description": "10 rund"
             },
             "death": {
-                "title": "Tryb Śmierci",
-                "description": "Jedno życie"
+                "title": "Tryb Przetrwania",
+                "description": "3 błędy dozwolone"
             }
         },
         "status": {
@@ -334,9 +341,12 @@
         },
         "input": {
             "placeholder": "Tytuł piosenki...",
+            "skinPlaceholder": "Nazwa skina...",
+            "skipDeath": "Pomiń",
             "title": "Wpisz odpowiedź:",
+            "yourGuess": "Twój typ:",
             "submit": "Potwierdź",
-            "skip": "Pomiń (-50 punktów)"
+            "skip": "Pomiń"
         },
         "header": {
             "title": "{mode} Guessr",
@@ -351,7 +361,8 @@
                     "gameOver": "Koniec Gry"
                 },
                 "currentStreak": "Aktualna Seria: {count}",
-                "maxStreak": "Największa Seria: {count}"
+                "maxStreak": "Największa Seria: {count}",
+                "mistakes": "Błędy: {current}/{limit}"
             },
             "timeLeft": "{seconds}s"
         },
@@ -366,16 +377,19 @@
             "death": {
                 "title": {
                     "died": "Koniec Gry!",
-                    "completed": "Gra ukończona"
+                    "completed": "Gra ukończona",
+                    "ended": "Gra zakończona"
                 },
                 "maxStreak": "Największa Seria",
                 "totalCorrect": "Ilość Poprawnych Odpowiedzi",
                 "averageTime": "Średni Czas",
-                "diedMessage": "Zrobiłeś/aś błąd."
+                "diedMessage": "Popełniłeś/aś 4 błędy.",
+                "mistakes": "Błędy"
             },
             "labels": {
                 "averageTime": "Średni Czas",
-                "correctGuesses": "Poprawne Odpowiedzi"
+                "correctGuesses": "Poprawne Odpowiedzi",
+                "runPp": "pp"
             },
             "actions": {
                 "tryAgain": "Spróbuj Ponownie",
@@ -414,7 +428,8 @@
             },
             "variant": {
                 "classic": "Tryb Klasyczny",
-                "death": "Tryb Śmierci"
+                "death": "Tryb Śmierci",
+                "survival": "Tryb Przetrwania"
             }
         },
         "table": {
@@ -423,17 +438,32 @@
             "totalScore": "Suma Punktów",
             "gamesPlayed": "Ilość Ukończonych Gier",
             "hiScore": "Najwyższy Wynik",
-            "bestStreak": "Największa Seria"
+            "bestStreak": "Największa Seria",
+            "profilePp": "pp",
+            "bestRunPp": "Najlepsza gra pp"
         },
         "empty": "Nie znaleziono graczy dla tego trybu gry.",
-        "loading": "Ładowanie..."
+        "loading": "Ładowanie...",
+        "description": "Ranking według pp wybranego trybu."
     },
     "user": {
         "profile": {
+            "loadFailed": "Nie udało się wczytać profilu",
+            "totalGamesScope": "{count} gier rankingowych · wszystkie tryby i warianty",
+            "viewOsuProfile": "Zobacz profil osu!",
+            "variantLabel": "Wariant gry",
+            "allModes": "Wszystkie tryby",
+            "modeLabel": "Tryb gry",
+            "runsLabel": "Gry",
+            "recentScope": "Ostatnie 24 godziny",
+            "showMore": "Pokaż więcej",
             "stats": {
                 "hiScore": "Najwyższy Wynik",
                 "totalGames": "Ilość Ukończonych Gier",
-                "globalRank": "Ranking Globalny"
+                "globalRank": "Ranking Globalny",
+                "profilePp": "Łączne pp",
+                "playtime": "Czas gry",
+                "rankHistory": "Historia rankingu"
             },
             "noPlays": "Brak wyników",
             "gameStats": {
@@ -443,16 +473,23 @@
                 "highestScore": "Najwyższy Wynik",
                 "bestStreak": "Największa Seria",
                 "lastPlayed": "Ostatnia Gra",
-                "modeRank": "Ranking Trybu"
+                "modeRank": "Ranking Trybu",
+                "profilePp": "pp",
+                "bestRunPp": "Najlepsza gra pp",
+                "guessAccuracy": "Celność odpowiedzi",
+                "totalGuesses": "Łącznie odpowiedzi",
+                "averageCombo": "Średnie combo"
             },
             "topGames": {
-                "title": "Najlepsze Wyniki",
+                "title": "Najlepsze wyniki",
                 "points": "{points} punktów",
-                "streak": "{count}x seria"
+                "streak": "{count}x seria",
+                "pp": "{pp} pp",
+                "empty": "Brak jeszcze rozgrywek z pp"
             },
             "recentGames": {
-                "title": "Najnowsze Wyniki",
-                "noGames": "Brak wyników przez ostatnie 24 godziny"
+                "title": "Ostatnie wyniki",
+                "noGames": "Brak ostatnich wyników"
             }
         },
         "notFound": {
@@ -627,16 +664,16 @@
         "auth": {
             "required": {
                 "title": "Musisz się zalogować",
-                "description": "Zaloguj się przez Hanami, aby grać w {osu_guessr}.",
+                "description": "Zaloguj się przez Hanami, aby kontynuować.",
                 "noAccount": "Nie masz konta {osu_base}? Stwórz je tutaj."
             }
         }
     },
     "confirmations": {
         "exitGame": {
-            "classic": "Wyjść? Wynik zostanie zapisany dopiero po ukończeniu wszystkich rund.",
-            "classicComplete": "Czy na pewno chcesz wyjść? Twój wynik zostanie zapisany.",
-            "death": "Czy na pewno chcesz zakończyć grę? Twoja największa seria zostanie zapisana."
+            "classic": "Wyjść? Ta rozgrywka zostanie zapisana dopiero po ukończeniu wszystkich rund.",
+            "classicComplete": "Wyjść? Twoja rozgrywka i pp zostaną zapisane.",
+            "death": "Zakończyć tę rozgrywkę? Rozgrywka i pp zostaną zapisane."
         }
     },
     "notifications": {

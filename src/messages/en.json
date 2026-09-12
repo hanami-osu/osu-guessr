@@ -24,9 +24,9 @@
                 "title": "Games Played",
                 "description": "Total games completed"
             },
-            "highScore": {
-                "title": "High Score",
-                "description": "Current highest score in one game"
+            "profilePp": {
+                "title": "Top pp",
+                "description": "Highest pp from a single play"
             }
         },
         "announcements": {
@@ -211,8 +211,8 @@
                     "description": "You have {seconds} seconds per round. Type your answer or select a suggestion."
                 },
                 "3": {
-                    "title": "Score Points",
-                    "description": "Correct answers earn points. Faster answers and streaks add bonuses."
+                    "title": "Score Points and pp",
+                    "description": "Correct answers earn points. Ranked runs also earn pp from accuracy, speed, difficulty, and consistency."
                 }
             }
         },
@@ -227,13 +227,18 @@
             "gameInfo": {
                 "length": "Game Length: {rounds} rounds",
                 "time": "Round Time: {seconds} seconds"
+            },
+            "pp": {
+                "title": "pp",
+                "description": "Ranked runs earn pp from accuracy, response speed, content difficulty, and consistency. Survival mode also rewards longer successful runs.",
+                "profile": "Mode pp combines your 100 strongest ranked runs, with each lower run weighted at 95% of the previous one. Leaderboards rank by mode pp."
             }
         },
         "features": {
             "title": "Features",
             "leaderboards": {
                 "title": "Leaderboards",
-                "description": "Compare scores and streaks by game mode."
+                "description": "Rankings by mode pp, alongside scores and streaks."
             },
             "autoComplete": {
                 "title": "Auto-Complete",
@@ -340,8 +345,9 @@
                     "streak": "Build a streak for bonus points"
                 },
                 "death": {
-                    "continuous": "Keep playing until you make a mistake",
-                    "time": "{seconds} seconds per round"
+                    "continuous": "Guess every map correctly to complete the run",
+                    "time": "{seconds} seconds per round",
+                    "mistakes": "You can make 3 mistakes; the fourth ends the run"
                 }
             },
             "scoring": {
@@ -350,12 +356,13 @@
                     "base": "Base Points: {points}",
                     "timeBonus": "Time Bonus: {points} points per second remaining",
                     "streakBonus": "Streak Bonus: {points} points per streak level",
-                    "skipPenalty": "Skip Penalty: {points} points"
+                    "skipPenalty": "Skip Penalty: {points} points",
+                    "pp": "Ranked runs also earn pp from accuracy, speed, difficulty, and consistency"
                 },
                 "death": {
-                    "streakOnly": "Only your streak count matters",
-                    "noPoints": "Points are not recorded in this mode",
-                    "compete": "The leaderboard ranks your highest streak"
+                    "score": "Arcade score uses the same points formula as Classic Mode",
+                    "streakOnly": "pp depends on accuracy, speed, difficulty, consistency, and streak length",
+                    "compete": "The leaderboard ranks your mode pp"
                 }
             },
             "modes": {
@@ -364,13 +371,13 @@
                     "description": "10 rounds"
                 },
                 "death": {
-                    "title": "Death Mode",
-                    "description": "One life"
+                    "title": "Survival Mode",
+                    "description": "3 mistakes allowed"
                 }
             },
             "warning": {
-                "title": "Saving scores",
-                "description": "Finish all {rounds} rounds to save your score. Leaving early discards your progress."
+                "title": "Saving runs",
+                "description": "Finish all {rounds} rounds to save your pp. Leaving early discards your progress."
             },
             "actions": {
                 "startGame": "Start Game",
@@ -383,8 +390,8 @@
                 "description": "10 rounds"
             },
             "death": {
-                "title": "Death Mode",
-                "description": "One life"
+                "title": "Survival Mode",
+                "description": "3 mistakes allowed"
             }
         },
         "status": {
@@ -392,9 +399,12 @@
         },
         "input": {
             "placeholder": "Song title...",
+            "skinPlaceholder": "Skin name...",
+            "skipDeath": "Skip",
             "title": "Enter your guess:",
+            "yourGuess": "Your guess:",
             "submit": "Submit",
-            "skip": "Skip (-50 points)",
+            "skip": "Skip",
             "suggestions": "Guess suggestions",
             "suggestionsAvailable": "{count} suggestions available.",
             "suggestionSelected": "Selected {suggestion}."
@@ -412,7 +422,8 @@
                     "gameOver": "Game Over"
                 },
                 "currentStreak": "Current Streak: {count}",
-                "maxStreak": "Max Streak: {count}"
+                "maxStreak": "Max Streak: {count}",
+                "mistakes": "Mistakes: {current}/{limit}"
             },
             "timeLeft": "{seconds}s"
         },
@@ -433,11 +444,13 @@
                 "maxStreak": "Maximum Streak",
                 "totalCorrect": "Total Correct",
                 "averageTime": "Average Time",
-                "diedMessage": "You made a mistake."
+                "diedMessage": "You made 4 mistakes.",
+                "mistakes": "Mistakes"
             },
             "labels": {
                 "averageTime": "Average Time",
-                "correctGuesses": "Correct Guesses"
+                "correctGuesses": "Correct Guesses",
+                "runPp": "pp"
             },
             "actions": {
                 "tryAgain": "Try Again",
@@ -499,7 +512,8 @@
             },
             "variant": {
                 "classic": "Classic Mode",
-                "death": "Death Mode"
+                "death": "Death Mode",
+                "survival": "Survival Mode"
             }
         },
         "table": {
@@ -508,36 +522,58 @@
             "totalScore": "Total Score",
             "gamesPlayed": "Games Played",
             "hiScore": "Hi-Score",
-            "bestStreak": "Best Streak"
+            "bestStreak": "Best Streak",
+            "profilePp": "pp",
+            "bestRunPp": "Top pp Play"
         },
         "empty": "No players found for this game mode.",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "description": "Ranked by pp for the selected mode."
     },
     "user": {
         "profile": {
+            "loadFailed": "Unable to load this profile",
+            "totalGamesScope": "{count} ranked games · all modes and variants",
+            "viewOsuProfile": "View osu! profile",
+            "variantLabel": "Game variant",
+            "allModes": "All modes",
+            "modeLabel": "Game mode",
+            "runsLabel": "Runs",
+            "recentScope": "Last 24 hours",
+            "showMore": "Show more",
             "stats": {
                 "hiScore": "Hi-Score",
                 "totalGames": "Total Games",
-                "globalRank": "Global Rank"
+                "globalRank": "Global Rank",
+                "profilePp": "Overall pp",
+                "playtime": "Playtime",
+                "rankHistory": "Rank history"
             },
             "noPlays": "No plays yet",
             "gameStats": {
                 "title": "Game Statistics",
-                "totalScore": "Total Score",
+                "totalScore": "Total Points",
                 "gamesPlayed": "Games Played",
                 "highestScore": "Highest Score",
                 "bestStreak": "Best Streak",
                 "lastPlayed": "Last Played",
-                "modeRank": "Mode Rank"
+                "modeRank": "Mode Rank",
+                "profilePp": "pp",
+                "bestRunPp": "Top pp Play",
+                "guessAccuracy": "Guess Accuracy",
+                "totalGuesses": "Total Guesses",
+                "averageCombo": "Average Combo"
             },
             "topGames": {
-                "title": "Top Games",
+                "title": "Best Scores",
                 "points": "{points} points",
-                "streak": "{count}x streak"
+                "streak": "{count}x streak",
+                "pp": "{pp} pp",
+                "empty": "No pp runs yet"
             },
             "recentGames": {
-                "title": "Recent Games",
-                "noGames": "No games played in the last 24 hours"
+                "title": "Recent Scores",
+                "noGames": "No recent scores"
             }
         },
         "notFound": {
@@ -558,7 +594,12 @@
             "searching": "Searching...",
             "failed": "Search failed. Please try again.",
             "results": "User search results",
-            "resultsFound": "{count} users found"
+            "resultsFound": "{count} users found",
+            "previous": "Previous",
+            "next": "Next",
+            "previousPage": "Previous page",
+            "nextPage": "Next page",
+            "page": "Page {page} of {total}"
         }
     },
     "settings": {
@@ -725,16 +766,16 @@
         "auth": {
             "required": {
                 "title": "Sign in Required",
-                "description": "Sign in with Hanami to play {osu_guessr}.",
+                "description": "Sign in with Hanami to continue.",
                 "noAccount": "Don't have an {osu_base} account? Create one here"
             }
         }
     },
     "confirmations": {
         "exitGame": {
-            "classic": "Exit? Your score will not be saved until you finish all rounds.",
-            "classicComplete": "Exit? Your score will be saved.",
-            "death": "End this run? Your highest streak will be saved."
+            "classic": "Exit? This run will not be saved until you finish all rounds.",
+            "classicComplete": "Exit? Your run and pp will be saved.",
+            "death": "End this run? Your run and pp will be saved."
         }
     },
     "notifications": {

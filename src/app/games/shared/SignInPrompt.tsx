@@ -9,7 +9,7 @@ export default function SignInPrompt() {
     const { t } = useTranslationsContext();
 
     return (
-        <div className="container mx-auto px-4 py-16">
+        <div className="page-container py-16">
             <div className="max-w-2xl mx-auto text-center">
                 <div className="py-8">
                     <h1 className="text-3xl font-bold mb-6">{t.errors.auth.required.title}</h1>
@@ -29,7 +29,7 @@ export default function SignInPrompt() {
                         </Button>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-border/50">
+                    <div className="mt-8 pt-6 border-t border-border/60">
                         <p className="text-sm text-foreground/50">
                             <a href="https://osu.ppy.sh/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                 {t.errors.auth.required.noAccount}
