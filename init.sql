@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     bancho_id INT PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
     avatar_url TEXT NOT NULL,
+    banner_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

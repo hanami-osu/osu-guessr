@@ -3,7 +3,7 @@
 import { Game, GameMode, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "@/actions/types";
 import { GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { ArrowUpRight, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ChevronRight, Clock3 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -66,8 +66,6 @@ export default function UserProfileClient({
         average_streak: 0,
         last_played: modeStats?.last_played ?? null,
     };
-    const currentRank = user.ranks?.modeRanks[currentMode]?.[currentVariant];
-    const previewRankHistory = createRankHistoryPreview(generatedAt, currentRank, rankHistory);
     const formatRank = (rank?: number) => (rank ? `#${rank.toLocaleString(locale)}` : "-");
 
     return (
@@ -106,7 +104,17 @@ export default function UserProfileClient({
                 </div>
 
                 <div className="relative h-40 overflow-hidden sm:h-48 md:h-56">
-                    <Image src="/main_bg.webp" alt="" fill sizes="(min-width: 768px) 1152px, 100vw" priority className="object-cover object-[50%_32%]" />
+                    <Image
+                        src={user.banner_url || "/main_bg.webp"}
+                        alt=""
+                        fill
+                        sizes="(min-width: 768px) 1152px, 100vw"
+                        priority
+                        unoptimized={Boolean(user.banner_url)}
+                        loader={user.banner_url ? ({ src }) => src : undefined}
+                        referrerPolicy="no-referrer"
+                        className={`object-cover ${user.banner_url ? "object-center" : "object-[50%_32%]"}`}
+                    />
                     <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
                 </div>
 
@@ -152,7 +160,7 @@ export default function UserProfileClient({
                                 </dl>
                             </div>
 
-                            <RankHistory title={t.user.profile.stats.rankHistory} points={previewRankHistory} locale={locale} />
+                            <RankHistory title={t.user.profile.stats.rankHistory} points={rankHistory} locale={locale} />
                         </section>
 
                         <div aria-hidden="true" className="hidden bg-border/70 lg:block" />
@@ -173,11 +181,12 @@ export default function UserProfileClient({
                 </div>
             </div>
 
-            <div className="mt-6 space-y-6">
+            <div className="mt-6 rounded-2xl bg-card/70 p-4 shadow-sm sm:p-5">
                 <ScoreSection
                     title={t.user.profile.topGames.title}
                     emptyText={t.user.profile.topGames.empty}
                     games={bestScores}
+                    kind="top"
                     variant={currentVariant}
                     locale={locale}
                     pointsTemplate={t.user.profile.topGames.points}
@@ -185,10 +194,12 @@ export default function UserProfileClient({
                     ppTemplate={t.user.profile.topGames.pp}
                     showMoreText={t.user.profile.showMore}
                 />
+                <div aria-hidden="true" className="my-6 h-px bg-border/60" />
                 <ScoreSection
                     title={`${t.user.profile.recentGames.title} (24h)`}
                     emptyText={t.user.profile.recentGames.noGames}
                     games={recentScores}
+                    kind="recent"
                     variant={currentVariant}
                     locale={locale}
                     pointsTemplate={t.user.profile.topGames.points}
@@ -207,6 +218,7 @@ interface ScoreSectionProps {
     title: string;
     emptyText: string;
     games: Game[];
+    kind: "top" | "recent";
     variant: GameVariant;
     locale: string;
     pointsTemplate: string;
@@ -217,23 +229,28 @@ interface ScoreSectionProps {
     generatedAt?: string;
 }
 
-function ScoreSection({ title, emptyText, games, locale, pointsTemplate, streakTemplate, ppTemplate, showMoreText, relativeDates = false, generatedAt }: ScoreSectionProps) {
+function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTemplate, streakTemplate, ppTemplate, showMoreText, relativeDates = false, generatedAt }: ScoreSectionProps) {
     const [expanded, setExpanded] = useState(false);
     const visibleGames = expanded ? games : games.slice(0, 5);
+    const isTopSection = kind === "top";
 
     return (
-        <section aria-label={title} className="overflow-hidden rounded-2xl bg-card/70 px-5 pb-3 sm:px-7 sm:pb-4 md:px-9">
-            <div className="flex items-center justify-between gap-4 border-b border-border/60 py-5">
-                <h2 className="text-base font-semibold tracking-tight text-foreground">{title}</h2>
-                <span className="text-xs tabular-nums text-muted-foreground">{games.length.toLocaleString(locale)}</span>
+        <section aria-label={title}>
+            <div className="mb-3 flex items-center gap-2 px-1">
+                <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                <h2 className="truncate text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">{games.length.toLocaleString(locale)}</span>
             </div>
 
             {games.length > 0 ? (
                 <>
-                    <div className="-mx-3 divide-y divide-border/40 sm:-mx-4">
+                    <div className="space-y-1.5">
                         {visibleGames.map((game, index) => {
                             const endedAt = new Date(game.ended_at);
-                            const scoreText = pointsTemplate.replace("{points}", game.points.toLocaleString(locale));
+                            const isLegacyDeath = variant === "survival" && game.variant === "death" && game.ruleset_version === 0 && game.pp_version === 0;
+                            const scoreText = isLegacyDeath
+                                ? streakTemplate.replace("{count}", game.streak.toLocaleString(locale))
+                                : pointsTemplate.replace("{points}", game.points.toLocaleString(locale));
                             const detailText = streakTemplate.replace("{count}", game.streak.toLocaleString(locale));
                             const dateText = relativeDates && generatedAt ? formatHoursAgo(endedAt, new Date(generatedAt)) : endedAt.toLocaleDateString(locale, { dateStyle: "medium" });
                             const fullDateText = endedAt.toLocaleString(locale, { dateStyle: "full", timeStyle: "long" });
@@ -244,29 +261,37 @@ function ScoreSection({ title, emptyText, games, locale, pointsTemplate, streakT
                                 <Link
                                     key={`${game.ended_at.toString()}-${index}`}
                                     href={`/scores/${game.id}`}
-                                    className="group grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 sm:grid-cols-[2rem_minmax(0,1fr)_auto] sm:gap-5 sm:px-4"
+                                    className="group grid min-h-14 grid-cols-[3.25rem_minmax(0,1fr)_6.75rem] items-stretch overflow-hidden rounded-xl bg-muted/55 ring-1 ring-inset ring-border/35 transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:bg-muted/75 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_6rem_6.75rem]"
                                 >
-                                    <div className="text-xs tabular-nums text-muted-foreground">#{index + 1}</div>
+                                    <div className={`flex items-center justify-center border-r border-border/35 ${isTopSection && index < 3 ? "bg-primary/15 text-primary" : "bg-background/15 text-muted-foreground"}`}>
+                                        {isTopSection ? <span className="text-sm font-bold tabular-nums">#{index + 1}</span> : <Clock3 aria-hidden="true" className="size-4" />}
+                                    </div>
 
-                                    <div className="min-w-0">
-                                        <div className="truncate text-sm font-medium text-foreground sm:text-base">{scoreText}</div>
-                                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                                            <span className="truncate">{detailText}</span>
-                                            <span aria-hidden="true">·</span>
+                                    <div className="min-w-0 self-center px-3 py-2 sm:px-4">
+                                        <div className="truncate text-sm font-semibold text-foreground">{scoreText}</div>
+                                        <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                                            <span className="truncate sm:hidden">{!isLegacyDeath ? detailText : ppText}</span>
+                                            {!isLegacyDeath && <span aria-hidden="true" className="sm:hidden">·</span>}
                                             <time dateTime={endedAt.toISOString()} title={fullDateText} className="shrink-0 cursor-help">
                                                 {dateText}
                                             </time>
                                         </div>
                                     </div>
 
-                                    <div className="flex shrink-0 items-center gap-2.5 text-right">
-                                        <div
-                                            title={hasPp ? undefined : "pp was not recorded for this legacy score"}
-                                            className={`text-sm font-semibold tabular-nums sm:text-base ${hasPp ? "text-foreground" : "text-muted-foreground"}`}
-                                        >
+                                    <div className="hidden items-center justify-center border-l border-border/35 bg-background/10 px-2 text-center sm:flex">
+                                        {!isLegacyDeath && (
+                                            <div>
+                                                <div className="text-xs font-semibold tabular-nums text-foreground">{game.streak.toLocaleString(locale)}x</div>
+                                                <div className="text-[10px] text-muted-foreground">streak</div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="relative flex items-center justify-center border-l border-primary/10 bg-primary/[0.08] px-2 text-center">
+                                        <div title={hasPp ? undefined : "pp was not recorded for this legacy score"} className={`text-sm font-bold tabular-nums ${hasPp ? "text-primary" : "text-muted-foreground"}`}>
                                             {ppText}
                                         </div>
-                                        <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground/45 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary" />
+                                        <ChevronRight aria-hidden="true" className="absolute right-2 size-4 text-primary/45 transition-transform group-hover:translate-x-0.5" />
                                     </div>
                                 </Link>
                             );
@@ -277,7 +302,7 @@ function ScoreSection({ title, emptyText, games, locale, pointsTemplate, streakT
                         <button
                             type="button"
                             onClick={() => setExpanded(true)}
-                            className="flex w-full items-center justify-center gap-2 border-t border-border/60 py-4 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/25 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2"
+                            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-muted/35 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
                         >
                             {showMoreText}
                             <ChevronDown aria-hidden="true" className="size-3.5" />
@@ -285,7 +310,7 @@ function ScoreSection({ title, emptyText, games, locale, pointsTemplate, streakT
                     )}
                 </>
             ) : (
-                <div className="py-8 text-sm text-muted-foreground">{emptyText}</div>
+                <div className="rounded-xl bg-muted/35 px-4 py-6 text-sm text-muted-foreground">{emptyText}</div>
             )}
         </section>
     );
@@ -313,32 +338,6 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
             <dd className="text-right font-semibold tabular-nums text-foreground">{value}</dd>
         </>
     );
-}
-
-function createRankHistoryPreview(generatedAt: string, currentRank: number | undefined, realPoints: UserRankHistoryPoint[]): UserRankHistoryPoint[] {
-    const end = new Date(generatedAt);
-    end.setUTCHours(23, 59, 59, 999);
-    const finalRank = Math.max(1, currentRank ?? 1);
-    const realRanksByDay = new Map(
-        realPoints.map((point) => {
-            const date = new Date(point.recorded_at);
-            return [Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()), point.rank] as const;
-        }),
-    );
-
-    return Array.from({ length: 60 }, (_, index) => {
-        const daysAgo = 59 - index;
-        const trend = daysAgo * 0.28;
-        const variation = Math.sin(index * 0.55) * 2.4 + Math.sin(index * 0.19) * 1.6;
-        const recordedAt = new Date(end.getTime() - daysAgo * 86_400_000);
-        const day = Date.UTC(recordedAt.getUTCFullYear(), recordedAt.getUTCMonth(), recordedAt.getUTCDate());
-        const fakeRank = index === 59 ? finalRank : Math.max(finalRank, finalRank + Math.round(trend + variation + 2));
-
-        return {
-            rank: realRanksByDay.get(day) ?? fakeRank,
-            recorded_at: recordedAt,
-        };
-    });
 }
 
 function RankHistory({ title, points, locale }: { title: string; points: UserRankHistoryPoint[]; locale: string }) {

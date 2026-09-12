@@ -26,9 +26,9 @@ export default function GameModeCards() {
     };
 
     return (
-        <section className="scroll-mt-24 py-10 md:py-12" id="gamemodes">
+        <section className="scroll-mt-24 py-6 md:py-8" id="gamemodes">
             <div className="page-container">
-                <h2 className="mb-6 text-2xl font-bold tracking-tight text-foreground">{t.gameModes.title}</h2>
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.gameModes.title}</h2>
 
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
                     {GAME_MODES.map((mode) => (
@@ -39,13 +39,13 @@ export default function GameModeCards() {
                             onClick={() => {
                                 openedFromCard.current = true;
                             }}
-                            className="group block border-t border-border pt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+                            className="group block overflow-hidden rounded-xl bg-muted/35 ring-1 ring-inset ring-border/35 transition-colors hover:bg-muted/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
                         >
-                            <div className="relative aspect-[16/9] overflow-hidden rounded-lg bg-card">
+                            <div className="relative aspect-[16/9] overflow-hidden bg-card">
                                 <Image src={mode.image || "/placeholder.svg"} alt="" fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover opacity-85 transition-[opacity,transform] duration-200 group-hover:scale-[1.015] group-hover:opacity-100" />
                             </div>
-                            <div className="pt-4">
-                                <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">{t.gameModes.modes[mode.id].title}</h3>
+                            <div className="p-4">
+                                <h3 className="mb-1 text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{t.gameModes.modes[mode.id].title}</h3>
                                 <p className="text-foreground/70 text-sm leading-relaxed">{t.gameModes.modes[mode.id].description}</p>
                             </div>
                         </Link>
@@ -55,7 +55,7 @@ export default function GameModeCards() {
 
             <Dialog open={!!selectedGame} onOpenChange={(open) => !open && closeGameModal()}>
                 {selectedGame && (
-                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto p-0 sm:max-w-4xl">
+                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl border-border/50 bg-card p-0 sm:max-w-4xl">
                         <DialogTitle className="sr-only">{t.game.preGame.title[selectedGame.id]}</DialogTitle>
                         <PreGameMenu
                             gameMode={selectedGame.id}

@@ -3,12 +3,13 @@ import { auth } from "@/lib/auth";
 import SignInPrompt from "../games/shared/SignInPrompt";
 import SettingsClient from "./SettingsClient";
 import { listApiKeysAction } from "@/actions/api-keys-server";
+import { getProfileBannerAction } from "@/actions/user-server";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Settings",
-    description: "Manage your osu!guessr API keys.",
+    description: "Manage osu!guessr preferences, account options, privacy, and API keys.",
     robots: { index: false, follow: false },
 };
 
@@ -20,10 +21,10 @@ export default async function SettingsPage() {
     }
 
     try {
-        const apiKeys = await listApiKeysAction();
-        return <SettingsClient initialApiKeys={apiKeys} />;
+        const [apiKeys, bannerUrl] = await Promise.all([listApiKeysAction(), getProfileBannerAction()]);
+        return <SettingsClient initialApiKeys={apiKeys} initialBannerUrl={bannerUrl} />;
     } catch (error) {
         console.error("Failed to load API keys:", error);
-        return <SettingsClient initialApiKeys={[]} initialLoadError />;
+        return <SettingsClient initialApiKeys={[]} initialBannerUrl={null} initialLoadError />;
     }
 }

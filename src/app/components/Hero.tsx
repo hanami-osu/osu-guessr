@@ -28,32 +28,32 @@ export default function Hero() {
 
             <div className="page-container relative z-10 py-14 sm:py-20 lg:py-24">
                 <div className="max-w-3xl">
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-5 leading-tight">
+                    <h1 className="text-3xl font-semibold tracking-tight mb-4 leading-tight sm:text-4xl lg:text-5xl">
                         {titleParts[0]}
                         <span className="text-primary">osu!guessr</span>
                         {titleParts[1]}
                     </h1>
 
-                    <p className="max-w-xl text-base sm:text-lg text-foreground/75 mb-8 leading-relaxed">{t.home.hero.subtitle}</p>
+                    <p className="max-w-xl text-sm sm:text-base text-muted-foreground mb-6 leading-relaxed">{t.home.hero.subtitle}</p>
 
                     <div className="flex flex-col sm:flex-row gap-3">
                         {session ? (
-                            <Button size="lg" onClick={scrollToGamemodes} className="text-base sm:text-lg px-8 w-full sm:w-auto">
+                            <Button size="lg" onClick={scrollToGamemodes} className="text-sm px-6 w-full sm:w-auto">
                                 {t.home.hero.startPlaying}
                             </Button>
                         ) : (
-                            <Button size="lg" onClick={() => signIn("hanami")} className="text-base sm:text-lg px-8 w-full sm:w-auto">
+                            <Button size="lg" onClick={() => signIn("hanami")} className="text-sm px-6 w-full sm:w-auto">
                                 {t.home.hero.signIn}
                             </Button>
                         )}
-                        <Button asChild variant="outline" size="lg" className="text-base sm:text-lg px-8 w-full sm:w-auto bg-background/60">
+                        <Button asChild variant="outline" size="lg" className="text-sm px-6 w-full sm:w-auto bg-background/60">
                             <Link href="/about">{t.home.hero.learnMore}</Link>
                         </Button>
                     </div>
                 </div>
             </div>
 
-            <div className="relative z-10 w-full border-t border-border/60 bg-background/65 px-4 py-3 backdrop-blur-sm">
+            <div className="relative z-10 w-full border-t border-border/60 bg-background/65 py-3 backdrop-blur-sm">
                 <div className="page-container flex flex-col sm:flex-row justify-between items-center gap-3 text-xs sm:text-sm">
                     <Link href={"https://twitter.com/Akariimia"} target="_blank" className="subtle-link text-foreground/65 hover:text-primary transition-colors">
                         {t.home.hero.artCredit}

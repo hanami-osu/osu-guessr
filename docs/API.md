@@ -23,6 +23,7 @@ GET /api/users/{userId}
         bancho_id: number;
         username: string;
         avatar_url: string;
+        banner_url: string | null;
         created_at: string;
         badges: Array<{
             name: string;
@@ -33,22 +34,30 @@ GET /api/users/{userId}
             user_id: number;
             game_mode: "background" | "audio" | "skin";
             variant: "classic" | "survival" | "death";
+            ruleset_version: number;
+            pp_version: number;
             total_score: number;
             games_played: number;
+            rounds_played: number;
+            total_correct: number;
+            total_skips: number;
+            total_timeouts: number;
+            total_response_time_ms: number;
             highest_streak: number;
             highest_score: number;
+            best_run_pp: number;
+            profile_pp: number;
             last_played: string;
         }>;
         ranks: {
             globalRank?: {
                 classic?: number;
                 survival?: number;
-                death?: number;
             };
             modeRanks: {
-                background: { classic?: number; survival?: number; death?: number };
-                audio: { classic?: number; survival?: number; death?: number };
-                skin: { classic?: number; survival?: number; death?: number };
+                background: { classic?: number; survival?: number };
+                audio: { classic?: number; survival?: number };
+                skin: { classic?: number; survival?: number };
             };
         };
     };
@@ -74,11 +83,15 @@ Query parameters:
 {
     success: true;
     data: Array<{
+        id: string;
         user_id: number;
         game_mode: "background" | "audio" | "skin";
         points: number;
         streak: number;
         variant: "classic" | "survival" | "death";
+        ruleset_version: number;
+        pp_version: number;
+        pp: number;
         ended_at: string;
     }>;
     meta: {
@@ -107,10 +120,19 @@ Query parameters:
         user_id: number;
         game_mode: "background" | "audio" | "skin";
         variant: "classic" | "survival" | "death";
+        ruleset_version: number;
+        pp_version: number;
         total_score: number;
         games_played: number;
+        rounds_played: number;
+        total_correct: number;
+        total_skips: number;
+        total_timeouts: number;
+        total_response_time_ms: number;
         highest_streak: number;
         highest_score: number;
+        best_run_pp: number;
+        profile_pp: number;
         last_played: string;
     }>;
 }
@@ -136,6 +158,7 @@ Query parameters:
         bancho_id: number;
         username: string;
         avatar_url: string;
+        banner_url: string | null;
         created_at: string;
     }>;
 }
@@ -160,12 +183,15 @@ Query parameters:
         bancho_id: number;
         username: string;
         avatar_url: string;
+        banner_url: string | null;
         created_at: string;
         total_score: number;
         games_played: number;
         highest_streak: number;
         highest_score: number;
-        earliest_ended_at: string;
+        best_run_pp: number;
+        profile_pp: number;
+        last_played: string;
         badges: Array<{
             name: string;
             color: string;
@@ -191,6 +217,7 @@ Query parameters:
     success: true;
     data: {
         highest_points: number;
+        highest_run_pp: number;
         total_games: number;
         total_users: number;
     };

@@ -92,6 +92,7 @@ export interface User {
     bancho_id: number;
     username: string;
     avatar_url: string;
+    banner_url: string | null;
     badges: Array<UserBadge>;
     created_at: Date;
 }

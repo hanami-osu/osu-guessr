@@ -14,7 +14,7 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
     return (
         <div className="page-container">
             <div className="border-t border-border pt-6">
-                <h2 className="mb-5 text-2xl font-bold">{t.home.updates.title}</h2>
+                <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight mb-3"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.home.updates.title}</h2>
 
                 <div className="max-h-[420px] space-y-5 overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
                     {sortedChangelogs.map((log, i) => (

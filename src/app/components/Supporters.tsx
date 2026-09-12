@@ -10,7 +10,7 @@ export function SupportersSection() {
     return (
         <div className="page-container">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-center text-2xl font-bold">{t.home.supporters.title}</h2>
+                <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight mb-3"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.home.supporters.title}</h2>
                 <SupportPageLink />
             </div>
 

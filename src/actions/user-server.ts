@@ -6,6 +6,7 @@ import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { calculateProfilePp } from "@/lib/game/performance-points";
 import { hasPlayedGame } from "@/lib/user-stats";
+import { authenticatedAction } from "./server";
 import { z } from "zod";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
 
@@ -17,6 +18,35 @@ const searchSchema = z.object({
     limit: z.number().min(1).max(100).default(10),
     offset: z.number().int().min(0).default(0),
 });
+const profileBannerSchema = z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((value) => {
+        if (value.length === 0) return true;
+
+        try {
+            const url = new URL(value);
+            return url.protocol === "https:" && !url.username && !url.password;
+        } catch {
+            return false;
+        }
+    }, "Banner must be a valid HTTPS image URL");
+
+function getProfileHistoryVariantWhere(variant: GameVariant) {
+    if (variant !== "survival") return { variant };
+
+    return {
+        OR: [
+            { variant: "survival" as const },
+            {
+                variant: "death" as const,
+                rulesetVersion: 0,
+                ppVersion: 0,
+            },
+        ],
+    };
+}
 
 type UserRow = Awaited<ReturnType<typeof prisma.user.findFirstOrThrow>>;
 type AchievementRow = Awaited<ReturnType<typeof prisma.userAchievement.findFirstOrThrow>>;
@@ -27,9 +57,35 @@ function mapUser(user: UserRow, badges: UserBadge[] = []): User {
         bancho_id: user.banchoId,
         username: user.username,
         avatar_url: user.avatarUrl,
+        banner_url: user.bannerUrl,
         created_at: user.createdAt,
         badges,
     };
+}
+
+export async function getProfileBannerAction(): Promise<string | null> {
+    return authenticatedAction(async (session) => {
+        const user = await prisma.user.findUnique({
+            where: { banchoId: session.user.banchoId },
+            select: { bannerUrl: true },
+        });
+
+        return user?.bannerUrl ?? null;
+    });
+}
+
+export async function updateProfileBannerAction(value: string): Promise<string | null> {
+    return authenticatedAction(async (session) => {
+        const validated = profileBannerSchema.parse(value);
+        const bannerUrl = validated.length > 0 ? validated : null;
+
+        await prisma.user.update({
+            where: { banchoId: session.user.banchoId },
+            data: { bannerUrl },
+        });
+
+        return bannerUrl;
+    });
 }
 
 function mapAchievement(achievement: AchievementRow): UserAchievement {
@@ -201,7 +257,7 @@ export async function getUserLatestGamesAction(
     const rows = await prisma.game.findMany({
         where: {
             userId: banchoId,
-            variant: validatedVariant,
+            ...getProfileHistoryVariantWhere(validatedVariant),
             ranked: true,
             ...(endedAfter ? { endedAt: { gte: endedAfter } } : {}),
             ...(validatedMode ? { gameMode: validatedMode } : {}),
@@ -218,7 +274,7 @@ export async function getUserGamesCountAction(banchoId: number, gameMode?: GameM
     return prisma.game.count({
         where: {
             userId: banchoId,
-            variant: validatedVariant,
+            ...getProfileHistoryVariantWhere(validatedVariant),
             ranked: true,
             ...(validatedMode ? { gameMode: validatedMode } : {}),
         },
@@ -232,7 +288,7 @@ export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode:
         where: {
             userId: banchoId,
             gameMode: validatedMode,
-            variant: validatedVariant,
+            ...getProfileHistoryVariantWhere(validatedVariant),
             ranked: true,
         },
         _count: { _all: true },
@@ -374,11 +430,11 @@ export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMod
     const rows = await prisma.game.findMany({
         where: {
             userId: banchoId,
-            variant: validated.variant,
+            ...getProfileHistoryVariantWhere(validated.variant),
             ranked: true,
             ...(validatedMode ? { gameMode: validatedMode } : {}),
         },
-        orderBy: [{ pp: "desc" }, { endedAt: "desc" }],
+        orderBy: [{ pp: "desc" }, { streak: "desc" }, { endedAt: "desc" }],
         take: validated.limit,
     });
     return rows.map(mapGame);
@@ -475,7 +531,7 @@ export async function getHighestStatsAction(variant: GameVariant = "classic"): P
     return {
         total_users: totalUsers,
         total_games: totalGames,
-        highest_points: validatedVariant === "classic" ? maxima._max.points ?? 0 : maxima._max.streak ?? 0,
+        highest_points: maxima._max.points ?? 0,
         highest_run_pp: Number(maxima._max.pp ?? 0),
     };
 }

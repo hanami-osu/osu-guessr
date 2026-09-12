@@ -68,6 +68,7 @@ model User {
   banchoId  Int      @id @map("bancho_id")
   username  String   @db.VarChar(255)
   avatarUrl String   @map("avatar_url") @db.Text
+  bannerUrl String?  @map("banner_url") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@index([username], map: "idx_username")

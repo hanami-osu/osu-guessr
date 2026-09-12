@@ -23,11 +23,11 @@ export default async function Home() {
             <GameModeCards />
             <HomeAnnouncementsSection latestAnnouncement={announcements[0] ?? null} />
             <HomeStatsSection highStats={highStats} />
-            <section className="bg-muted/30 py-12">
+            <section className="bg-muted/30 py-6">
                 <SupportersSection />
             </section>
             {changelogs.length > 0 && (
-                <section className="py-12">
+                <section className="py-6">
                     <ChangelogsSection changelogs={changelogs} />
                 </section>
             )}

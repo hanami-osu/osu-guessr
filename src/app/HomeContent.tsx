@@ -30,10 +30,10 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
     const { t, locale } = useTranslationsContext();
 
     return (
-        <section className="pb-10 pt-2">
+        <section className="pb-6 pt-2">
             <div className="page-container">
-                <h2 className="text-2xl font-bold tracking-tight mb-6">{t.home.statistics.title}</h2>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
+                <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight mb-3"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.home.statistics.title}</h2>
+                <div className="grid grid-cols-1 divide-y divide-border/60 rounded-xl bg-muted/35 md:grid-cols-3 md:divide-x md:divide-y-0">
                     <div>
                         <StatsCard
                             title={t.home.statistics.totalPlayers.title}
@@ -72,10 +72,10 @@ export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeConten
     const preview = latestAnnouncement.content.length > 180 ? `${latestAnnouncement.content.slice(0, 180).trimEnd()}…` : latestAnnouncement.content;
 
     return (
-        <section className="py-10 md:py-12">
+        <section className="py-6">
             <div className="page-container">
                 <div className="mb-5 flex items-center justify-between gap-4">
-                    <h2 className="text-2xl font-bold tracking-tight">{t.home.announcements.title}</h2>
+                    <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.home.announcements.title}</h2>
                     <Link href="/announcements" className="subtle-link shrink-0 text-sm text-foreground/65 transition-colors hover:text-primary">
                         {t.home.announcements.viewAll}
                     </Link>
@@ -83,7 +83,7 @@ export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeConten
 
                 <Link
                     href="/announcements"
-                    className="group grid gap-5 border-y border-border py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                    className="group grid gap-5 rounded-xl bg-muted/45 p-4 ring-1 ring-inset ring-border/35 transition-colors hover:bg-muted/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                 >
                     <div className="min-w-0">
                         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
@@ -92,8 +92,8 @@ export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeConten
                                 {new Date(latestAnnouncement.created_at).toLocaleDateString(locale, { timeZone: "UTC" })}
                             </time>
                         </div>
-                        <h3 className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-xl">{latestAnnouncement.title}</h3>
-                        <p className="mt-2 max-w-4xl whitespace-pre-line text-sm leading-relaxed text-foreground/65 sm:text-base">{preview}</p>
+                        <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{latestAnnouncement.title}</h3>
+                        <p className="mt-2 max-w-4xl whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{preview}</p>
                     </div>
                     <ArrowRight className="hidden h-5 w-5 text-muted-foreground transition-[color,transform] duration-150 group-hover:translate-x-1 group-hover:text-primary sm:block" aria-hidden="true" />
                 </Link>
