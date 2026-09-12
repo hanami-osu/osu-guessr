@@ -5,9 +5,10 @@ import React, { useEffect, useRef } from "react";
 type AdSlotProps = {
     adSlot?: string;
     adClient?: string;
+    compact?: boolean;
 };
 
-export default function AdSlot({ adSlot, adClient }: AdSlotProps) {
+export default function AdSlot({ adSlot, adClient, compact = false }: AdSlotProps) {
     const ref = useRef<HTMLDivElement | null>(null);
 
     const client = adClient ?? process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-3511683752810096";
@@ -50,8 +51,8 @@ export default function AdSlot({ adSlot, adClient }: AdSlotProps) {
     }
 
     return (
-        <div className="my-4 flex justify-center" ref={ref} role="complementary" aria-label="Advertisement">
-            <ins className="adsbygoogle" style={{ display: "block" }} data-ad-client={client} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true" />
+        <div className={compact ? "flex min-h-12 justify-center py-3" : "my-4 flex justify-center"} ref={ref} role="complementary" aria-label="Advertisement">
+            <ins className="adsbygoogle w-full" style={{ display: "block" }} data-ad-client={client} data-ad-slot={slot} data-ad-format={compact ? "horizontal" : "auto"} data-full-width-responsive="true" />
         </div>
     );
 }

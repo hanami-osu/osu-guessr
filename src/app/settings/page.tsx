@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Settings",
-    description: "Manage your API keys and account settings",
+    description: "Manage your osu!guessr API keys.",
+    robots: { index: false, follow: false },
 };
 
 export default async function SettingsPage() {

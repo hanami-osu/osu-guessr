@@ -1,52 +1,58 @@
 "use client";
 
 import { useTranslationsContext } from "@/context/translations-provider";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Coffee, AlertCircle } from "lucide-react";
+import { ArrowUpRight, Check, Coffee, Info } from "lucide-react";
 
 export function SupportPageContent() {
     const { t } = useTranslationsContext();
+    const benefits = Object.values(t.support.benefits.items);
 
     return (
-        <div className="container mx-auto px-4 py-8 md:py-10">
-            <div className="mx-auto flex max-w-xl flex-col gap-7">
-                <div className="text-center flex flex-col gap-3">
-                    <h1 className="text-3xl font-bold">{t.support.title}</h1>
-                    <p className="text-base leading-relaxed text-muted-foreground">{t.support.description}</p>
-                </div>
+        <div className="page-container py-10 md:py-14 lg:py-16">
+            <header className="max-w-3xl">
+                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t.support.title}</h1>
+                <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">{t.support.description}</p>
+            </header>
 
-                <section className="flex flex-col gap-4 border-t border-border/60 pt-6">
-                    <h2 className="text-xl font-bold">{t.support.benefits.title}</h2>
-                    <ul className="flex flex-col gap-2">
-                        {Object.values(t.support.benefits.items).map((benefit, index) => (
-                            <li key={index} className="flex items-center gap-2.5 text-sm text-foreground">
-                                <span>•</span>
-                                <span>{benefit}</span>
-                            </li>
+            <div className="mt-10 grid border-t border-border/60 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:divide-x lg:divide-border/60">
+                <section className="py-8 lg:pr-10 lg:py-10">
+                    <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{t.support.benefits.title}</h2>
+
+                    <div className="mt-6 divide-y divide-border/60 border-y border-border/60">
+                        {benefits.map((benefit, index) => (
+                            <div key={index} className="flex items-start gap-3 py-4 sm:py-5">
+                                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                                    <Check className="size-3.5" strokeWidth={2.5} />
+                                </span>
+                                <p className="text-sm font-medium leading-relaxed sm:text-base">{benefit}</p>
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 </section>
 
-                <section className="flex flex-col gap-4">
-                    <h2 className="text-xl font-bold">{t.support.donate.title}</h2>
-                    <Alert className="border-yellow-500/50 bg-yellow-500/10 text-foreground [&>svg]:text-yellow-500">
-                        <AlertCircle />
-                        <AlertDescription>{t.support.donate.reminder}</AlertDescription>
-                    </Alert>
-                    <a
-                        href="https://www.buymeacoffee.com/yorunoken"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-                    >
-                        <div className="mb-3 flex items-center gap-3">
-                            <Coffee className="h-5 w-5 text-primary" />
-                            <span className="text-lg font-medium">{t.support.donate.button}</span>
-                        </div>
-                        <p className="mb-4 text-sm leading-relaxed text-muted-foreground">{t.support.donate.description}</p>
-                        <Button className="w-full bg-primary hover:bg-primary/90">{t.support.donate.button}</Button>
-                    </a>
+                <section className="py-8 lg:py-10 lg:pl-10">
+                    <div className="flex items-center gap-3 text-primary">
+                        <Coffee className="size-6" />
+                        <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t.support.donate.title}</h2>
+                    </div>
+
+                    <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">{t.support.donate.description}</p>
+
+                    <div className="mt-6 flex items-start gap-3 border-l-2 border-primary/60 pl-4 text-sm leading-relaxed text-muted-foreground">
+                        <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <p>{t.support.donate.reminder}</p>
+                    </div>
+
+                    <Button asChild size="lg" className="mt-8 w-full justify-between px-5 text-base sm:w-auto sm:min-w-72">
+                        <a href="https://www.buymeacoffee.com/yorunoken" target="_blank" rel="noopener noreferrer">
+                            <span className="flex items-center gap-2">
+                                <Coffee className="size-4" />
+                                {t.support.donate.button}
+                            </span>
+                            <ArrowUpRight className="size-4" />
+                        </a>
+                    </Button>
                 </section>
             </div>
         </div>

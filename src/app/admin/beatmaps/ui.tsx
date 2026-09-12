@@ -145,7 +145,7 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
     const allSelected = mapsets.length > 0 && mapsets.every((mapset) => selected[mapset.mapset_id]);
 
     return (
-        <div className="container mx-auto max-w-6xl px-4 py-6 md:py-10">
+        <div className="page-container py-6 md:py-10">
             <header className="flex flex-col gap-5 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <Button asChild variant="ghost" size="sm" className="mb-3 -ml-3 text-muted-foreground">

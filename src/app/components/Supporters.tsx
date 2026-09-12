@@ -8,7 +8,7 @@ export function SupportersSection() {
     const { t } = useTranslationsContext();
 
     return (
-        <div className="container mx-auto max-w-6xl px-4">
+        <div className="page-container">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-center text-2xl font-bold">{t.home.supporters.title}</h2>
                 <SupportPageLink />

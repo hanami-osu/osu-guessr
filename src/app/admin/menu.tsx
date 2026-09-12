@@ -208,7 +208,7 @@ export default function AdminMenu() {
         if (!bulkFile) return;
 
         setIsLoading(true);
-        appendOutput("Starting bulk upload process...");
+        appendOutput("Importing mapsets...");
 
         try {
             const content = await bulkFile.text();
@@ -238,10 +238,10 @@ export default function AdminMenu() {
 
     const handleSyncUsers = async () => {
         setIsLoading(true);
-        appendOutput("Syncing user achievements...");
+        appendOutput("Syncing user stats...");
         try {
             await syncUserAchievements();
-            appendOutput("User achievements synced");
+            appendOutput("User stats synced");
         } catch (error) {
             appendOutput(`Error: ${error}`);
         }
@@ -541,12 +541,10 @@ export default function AdminMenu() {
     };
 
     return (
-        <div className="container mx-auto max-w-7xl px-4 py-6 md:py-10">
+        <div className="page-container py-6 md:py-10">
             <header className="flex flex-col gap-5 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Owner tools</p>
-                    <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Administration</h1>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Manage game content, moderation, and maintenance from one workspace.</p>
+                    <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Administration</h1>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     {isLoading && (
@@ -568,7 +566,7 @@ export default function AdminMenu() {
                 <main className="min-w-0">
                     <CollapsibleSection id="mapsets" title="Mapsets" description="Import, remove, and inspect the beatmapsets used by the game." icon={<Disc3 />} defaultOpen>
                         <div className="space-y-7">
-                            <AdminGroup title="Single mapset" description="Use an osu! beatmapset ID for a quick import or removal.">
+                            <AdminGroup title="Single mapset" description="Enter an osu! beatmapset ID.">
                                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                                     <div className="space-y-2">
                                         <Label htmlFor="mapset-id">Mapset ID</Label>
@@ -602,7 +600,7 @@ export default function AdminMenu() {
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="skins" title="Skins" description="Maintain the random skin pool and import skin records by ID." icon={<Paintbrush />}>
+                    <CollapsibleSection id="skins" title="Skins" description="Add or remove skins used by the game." icon={<Paintbrush />}>
                         <div className="space-y-7">
                             <AdminGroup title="Skin library">
                                 <Button onClick={handleListSkins} disabled={isLoading} variant="outline">
@@ -647,7 +645,7 @@ export default function AdminMenu() {
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="badges" title="Badges" description="Assign existing badges to users and manage the badge types themselves." icon={<BadgeCheck />}>
+                    <CollapsibleSection id="badges" title="Badges" description="Create badges and assign them to users." icon={<BadgeCheck />}>
                         <div className="space-y-7">
                             <AdminGroup title="User badge">
                                 <div className="grid gap-4 sm:grid-cols-2">
@@ -705,7 +703,7 @@ export default function AdminMenu() {
                                     </Button>
                                 </div>
 
-                                <div className="mt-5 divide-y divide-border/50 border-y border-border/50">
+                                <div className="mt-5 divide-y divide-border/60 border-y border-border/60">
                                     {Object.entries(availableBadges).length === 0 ? (
                                         <p className="py-4 text-sm text-muted-foreground">No badge types found.</p>
                                     ) : (
@@ -727,10 +725,10 @@ export default function AdminMenu() {
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="translations" title="Translations" description="Check locale coverage and optionally repair missing or extra keys." icon={<Languages />}>
+                    <CollapsibleSection id="translations" title="Translations" description="Find missing or extra translation keys." icon={<Languages />}>
                         <div className="space-y-6">
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <label htmlFor="auto-fill" className="flex cursor-pointer items-start gap-3 border-b border-border/40 pb-4 sm:border-b-0 sm:pb-0">
+                                <label htmlFor="auto-fill" className="flex cursor-pointer items-start gap-3 border-b border-border/60 pb-4 sm:border-b-0 sm:pb-0">
                                     <Switch id="auto-fill" checked={autoFill} onCheckedChange={setAutoFill} />
                                     <span>
                                         <span className="block text-sm font-medium">Fill missing keys</span>
@@ -774,7 +772,7 @@ export default function AdminMenu() {
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="reports" title="Reports" description="Review submitted reports and move them through the moderation workflow." icon={<FileText />}>
+                    <CollapsibleSection id="reports" title="Reports" description="Review player reports and update their status." icon={<FileText />}>
                         <div className="space-y-7">
                             <AdminGroup title="Report queue">
                                 <Button onClick={handleListReports} disabled={isLoading} variant="outline">
@@ -810,7 +808,7 @@ export default function AdminMenu() {
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="announcements" title="Announcements" description="Publish notices shown to users and remove old ones." icon={<Megaphone />}>
+                    <CollapsibleSection id="announcements" title="Announcements" description="Publish or remove announcements." icon={<Megaphone />}>
                         <div className="space-y-7">
                             <AdminGroup title="Create announcement">
                                 <div className="space-y-4">
@@ -834,7 +832,7 @@ export default function AdminMenu() {
                             </AdminGroup>
 
                             <AdminGroup title="Published announcements">
-                                <div className="divide-y divide-border/50 border-y border-border/50">
+                                <div className="divide-y divide-border/60 border-y border-border/60">
                                     {announcementsList.length === 0 ? (
                                         <p className="py-4 text-sm text-muted-foreground">No announcements.</p>
                                     ) : (
@@ -861,18 +859,18 @@ export default function AdminMenu() {
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="maintenance" title="User maintenance" description="Run owner-only maintenance tasks against user data." icon={<UserRoundCog />}>
-                        <AdminGroup title="Achievements" description="Recalculate and synchronize user achievement state.">
+                    <CollapsibleSection id="maintenance" title="User maintenance" description="Rebuild player stats from saved games." icon={<UserRoundCog />}>
+                        <AdminGroup title="Player stats">
                             <Button onClick={handleSyncUsers} disabled={isLoading}>
-                                Sync user achievements
+                                Sync user stats
                             </Button>
                         </AdminGroup>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="lockdown" title="Server lockdown" description="Temporarily block access while maintenance or recovery work is in progress." icon={<ShieldAlert />}>
+                    <CollapsibleSection id="lockdown" title="Server lockdown" description="Only the owner can access the site while it is locked." icon={<ShieldAlert />}>
                         <AdminGroup title="Access control">
                             <div className="mb-5 flex items-center gap-2 text-sm">
-                                <span className={`size-2 rounded-full ${lockInfo ? "bg-destructive" : "bg-emerald-500"}`} />
+                                <span className={`size-2 rounded-full ${lockInfo ? "bg-destructive" : "bg-success"}`} />
                                 <span className="font-medium">{lockInfo ?? "Server is unlocked"}</span>
                             </div>
                             <div className="grid gap-3 sm:grid-cols-[8rem_auto] sm:items-end">
@@ -905,8 +903,7 @@ export default function AdminMenu() {
                             </div>
                             {isLoading && <span className="text-xs text-muted-foreground">Running</span>}
                         </div>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">Results from admin actions appear here and stay visible while you work.</p>
-                        <div ref={consoleDivRef} className="mt-4 h-80 overflow-y-auto border-y border-border/50 py-3 scrollbar-thin lg:h-[30rem]">
+                        <div ref={consoleDivRef} className="mt-4 h-80 overflow-y-auto border-y border-border/60 py-3 scrollbar-thin lg:h-[30rem]">
                             <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-5 text-muted-foreground">{output.trim() || "No admin activity yet."}</pre>
                         </div>
                         <Button onClick={() => setOutput("")} disabled={!output} variant="ghost" size="sm" className="mt-2 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground">

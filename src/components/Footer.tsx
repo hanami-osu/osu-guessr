@@ -3,7 +3,6 @@
 import { useTranslationsContext } from "@/context/translations-provider";
 import Link from "next/link";
 import React from "react";
-import AdSlot from "./AdSlot";
 
 export default function Footer() {
     const { t } = useTranslationsContext();
@@ -15,7 +14,7 @@ export default function Footer() {
     );
 
     return (
-        <footer className="bg-secondary py-4 sm:py-6">
+        <footer className="border-t border-border/60 bg-muted/30 py-4 sm:py-6">
             <div className="container mx-auto px-4 text-center">
                 <p className="text-sm sm:text-lg text-foreground/80">
                     {t.components.footer.madeWith.split("{author}").map((part, index, array) => (
@@ -25,17 +24,16 @@ export default function Footer() {
                         </React.Fragment>
                     ))}
                 </p>
-                <AdSlot />
                 <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-foreground/50 flex flex-wrap justify-center gap-4">
                     <Link href="/about" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.about}
                     </Link>
-                    <Link href="https://hanami.yorunoken.com/legal/privacy" className="hover:text-foreground transition-colors duration-200">
+                    <a href="https://hanami.yorunoken.com/legal/privacy" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.privacy}
-                    </Link>
-                    <Link href="https://hanami.yorunoken.com/legal/terms" className="hover:text-foreground transition-colors duration-200">
+                    </a>
+                    <a href="https://hanami.yorunoken.com/legal/terms" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.tos}
-                    </Link>
+                    </a>
                     <a
                         href="https://github.com/hanami-osu/osu-guessr"
                         target="_blank"

@@ -26,7 +26,7 @@ export default function Hero() {
             <div className="absolute inset-0 bg-[url('/main_bg.webp')] bg-cover bg-center"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/30"></div>
 
-            <div className="container mx-auto max-w-6xl px-4 relative z-10 py-14 sm:py-20 lg:py-24">
+            <div className="page-container relative z-10 py-14 sm:py-20 lg:py-24">
                 <div className="max-w-3xl">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-5 leading-tight">
                         {titleParts[0]}
@@ -53,8 +53,8 @@ export default function Hero() {
                 </div>
             </div>
 
-            <div className="relative z-10 w-full px-4 py-3 bg-background/65 backdrop-blur-sm border-t border-white/10">
-                <div className="container mx-auto max-w-6xl flex flex-col sm:flex-row justify-between items-center gap-3 text-xs sm:text-sm">
+            <div className="relative z-10 w-full border-t border-border/60 bg-background/65 px-4 py-3 backdrop-blur-sm">
+                <div className="page-container flex flex-col sm:flex-row justify-between items-center gap-3 text-xs sm:text-sm">
                     <Link href={"https://twitter.com/Akariimia"} target="_blank" className="subtle-link text-foreground/65 hover:text-primary transition-colors">
                         {t.home.hero.artCredit}
                     </Link>

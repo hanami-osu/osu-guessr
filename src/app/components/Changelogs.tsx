@@ -12,13 +12,13 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
     const sortedChangelogs = [...changelogs].reverse();
 
     return (
-        <div className="container mx-auto max-w-6xl px-4">
+        <div className="page-container">
             <div className="border-t border-border pt-6">
                 <h2 className="mb-5 text-2xl font-bold">{t.home.updates.title}</h2>
 
                 <div className="max-h-[420px] space-y-5 overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
                     {sortedChangelogs.map((log, i) => (
-                        <div key={i} className="border-b border-border/50 pb-5 last:border-0 last:pb-0">
+                        <div key={i} className="border-b border-border/60 pb-5 last:border-0 last:pb-0">
                             <div className="mb-3 flex items-center gap-2">
                                 <span className="text-lg font-semibold">{log.version}</span>
                                 <span className="text-sm text-foreground/70">• {log.date}</span>

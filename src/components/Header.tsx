@@ -6,12 +6,13 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import UserSearch from "./UserSearch";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { SupportPageLink } from "./SupportDialogWrapper";
 import { OWNER_ID } from "@/lib";
+import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = ["leaderboard", "about", "announcements"] as const;
 const MOBILE_NAV_ID = "mobile-navigation";
@@ -20,6 +21,7 @@ export default function Header() {
     const { data: session } = useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { t } = useTranslationsContext();
+    const pathname = usePathname();
 
     const getNavLabel = (key: string) => {
         try {
@@ -35,14 +37,18 @@ export default function Header() {
         <header className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-50 shadow-sm">
             <div className="container mx-auto flex items-center justify-between gap-2 px-2 py-3 sm:px-4">
                 <div className="flex min-w-0 items-center space-x-8">
-                    <Link href="/" className="whitespace-nowrap text-xl font-bold text-primary transition-[color,opacity] duration-150 ease-[var(--ease-out-smooth)] hover:text-primary/80 sm:text-2xl">
+                    <Link href="/" className="whitespace-nowrap text-xl font-bold text-primary transition-[color,opacity] duration-150 ease-smooth hover:text-primary/80 sm:text-2xl">
                         osu!guessr
                     </Link>
                     <nav className="hidden md:block">
                         <ul className="flex space-x-8 items-center">
                             {NAV_ITEMS.map((item) => (
                                 <li key={item}>
-                                    <Link href={`/${item}`} className="subtle-link text-foreground/80 hover:text-primary transition-colors duration-200 font-medium">
+                                    <Link
+                                        href={`/${item}`}
+                                        aria-current={pathname === `/${item}` ? "page" : undefined}
+                                        className={`subtle-link font-medium transition-colors duration-200 ${pathname === `/${item}` ? "text-primary" : "text-foreground/80 hover:text-primary"}`}
+                                    >
                                         {getNavLabel(item)}
                                     </Link>
                                 </li>
@@ -69,14 +75,14 @@ export default function Header() {
                         aria-expanded={isMenuOpen}
                         aria-controls={MOBILE_NAV_ID}
                     >
-                        <Menu className="h-6 w-6" />
+                        {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </Button>
 
                     {session ? (
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 active:!transform-none" aria-label={t.components.header.accessibility.profileMenu}>
-                                    <Image src={session.user?.image || "/default-avatar.svg"} alt="" className="rounded-full" fill style={{ objectFit: "cover" }} />
+                                    <Image src={session.user?.image || "/default-avatar.svg"} alt="" className="rounded-full" fill unoptimized style={{ objectFit: "cover" }} />
                                 </Button>
                             </DropdownMenuTrigger>
 
@@ -84,7 +90,7 @@ export default function Header() {
                                 <DropdownMenuItem className="cursor-pointer" asChild>
                                     <Link href={`/user/${session.user.banchoId}`} className="flex items-center">
                                         <div className="relative h-8 w-8 rounded-full mr-2">
-                                            <Image src={session.user?.image || "/default-avatar.svg"} alt="" className="rounded-full" fill style={{ objectFit: "cover" }} />
+                                            <Image src={session.user?.image || "/default-avatar.svg"} alt="" className="rounded-full" fill unoptimized style={{ objectFit: "cover" }} />
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="font-medium">{session.user.name}</span>
@@ -122,6 +128,7 @@ export default function Header() {
                                 <li className="flex w-full items-center" key={item}>
                                     <Link
                                         href={`/${item}`}
+                                        aria-current={pathname === `/${item}` ? "page" : undefined}
                                         className="w-full px-4 py-2 text-center font-medium text-foreground/80 transition-colors duration-200 hover:text-primary"
                                         onClick={() => setIsMenuOpen(false)}
                                     >

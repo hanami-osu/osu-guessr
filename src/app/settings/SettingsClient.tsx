@@ -160,8 +160,8 @@ export default function SettingsClient({ initialApiKeys, initialLoadError = fals
     }
 
     return (
-        <div className="container mx-auto px-4 py-10 md:py-16">
-            <div className="max-w-3xl mx-auto">
+        <div className="page-container py-10 md:py-16">
+            <div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-8">{t.settings.title}</h1>
 
                 <section className="border-t border-border/60 pt-8">
@@ -291,7 +291,7 @@ export default function SettingsClient({ initialApiKeys, initialLoadError = fals
                                     </AlertDescription>
                                 </Alert>
                                 <div className="mt-4">
-                                    <div className="flex items-center gap-2 p-2 bg-background rounded border border-border/50">
+                                    <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background p-2">
                                         <code className="font-mono text-sm flex-1 break-all px-2">{dialogs.newKey}</code>
                                         <Button
                                             size="icon"

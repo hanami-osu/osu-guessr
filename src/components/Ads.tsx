@@ -3,42 +3,53 @@
 import { useState, useEffect } from "react";
 import type { Translations } from "@/lib/translations";
 import { useTranslationsContext } from "@/context/translations-provider";
+import AdSlot from "./AdSlot";
 
-interface Promo {
+interface LinkPromo {
     id: string;
     title: string;
     link: string;
     icon?: string;
 }
 
-const createPromos = (t: Translations): Array<Promo> => [
-    {
-        id: "twitter",
-        title: t.components.ads.twitter.title,
-        link: "https://twitter.com/_yorunoken",
-        icon: "🐦",
-    },
-    {
-        id: "osu",
-        title: t.components.ads.osu.title,
-        link: "https://osu.ppy.sh/users/yorunoken",
-        icon: "🎮",
-    },
-    {
-        id: "buymeacoffe",
-        title: t.components.ads.buymeacoffe.title,
-        link: "https://ko-fi.com/yorunoken",
-        icon: "☕",
-    },
-    {
-        id: "discord",
-        title: t.components.ads.discord.title,
-        link: "https://discord.gg/qrud2g4CA5",
-        icon: "👾",
-    },
-];
+type Promo = LinkPromo | { id: "adsense"; kind: "ad" };
 
-export function AdSlider() {
+const createPromos = (t: Translations): Array<Promo> => {
+    const promos: Array<Promo> = [
+        {
+            id: "twitter",
+            title: t.components.ads.twitter.title,
+            link: "https://twitter.com/_yorunoken",
+            icon: "🐦",
+        },
+        {
+            id: "osu",
+            title: t.components.ads.osu.title,
+            link: "https://osu.ppy.sh/users/yorunoken",
+            icon: "🎮",
+        },
+        {
+            id: "buymeacoffe",
+            title: t.components.ads.buymeacoffe.title,
+            link: "https://ko-fi.com/yorunoken",
+            icon: "☕",
+        },
+        {
+            id: "discord",
+            title: t.components.ads.discord.title,
+            link: "https://discord.gg/qrud2g4CA5",
+            icon: "👾",
+        },
+    ];
+
+    if (process.env.NEXT_PUBLIC_ADSENSE_SLOT) {
+        promos.push({ id: "adsense", kind: "ad" });
+    }
+
+    return promos;
+};
+
+export function AdSlider({ compact = false }: { compact?: boolean }) {
     const { t } = useTranslationsContext();
     const promos = createPromos(t);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -72,17 +83,23 @@ export function AdSlider() {
         setCurrentIndex(sequence[sequenceIndex]);
     }, [sequenceIndex, sequence]);
 
+    const currentPromo = promos[currentIndex];
+
     return (
-        <div className="max-w-md mx-auto border-t border-border/60 my-8">
+        <div className={compact ? "mt-5 border-t border-border/60 text-xs text-muted-foreground" : "max-w-md mx-auto border-t border-border/60 my-8"}>
             <div className="h-full">
-                <a href={promos[currentIndex].link} target="_blank" rel="noopener noreferrer" className="block h-full p-4 hover:opacity-80 transition-opacity">
-                    <div className="flex flex-col items-center justify-center text-center gap-3 h-full">
-                        {promos[currentIndex].icon && <span className="text-2xl">{promos[currentIndex].icon}</span>}
-                        <div>
-                            <h3 className="font-medium">{promos[currentIndex].title}</h3>
+                {"kind" in currentPromo ? (
+                    <AdSlot compact={compact} />
+                ) : (
+                    <a href={currentPromo.link} target="_blank" rel="noopener noreferrer" className={`block h-full ${compact ? "py-3" : "p-4"} hover:opacity-80 transition-opacity`}>
+                        <div className={`flex items-center justify-center text-center h-full ${compact ? "gap-2" : "flex-col gap-3"}`}>
+                            {currentPromo.icon && <span className={compact ? "text-sm" : "text-2xl"}>{currentPromo.icon}</span>}
+                            <div>
+                                <h3 className="font-medium">{currentPromo.title}</h3>
+                            </div>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                )}
             </div>
         </div>
     );

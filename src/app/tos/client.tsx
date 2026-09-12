@@ -6,7 +6,7 @@ export default function TosPolicy() {
     const { t } = useTranslationsContext();
 
     return (
-        <div className="container mx-auto px-4 py-10 md:py-16 max-w-4xl">
+        <div className="page-container py-10 md:py-16">
             <h1 className="text-3xl md:text-4xl font-bold mb-8">{t.tos.title}</h1>
 
             <div className="space-y-10">

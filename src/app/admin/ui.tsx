@@ -37,7 +37,7 @@ interface AdminGroupProps {
 
 export function AdminGroup({ title, description, children }: AdminGroupProps) {
     return (
-        <div className="border-t border-border/40 pt-5 first:border-t-0 first:pt-0">
+        <div className="border-t border-border/60 pt-5 first:border-t-0 first:pt-0">
             <div className="mb-4">
                 <h3 className="font-medium">{title}</h3>
                 {description && <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>}
