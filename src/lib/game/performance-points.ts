@@ -64,7 +64,7 @@ export function calculateRunPp(rounds: PerformanceRound[], variant: GameVariant)
     const difficultyFactor =
         correctRounds.reduce((total, round) => total + clamp(round.difficulty_snapshot ?? 1, 0.75, 1.5), 0) / correctRounds.length;
 
-    const lengthBase = variant === "death" ? correctRounds.length : rounds.length;
+    const lengthBase = variant === "death" || variant === "survival" ? correctRounds.length : rounds.length;
     const lengthFactor = Math.sqrt(lengthBase / 10);
 
     return roundPp(100 * accuracyFactor * speedFactor * consistencyFactor * difficultyFactor * lengthFactor);

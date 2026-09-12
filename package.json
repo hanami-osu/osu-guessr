@@ -10,6 +10,7 @@
         "check": "prisma generate && eslint src && tsc --noEmit",
         "test": "bun test --isolate",
         "sync": "bun scripts/sync-translations",
+        "backfill:arcade-scores": "dotenv -e .env -- bun scripts/backfill-arcade-scores.ts",
         "prisma:generate": "prisma generate",
         "db:introspect": "prisma db pull"
     },

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { apiErrorResponse } from "@/lib/api/errors";
 
 const querySchema = z.object({
-    variant: z.enum(["classic", "death"]).default("classic"),
+    variant: z.enum(["classic", "survival", "death"]).default("classic"),
 });
 
 export async function GET(request: Request) {

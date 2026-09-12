@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { GameState } from "@/actions/types";
-import { getDeathEndReason } from "./result";
+import { getDeathEndReason, getSurvivalEndReason } from "./result";
 
 const finishedState: GameState = {
     sessionId: "00000000-0000-4000-8000-000000000000",
     currentBeatmap: { revealed: true },
     score: { total: 0, current: 0, streak: 0, highestStreak: 3 },
-    rounds: { current: 4, total: 4, correctGuesses: 3, totalTimeUsed: 20 },
+    rounds: { current: 4, total: 4, correctGuesses: 3, totalTimeUsed: 20, mistakes: 1 },
     timeLeft: 0,
     gameStatus: "finished",
     variant: "death",
@@ -23,5 +23,19 @@ describe("getDeathEndReason", () => {
 
     test("distinguishes a manually ended active run from a death", () => {
         expect(getDeathEndReason({ ...finishedState, gameStatus: "active" })).toBe("ended");
+    });
+});
+
+describe("getSurvivalEndReason", () => {
+    test("marks the fourth mistake as a failed run", () => {
+        expect(getSurvivalEndReason({ ...finishedState, variant: "survival", rounds: { ...finishedState.rounds, mistakes: 4 } })).toBe("died");
+    });
+
+    test("marks content exhaustion before four mistakes as completion", () => {
+        expect(getSurvivalEndReason({ ...finishedState, variant: "survival", rounds: { ...finishedState.rounds, mistakes: 3 } })).toBe("completed");
+    });
+
+    test("distinguishes a manually ended active survival run", () => {
+        expect(getSurvivalEndReason({ ...finishedState, variant: "survival", gameStatus: "active" })).toBe("ended");
     });
 });

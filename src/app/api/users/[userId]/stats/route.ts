@@ -6,7 +6,7 @@ import { apiErrorResponse } from "@/lib/api/errors";
 
 const querySchema = z.object({
     mode: z.enum(["background", "audio", "skin"]).optional(),
-    variant: z.enum(["classic", "death"]).optional(),
+    variant: z.enum(["classic", "survival", "death"]).optional(),
 });
 const userIdSchema = z.coerce.number().int().positive();
 

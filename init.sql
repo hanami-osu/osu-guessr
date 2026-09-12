@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS badges;
 DROP TABLE IF EXISTS reports;
 DROP TABLE IF EXISTS announcements;
 DROP TABLE IF EXISTS game_challenge_rounds;
+DROP TABLE IF EXISTS content_stat_contributions;
 DROP TABLE IF EXISTS content_stats;
 DROP TABLE IF EXISTS game_challenges;
 DROP TABLE IF EXISTS game_rounds;
@@ -53,7 +54,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
 CREATE TABLE IF NOT EXISTS user_achievements (
     user_id INT NOT NULL,
     game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
-    variant ENUM ('classic', 'death') DEFAULT 'classic',
+    variant ENUM ('classic', 'survival', 'death') DEFAULT 'classic',
     ruleset_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     pp_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     total_score BIGINT DEFAULT 0,
@@ -81,7 +82,7 @@ CREATE TABLE IF NOT EXISTS games (
     game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
     points INT DEFAULT 0,
     streak INT UNSIGNED DEFAULT 0,
-    variant ENUM ('classic', 'death') DEFAULT 'classic',
+    variant ENUM ('classic', 'survival', 'death') DEFAULT 'classic',
     run_type ENUM ('standard', 'daily', 'challenge', 'practice') NOT NULL DEFAULT 'standard',
     challenge_id CHAR(36),
     seed VARCHAR(128),
@@ -132,7 +133,7 @@ CREATE TABLE IF NOT EXISTS game_challenges (
     creator_user_id INT,
     source_game_id BIGINT UNSIGNED,
     game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
-    variant ENUM ('classic', 'death') NOT NULL DEFAULT 'classic',
+    variant ENUM ('classic', 'survival', 'death') NOT NULL DEFAULT 'classic',
     ruleset_version SMALLINT UNSIGNED NOT NULL,
     pp_version SMALLINT UNSIGNED NOT NULL,
     seed VARCHAR(128) NOT NULL,
@@ -177,6 +178,21 @@ CREATE TABLE IF NOT EXISTS content_stats (
     empirical_difficulty DECIMAL(8, 4),
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (game_mode, item_type, item_id, ruleset_version, pp_version)
+);
+
+CREATE TABLE IF NOT EXISTS content_stat_contributions (
+    user_id INT NOT NULL,
+    game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
+    item_type ENUM ('mapset', 'skin') NOT NULL,
+    item_id INT UNSIGNED NOT NULL,
+    ruleset_version SMALLINT UNSIGNED NOT NULL,
+    pp_version SMALLINT UNSIGNED NOT NULL,
+    correct BOOLEAN NOT NULL,
+    result_type ENUM ('guess', 'skip', 'timeout') NOT NULL,
+    response_time_ms INT UNSIGNED NOT NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (user_id, game_mode, item_type, item_id, ruleset_version, pp_version),
+    INDEX idx_content_stat_contributions_item (game_mode, item_type, item_id, ruleset_version, pp_version)
 );
 
 CREATE TABLE IF NOT EXISTS mapset_tags (

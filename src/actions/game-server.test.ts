@@ -9,6 +9,25 @@ const answer = "Test Map";
 const contentStatFindManyMock = mock(async () => [] as Array<{ itemId: number; appearances: bigint; correctCount: bigint; totalResponseTimeMs: bigint }>);
 const contentStatFindUniqueMock = mock(async () => null as { appearances: bigint; correctCount: bigint; totalResponseTimeMs: bigint; fastestCorrectMs: number | null } | null);
 const contentStatUpsertMock = mock(async () => ({}));
+const contentStatContributionCreateManyMock = mock(
+    async (args: {
+        data: Array<{
+            userId: number;
+            gameMode: GameMode;
+            itemType: "mapset" | "skin";
+            itemId: number;
+            rulesetVersion: number;
+            ppVersion: number;
+            correct: boolean;
+            resultType: "guess" | "skip" | "timeout";
+            responseTimeMs: number;
+        }>;
+        skipDuplicates: boolean;
+    }) => {
+        void args;
+        return { count: 1 };
+    },
+);
 const gameFindUniqueMock = mock(async () => null as { id: bigint } | null);
 const gameCreateMock = mock(async (args: { data: { pp: number; [key: string]: unknown } }) => ({ id: 1n, endedAt: new Date(), ...args.data }));
 const gameFindManyMock = mock(async () => [{ pp: 50 }]);
@@ -35,6 +54,7 @@ const skinFindUniqueMock = mock(async () => null);
 const skinFindManyMock = mock(async () => [] as Array<{ name: string }>);
 const txMock = {
     contentStat: { findUnique: contentStatFindUniqueMock, upsert: contentStatUpsertMock },
+    contentStatContribution: { createMany: contentStatContributionCreateManyMock },
     game: { findUnique: gameFindUniqueMock, create: gameCreateMock, findMany: gameFindManyMock },
     gameRound: { createMany: gameRoundCreateManyMock },
     userAchievement: { findUnique: userAchievementFindUniqueMock, upsert: userAchievementUpsertMock },
@@ -71,6 +91,7 @@ const redisClientMock = {
     set: redisSetMock,
     eval: mock(async (_script: string, options: { keys: string[] }) => (redisValues.delete(options.keys[0]) ? 1 : 0)),
     sAdd: mock(async () => 1),
+    sRem: mock(async () => 1),
     expire: mock(async () => 1),
 };
 
@@ -134,6 +155,7 @@ beforeEach(() => {
     contentStatFindManyMock.mockReset().mockResolvedValue([]);
     contentStatFindUniqueMock.mockReset().mockResolvedValue(null);
     contentStatUpsertMock.mockReset().mockResolvedValue({});
+    contentStatContributionCreateManyMock.mockReset().mockResolvedValue({ count: 1 });
     gameFindUniqueMock.mockReset().mockResolvedValue(null);
     gameCreateMock.mockReset().mockImplementation(async (args) => ({ id: 1n, endedAt: new Date(), ...args.data }));
     gameFindManyMock.mockReset().mockResolvedValue([{ pp: 50 }]);
@@ -167,6 +189,7 @@ beforeEach(() => {
     getMediaDataMock.mockReset().mockResolvedValue("current-media");
     authSessionMock.mockReset().mockResolvedValue({ user: { banchoId: userId } });
     redisSetMock.mockClear();
+    redisClientMock.sRem.mockClear();
     setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 });
 
@@ -178,8 +201,8 @@ describe("game server lifecycle", () => {
         expect(getRandomActionMock).not.toHaveBeenCalled();
     });
 
-    test("persists a death-mode correct guess before next-round content exhaustion", async () => {
-        putSession(makeSession({ variant: "death" }));
+    test("persists a survival-mode correct guess before next-round content exhaustion", async () => {
+        putSession(makeSession({ variant: "survival" }));
 
         const answered = await submitGuessAction(sessionId, answer);
         expect(answered.lastGuess?.correct).toBe(true);
@@ -198,10 +221,70 @@ describe("game server lifecycle", () => {
         expect(Number(gameCreateMock.mock.calls[0]?.[0].data.pp)).toBeGreaterThan(0);
         expect(gameRoundCreateManyMock).toHaveBeenCalledTimes(1);
         expect(gameRoundCreateManyMock.mock.calls[0]?.[0].data[0]?.difficultySnapshot).toBe(1);
+        expect(contentStatContributionCreateManyMock).toHaveBeenCalledTimes(1);
         expect(contentStatUpsertMock).toHaveBeenCalledTimes(1);
         expect(userAchievementUpsertMock).toHaveBeenCalledTimes(1);
         expect(Number(userAchievementUpsertMock.mock.calls[0]?.[0].create.profilePp)).toBeGreaterThan(0);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
+    });
+
+    test("survival requeues mistakes and ends on the fourth one", async () => {
+        putSession(makeSession({ variant: "survival" }));
+
+        for (let mistakes = 1; mistakes <= 3; mistakes++) {
+            const failedGuess = await submitGuessAction(sessionId, "wrong answer");
+            expect(failedGuess.gameStatus).toBe("active");
+            expect(failedGuess.rounds.mistakes).toBe(mistakes);
+            await submitGuessAction(sessionId);
+        }
+
+        const fourthMistake = await submitGuessAction(sessionId, "wrong answer");
+        expect(fourthMistake.gameStatus).toBe("finished");
+        expect(fourthMistake.rounds.mistakes).toBe(4);
+        expect(redisClientMock.sRem).toHaveBeenCalledTimes(3);
+        expect(transactionMock).toHaveBeenCalledTimes(1);
+        expect(gameCreateMock).toHaveBeenCalledTimes(1);
+    });
+
+    test("counts only the first difficulty sample from a user for an item", async () => {
+        contentStatContributionCreateManyMock.mockResolvedValueOnce({ count: 0 });
+        putSession(makeSession({ variant: "death" }));
+
+        await submitGuessAction(sessionId, answer);
+        await endGameAction(sessionId);
+
+        expect(contentStatContributionCreateManyMock).toHaveBeenCalledTimes(1);
+        expect(contentStatContributionCreateManyMock.mock.calls[0]?.[0]).toMatchObject({
+            data: [
+                {
+                    userId,
+                    gameMode: GameMode.Background,
+                    itemType: "mapset",
+                    itemId: 1,
+                    rulesetVersion: 1,
+                    ppVersion: 1,
+                    correct: true,
+                },
+            ],
+            skipDuplicates: true,
+        });
+        expect(contentStatFindUniqueMock).not.toHaveBeenCalled();
+        expect(contentStatUpsertMock).not.toHaveBeenCalled();
+    });
+
+    test("keeps arcade score separate from pp in death mode", async () => {
+        putSession(makeSession({ variant: "death", total_points: 0 }));
+
+        const correct = await submitGuessAction(sessionId, answer);
+        expect(correct.score.total).toBe(160);
+        expect(correct.pp).toBeUndefined();
+
+        await submitGuessAction(sessionId);
+        const finished = await submitGuessAction(sessionId, "wrong answer");
+
+        expect(finished.score.total).toBe(110);
+        expect(finished.pp).toBeGreaterThan(0);
+        expect(gameCreateMock.mock.calls[0]?.[0].data.points).toBe(110);
     });
 
     test("allows advancing after a null guess skips the round", async () => {

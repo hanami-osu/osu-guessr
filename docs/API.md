@@ -32,7 +32,7 @@ GET /api/users/{userId}
         achievements: Array<{
             user_id: number;
             game_mode: "background" | "audio" | "skin";
-            variant: "classic" | "death";
+            variant: "classic" | "survival" | "death";
             total_score: number;
             games_played: number;
             highest_streak: number;
@@ -42,12 +42,13 @@ GET /api/users/{userId}
         ranks: {
             globalRank?: {
                 classic?: number;
+                survival?: number;
                 death?: number;
             };
             modeRanks: {
-                background: { classic?: number; death?: number };
-                audio: { classic?: number; death?: number };
-                skin: { classic?: number; death?: number };
+                background: { classic?: number; survival?: number; death?: number };
+                audio: { classic?: number; survival?: number; death?: number };
+                skin: { classic?: number; survival?: number; death?: number };
             };
         };
     };
@@ -65,7 +66,7 @@ GET /api/users/{userId}/games
 Query parameters:
 
 - `mode` (optional): `background`, `audio`, or `skin`.
-- `variant` (optional): `classic` or `death`; defaults to `classic`.
+- `variant` (optional): `classic`, `survival`, or legacy `death`; defaults to `classic`.
 - `limit` (optional): integer from 1 to 100; defaults to 20.
 - `offset` (optional): non-negative integer; defaults to 0.
 
@@ -77,7 +78,7 @@ Query parameters:
         game_mode: "background" | "audio" | "skin";
         points: number;
         streak: number;
-        variant: "classic" | "death";
+        variant: "classic" | "survival" | "death";
         ended_at: string;
     }>;
     meta: {
@@ -97,6 +98,7 @@ GET /api/users/{userId}/stats
 Query parameters:
 
 - `mode` (optional): `background`, `audio`, or `skin`.
+- `variant` (optional): `classic`, `survival`, or legacy `death`.
 
 ```typescript
 {
@@ -104,7 +106,7 @@ Query parameters:
     data: Array<{
         user_id: number;
         game_mode: "background" | "audio" | "skin";
-        variant: "classic" | "death";
+        variant: "classic" | "survival" | "death";
         total_score: number;
         games_played: number;
         highest_streak: number;
@@ -148,7 +150,7 @@ GET /api/games/leaderboard
 Query parameters:
 
 - `mode` (optional): `background`, `audio`, or `skin`; defaults to `background`.
-- `variant` (optional): `classic` or `death`; defaults to `classic`.
+- `variant` (optional): `classic`, `survival`, or legacy `death`; defaults to `classic`.
 - `limit` (optional): integer from 1 to 100; defaults to 100.
 
 ```typescript
@@ -182,7 +184,7 @@ GET /api/stats
 
 Query parameters:
 
-- `variant` (optional): `classic` or `death`; defaults to `classic`.
+- `variant` (optional): `classic`, `survival`, or legacy `death`; defaults to `classic`.
 
 ```typescript
 {

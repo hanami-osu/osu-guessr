@@ -1,18 +1,21 @@
 "use server";
 
 import { GameVariant } from "@/app/games/config";
+import { query } from "@/lib/database/database";
 import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { calculateProfilePp } from "@/lib/game/performance-points";
 import { hasPlayedGame } from "@/lib/user-stats";
 import { z } from "zod";
-import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserWithStats } from "./types";
+import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
 
 const gameModeSchema = z.nativeEnum(GameMode);
-const gameVariantSchema = z.enum(["classic", "death"]);
+const gameVariantSchema = z.enum(["classic", "survival", "death"]);
+const currentGameVariants = ["classic", "survival"] as const;
 const searchSchema = z.object({
     term: z.string().min(2).max(250),
     limit: z.number().min(1).max(100).default(10),
+    offset: z.number().int().min(0).default(0),
 });
 
 type UserRow = Awaited<ReturnType<typeof prisma.user.findFirstOrThrow>>;
@@ -53,11 +56,14 @@ function mapAchievement(achievement: AchievementRow): UserAchievement {
 
 function mapGame(game: GameRow): Game {
     return {
+        id: game.id.toString(),
         user_id: game.userId,
         game_mode: game.gameMode as GameMode,
         points: game.points,
         streak: game.streak,
         variant: game.variant,
+        ruleset_version: game.rulesetVersion,
+        pp_version: game.ppVersion,
         pp: Number(game.pp),
         ended_at: game.endedAt,
     };
@@ -124,8 +130,8 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
     });
     const achievements = achievementRows.map(mapAchievement);
     const badgesByUser = await getBadgesForUsers([banchoId]);
-    const [classicGlobalRank, deathGlobalRank] = await Promise.all([getGlobalRank(banchoId, "classic"), getGlobalRank(banchoId, "death")]);
-    const modeRanks: { [key in GameMode]: { classic?: number; death?: number } } = {
+    const [classicGlobalRank, survivalGlobalRank] = await Promise.all([getGlobalRank(banchoId, "classic"), getGlobalRank(banchoId, "survival")]);
+    const modeRanks: { [key in GameMode]: { classic?: number; survival?: number; death?: number } } = {
         [GameMode.Background]: {},
         [GameMode.Audio]: {},
         [GameMode.Skin]: {},
@@ -133,7 +139,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
 
     await Promise.all(
         (Object.keys(modeRanks) as GameMode[]).flatMap((mode) =>
-            (["classic", "death"] as const).map(async (variant) => {
+            currentGameVariants.map(async (variant) => {
                 const achievement = achievementRows.find((row) => row.gameMode === mode && row.variant === variant);
                 if (!achievement || achievement.gamesPlayed === 0) return;
                 const rank = await prisma.userAchievement.count({
@@ -156,7 +162,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
         ranks: {
             globalRank: {
                 classic: hasPlayedGame(achievements, "classic") ? classicGlobalRank : undefined,
-                death: hasPlayedGame(achievements, "death") ? deathGlobalRank : undefined,
+                survival: hasPlayedGame(achievements, "survival") ? survivalGlobalRank : undefined,
             },
             modeRanks,
         },
@@ -176,7 +182,14 @@ export async function getUserStatsAction(banchoId: number, variant?: GameVariant
     return rows.map(mapAchievement);
 }
 
-export async function getUserLatestGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit?: number, offset: number = 0): Promise<Array<Game>> {
+export async function getUserLatestGamesAction(
+    banchoId: number,
+    gameMode?: GameMode,
+    variant: GameVariant = "classic",
+    limit?: number,
+    offset: number = 0,
+    endedAfter?: Date,
+): Promise<Array<Game>> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validatedVariant = gameVariantSchema.parse(variant);
     const pagination = z
@@ -190,6 +203,7 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
             userId: banchoId,
             variant: validatedVariant,
             ranked: true,
+            ...(endedAfter ? { endedAt: { gte: endedAfter } } : {}),
             ...(validatedMode ? { gameMode: validatedMode } : {}),
         },
         orderBy: { endedAt: "desc" },
@@ -223,6 +237,7 @@ export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode:
         },
         _count: { _all: true },
         _sum: { points: true },
+        _avg: { streak: true },
         _max: {
             points: true,
             streak: true,
@@ -235,8 +250,122 @@ export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode:
         total_score: BigInt(stats._sum.points ?? 0),
         highest_score: stats._max.points ?? 0,
         highest_streak: stats._max.streak ?? 0,
+        average_streak: stats._avg.streak ?? 0,
         last_played: stats._max.endedAt,
     };
+}
+
+export async function getUserRankHistoryAction(
+    banchoId: number,
+    gameMode: GameMode,
+    variant: GameVariant = "classic",
+    days: number = 60,
+): Promise<UserRankHistoryPoint[]> {
+    const validatedMode = gameModeSchema.parse(gameMode);
+    const validated = z.object({ variant: gameVariantSchema, days: z.number().int().min(1).max(60) }).parse({ variant, days });
+    const now = new Date();
+    const todayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const windowStart = new Date(todayStart - (validated.days - 1) * 86_400_000);
+
+    const targetHasPlayedBeforeWindow =
+        (await prisma.game.count({
+            where: {
+                userId: banchoId,
+                gameMode: validatedMode,
+                variant: validated.variant,
+                rulesetVersion: CURRENT_RULESET_VERSION,
+                ppVersion: CURRENT_PP_VERSION,
+                ranked: true,
+                endedAt: { lt: windowStart },
+            },
+        })) > 0;
+
+    type BaselineRun = { user_id: number; pp: number };
+    const baselineRuns = await query<BaselineRun>(
+        `WITH ranked_runs AS (
+            SELECT
+                user_id,
+                pp,
+                ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY pp DESC, ended_at ASC, id ASC) AS run_position
+            FROM games
+            WHERE game_mode = ?
+              AND variant = ?
+              AND ruleset_version = ?
+              AND pp_version = ?
+              AND ranked = TRUE
+              AND pp > 0
+              AND ended_at < ?
+        )
+        SELECT user_id, pp
+        FROM ranked_runs
+        WHERE run_position <= 100`,
+        [validatedMode, validated.variant, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION, windowStart],
+    );
+
+    const topRunsByUser = new Map<number, number[]>();
+    for (const run of baselineRuns) {
+        const runs = topRunsByUser.get(run.user_id) ?? [];
+        runs.push(Number(run.pp));
+        topRunsByUser.set(run.user_id, runs);
+    }
+
+    const profilePpByUser = new Map<number, number>();
+    for (const [userId, runs] of topRunsByUser) {
+        profilePpByUser.set(userId, calculateProfilePp(runs));
+    }
+
+    const events = await prisma.game.findMany({
+        where: {
+            gameMode: validatedMode,
+            variant: validated.variant,
+            rulesetVersion: CURRENT_RULESET_VERSION,
+            ppVersion: CURRENT_PP_VERSION,
+            ranked: true,
+            endedAt: { gte: windowStart, lte: now },
+        },
+        select: { userId: true, pp: true, endedAt: true },
+        orderBy: [{ endedAt: "asc" }, { id: "asc" }],
+    });
+
+    const history: UserRankHistoryPoint[] = [];
+    let eventIndex = 0;
+    let targetHasPlayed = targetHasPlayedBeforeWindow;
+
+    for (let day = 0; day < validated.days; day += 1) {
+        const dayStart = todayStart - (validated.days - 1 - day) * 86_400_000;
+        const nextDayStart = dayStart + 86_400_000;
+        const dayCutoff = Math.min(nextDayStart - 1, now.getTime());
+
+        while (eventIndex < events.length && events[eventIndex].endedAt.getTime() <= dayCutoff) {
+            const event = events[eventIndex];
+            const runPp = Number(event.pp);
+
+            if (event.userId === banchoId) targetHasPlayed = true;
+
+            if (runPp > 0) {
+                const runs = topRunsByUser.get(event.userId) ?? [];
+                runs.push(runPp);
+                runs.sort((a, b) => b - a);
+                if (runs.length > 100) runs.length = 100;
+                topRunsByUser.set(event.userId, runs);
+                profilePpByUser.set(event.userId, calculateProfilePp(runs));
+            }
+
+            eventIndex += 1;
+        }
+
+        if (!targetHasPlayed) continue;
+
+        const targetPp = profilePpByUser.get(banchoId) ?? 0;
+        let rank = 1;
+        for (const profilePp of profilePpByUser.values()) {
+            if (profilePp > targetPp) rank += 1;
+        }
+
+        history.push({ rank, recorded_at: new Date(dayCutoff) });
+    }
+
+    return history;
 }
 
 export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit: number = 5): Promise<Array<Game>> {
@@ -246,12 +375,10 @@ export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMod
         where: {
             userId: banchoId,
             variant: validated.variant,
-            rulesetVersion: CURRENT_RULESET_VERSION,
-            ppVersion: CURRENT_PP_VERSION,
             ranked: true,
             ...(validatedMode ? { gameMode: validatedMode } : {}),
         },
-        orderBy: [{ pp: "desc" }, { endedAt: "asc" }],
+        orderBy: [{ pp: "desc" }, { endedAt: "desc" }],
         take: validated.limit,
     });
     return rows.map(mapGame);
@@ -309,10 +436,26 @@ export async function searchUsersAction(searchTerm: string, limit: number = 10):
     const validated = searchSchema.parse({ term: searchTerm, limit });
     const users = await prisma.user.findMany({
         where: { username: { contains: validated.term } },
-        orderBy: { username: "asc" },
+        orderBy: [{ username: "asc" }, { banchoId: "asc" }],
         take: validated.limit,
     });
     return users.map((user) => mapUser(user));
+}
+
+export async function searchUsersPageAction(searchTerm: string, limit: number = 10, offset: number = 0): Promise<{ users: Array<User>; total: number }> {
+    const validated = searchSchema.parse({ term: searchTerm, limit, offset });
+    const where = { username: { contains: validated.term } };
+    const [users, total] = await Promise.all([
+        prisma.user.findMany({
+            where,
+            orderBy: [{ username: "asc" }, { banchoId: "asc" }],
+            take: validated.limit,
+            skip: validated.offset,
+        }),
+        prisma.user.count({ where }),
+    ]);
+
+    return { users: users.map((user) => mapUser(user)), total };
 }
 
 export async function getHighestStatsAction(variant: GameVariant = "classic"): Promise<HighestStats> {

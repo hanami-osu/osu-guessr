@@ -3,7 +3,7 @@ export enum GameMode {
     Audio = "audio",
     Skin = "skin"
 }
-export type GameVariant = "classic" | "death";
+export type GameVariant = "classic" | "survival" | "death";
 export type GameRunType = "standard" | "daily" | "challenge" | "practice";
 export type GameEndReason = "completed" | "failed" | "quit" | "content_exhausted";
 export type GameRoundResult = "guess" | "skip" | "timeout";
@@ -74,6 +74,7 @@ export interface GameState {
         total: number;
         correctGuesses: number;
         totalTimeUsed: number;
+        mistakes: number;
     };
     timeLeft: number;
     gameStatus: "active" | "finished";
@@ -118,11 +119,13 @@ export interface UserAchievement {
 export interface UserRanks {
     globalRank?: {
         classic?: number;
+        survival?: number;
         death?: number;
     };
     modeRanks: {
         [key in GameMode]: {
             classic?: number;
+            survival?: number;
             death?: number;
         };
     };
@@ -134,11 +137,14 @@ export interface UserWithStats extends User {
 }
 
 export interface Game {
+    id: string;
     user_id: number;
     game_mode: GameMode;
     points: number;
     streak: number;
     variant: GameVariant;
+    ruleset_version: number;
+    pp_version: number;
     pp: string | number;
     ended_at: Date;
 }
@@ -148,7 +154,13 @@ export interface UserLifetimeModeStats {
     total_score: bigint;
     highest_score: number;
     highest_streak: number;
+    average_streak: number;
     last_played: Date | null;
+}
+
+export interface UserRankHistoryPoint {
+    rank: number;
+    recorded_at: Date;
 }
 
 export interface TopPlayer extends Omit<User, "badges"> {

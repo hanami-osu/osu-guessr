@@ -16,7 +16,7 @@ const initialGameState = {
     gameStatus: "active" as const,
     variant: "classic" as const,
     score: { total: 0, current: 0, streak: 0, highestStreak: 0 },
-    rounds: { current: 1, total: 10, correctGuesses: 0, totalTimeUsed: 0 },
+    rounds: { current: 1, total: 10, correctGuesses: 0, totalTimeUsed: 0, mistakes: 0 },
     currentBeatmap: { revealed: false },
 };
 const startGameActionMock = mock(async () => initialGameState);

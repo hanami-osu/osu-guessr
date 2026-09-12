@@ -7,7 +7,7 @@ import { apiErrorResponse } from "@/lib/api/errors";
 
 const querySchema = z.object({
     mode: z.nativeEnum(GameMode).optional(),
-    variant: z.enum(["classic", "death"]).default("classic"),
+    variant: z.enum(["classic", "survival", "death"]).default("classic"),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     offset: z.coerce.number().int().min(0).default(0),
 });

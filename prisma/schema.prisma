@@ -15,6 +15,7 @@ enum GameMode {
 
 enum GameVariant {
   classic
+  survival
   death
 }
 
@@ -242,6 +243,23 @@ model ContentStat {
 
   @@id([gameMode, itemType, itemId, rulesetVersion, ppVersion])
   @@map("content_stats")
+}
+
+model ContentStatContribution {
+  userId         Int             @map("user_id")
+  gameMode       GameMode        @map("game_mode")
+  itemType       GameItemType    @map("item_type")
+  itemId         Int             @map("item_id") @db.UnsignedInt
+  rulesetVersion Int             @map("ruleset_version") @db.UnsignedSmallInt
+  ppVersion      Int             @map("pp_version") @db.UnsignedSmallInt
+  correct        Boolean
+  resultType     GameRoundResult @map("result_type")
+  responseTimeMs Int             @map("response_time_ms") @db.UnsignedInt
+  createdAt      DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@id([userId, gameMode, itemType, itemId, rulesetVersion, ppVersion])
+  @@index([gameMode, itemType, itemId, rulesetVersion, ppVersion], map: "idx_content_stat_contributions_item")
+  @@map("content_stat_contributions")
 }
 
 model MapsetTag {

@@ -13,7 +13,7 @@ const ACTION_RELOAD_ATTEMPTED_KEY = "osu-guessr:action-reload-attempted";
 export class GameClient {
     private session: GameSession | null = null;
     private mutationPromise: Promise<void> | null = null;
-    private endGamePromise: Promise<void> | null = null;
+    private endGamePromise: Promise<number | null> | null = null;
     private disposed = false;
     private readonly handlePageHide = () => this.abandon();
     private readonly handlePageShow = (event: PageTransitionEvent) => {
@@ -218,9 +218,9 @@ export class GameClient {
         }
     }
 
-    endGame(): Promise<void> {
+    endGame(): Promise<number | null> {
         if (this.endGamePromise) return this.endGamePromise;
-        if (!this.session?.isActive) return Promise.resolve();
+        if (!this.session?.isActive) return Promise.resolve(this.session?.state.pp ?? null);
         this.session.isActive = false;
         this.endGamePromise = this.finishGame().finally(() => {
             this.endGamePromise = null;
@@ -228,24 +228,25 @@ export class GameClient {
         return this.endGamePromise;
     }
 
-    private async finishGame(): Promise<void> {
+    private async finishGame(): Promise<number | null> {
         await this.mutationPromise?.catch(() => undefined);
-        if (!this.session?.id) return;
+        if (!this.session?.id) return null;
 
         const session = this.session;
         this.stopTimer();
         session.isActive = false;
 
         try {
-            await this.execute(() => endGameAction(session.id), "endGame");
+            const pp = await this.execute(() => endGameAction(session.id), "endGame");
+            this.updateState({ ...session.state, pp: pp ?? session.state.pp, gameStatus: "finished" });
+            this.cleanup();
+            return pp;
         } catch (error) {
             session.isActive = session.state.gameStatus === "active";
             this.persistSessionId(session.id);
             if (session.isActive && !session.state.currentBeatmap.revealed) this.startTimer();
             throw error;
         }
-
-        this.cleanup();
     }
 
     dispose(): void {

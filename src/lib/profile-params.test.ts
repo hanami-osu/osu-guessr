@@ -4,6 +4,7 @@ import { parseProfileFilters } from "./profile-params";
 
 describe("parseProfileFilters", () => {
     test("accepts supported profile filters", () => {
+        expect(parseProfileFilters("audio", "survival")).toEqual({ mode: GameMode.Audio, variant: "survival" });
         expect(parseProfileFilters("audio", "death")).toEqual({ mode: GameMode.Audio, variant: "death" });
     });
 

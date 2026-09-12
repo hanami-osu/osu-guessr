@@ -8,7 +8,9 @@ export const BASE_POINTS = 100;
 export const STREAK_BONUS = 25;
 export const TIME_BONUS_MULTIPLIER = 2;
 export const MAX_ROUNDS = 10;
-export const AUTO_ADVANCE_DELAY_MS = 3000;
+export const AUTO_ADVANCE_DELAY_MS = 5000;
+export const SURVIVAL_MISTAKES_ALLOWED = 3;
+export const SURVIVAL_FAILURE_MISTAKES = SURVIVAL_MISTAKES_ALLOWED + 1;
 
 export const GAME_MODES = [
     { id: GameMode.Background, image: "/ghostrule.webp", url: "/games/background" },

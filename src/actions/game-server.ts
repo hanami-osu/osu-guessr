@@ -4,11 +4,12 @@ import { getAuthSession } from "./server";
 import { prisma } from "@/lib/database/prisma";
 import redisClient from "@/lib/redis";
 import { z } from "zod";
-import { BASE_POINTS, STREAK_BONUS, TIME_BONUS_MULTIPLIER, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, type GameVariant } from "../app/games/config";
+import { MAX_ROUNDS, ROUND_TIME, SURVIVAL_FAILURE_MISTAKES, type GameVariant } from "../app/games/config";
 import { getRandomAudioAction, getRandomBackgroundAction, getRandomSkinAction } from "./mapsets-server";
 import { GameMode, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "./types";
 import { getMediaData } from "./media";
 import { checkGuess, GuessDifficulty } from "@/lib/guess-checker";
+import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { isNoGameContentError } from "@/lib/game/content-errors";
 import { canPersistGameResult } from "@/lib/game/completion";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
@@ -35,7 +36,7 @@ const gameSchema = z.object({
         .transform((g) => (typeof g === "string" ? g.trim() : g)),
 });
 const gameModeSchema = z.nativeEnum(GameMode);
-const gameVariantSchema = z.enum(["classic", "death"]);
+const gameVariantSchema = z.enum(["classic", "survival"]);
 
 type SessionLock = {
     key: string;
@@ -163,7 +164,7 @@ async function finishGameSession(sessionId: string, userId: number, requestedRea
         return null;
     }
 
-    const points = gameState.variant === "death" ? 0 : gameState.total_points;
+    const points = gameState.total_points;
     const recordedRounds = gameState.round_history ?? [];
     const roundHistory = await resolveRoundDifficulties(gameState, recordedRounds);
     const skipCount = roundHistory.filter((round) => round.result_type === "skip").length;
@@ -239,6 +240,20 @@ async function finishGameSession(sessionId: string, userId: number, requestedRea
                     rulesetVersion,
                     ppVersion,
                 };
+                const contribution = await tx.contentStatContribution.createMany({
+                    data: [
+                        {
+                            userId,
+                            ...statKey,
+                            correct: round.correct,
+                            resultType: round.result_type,
+                            responseTimeMs: round.response_time_ms,
+                        },
+                    ],
+                    skipDuplicates: true,
+                });
+                if (contribution.count === 0) continue;
+
                 const persistedStats = await tx.contentStat.findUnique({
                     where: { gameMode_itemType_itemId_rulesetVersion_ppVersion: statKey },
                     select: {
@@ -422,9 +437,10 @@ export async function startGameAction(gameMode: GameMode, variant: GameVariant =
         },
         rounds: {
             current: 1,
-            total: MAX_ROUNDS,
+            total: variant === "classic" ? MAX_ROUNDS : Infinity,
             correctGuesses: 0,
             totalTimeUsed: 0,
+            mistakes: 0,
         },
         timeLeft: ROUND_TIME,
         gameStatus: "active",
@@ -454,9 +470,11 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             throw new Error("You must make a guess, skip, or let the timer run out before advancing to the next round");
         }
 
-        const isDeathMode = gameState.variant === "death";
+        const isLegacyDeathMode = gameState.variant === "death";
+        const isSurvivalMode = gameState.variant === "survival";
+        const isContinuousMode = isLegacyDeathMode || isSurvivalMode;
 
-        if (!isDeathMode && gameState.current_round > MAX_ROUNDS) {
+        if (!isContinuousMode && gameState.current_round > MAX_ROUNDS) {
             throw new Error("Game is complete");
         }
 
@@ -517,8 +535,13 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         const currentAnswer = gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).name : (currentItem as MapsetDataWithTags).title;
 
         const isCorrect = isGuess ? checkGuess(effectiveGuess || "", currentAnswer, guessingDifficulty) : false;
-        const points = isNextRound || isDeathMode ? 0 : calculateScore(isCorrect, timeLeft, gameState.current_streak);
-        const deathFailed = isDeathMode && (isSkipped || isTimeout || (!isCorrect && isGuess));
+        const points = isNextRound ? 0 : calculateArcadeScore(isCorrect, timeLeft, gameState.current_streak);
+        const madeMistake = !isNextRound && (isSkipped || isTimeout || (!isCorrect && isGuess));
+        const existingMistakes = (gameState.round_history ?? []).filter((round) => !round.correct).length;
+        const mistakes = existingMistakes + (madeMistake ? 1 : 0);
+        const legacyDeathFailed = isLegacyDeathMode && madeMistake;
+        const survivalFailed = isSurvivalMode && mistakes >= SURVIVAL_FAILURE_MISTAKES;
+        const runFailed = legacyDeathFailed || survivalFailed;
 
         let nextBeatmap: { data: MapsetDataWithTags | SkinData; backgroundData?: string; audioData?: string; skinData?: string } | null = null;
 
@@ -535,7 +558,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
                     nextBeatmap = { data: skin.data, skinData: skin.skinData };
                 }
             } catch (error) {
-                if (!isDeathMode || !isNoGameContentError(error)) throw error;
+                if (!isContinuousMode || !isNoGameContentError(error)) throw error;
                 const pp = await finishGameSession(sessionId, authSession.user.banchoId, "content_exhausted");
                 return {
                     sessionId,
@@ -560,6 +583,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
                         total: gameState.current_round,
                         correctGuesses: gameState.correct_guesses,
                         totalTimeUsed: gameState.total_time_used,
+                        mistakes: existingMistakes,
                     },
                     timeLeft: 0,
                     gameStatus: "finished",
@@ -631,6 +655,11 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         const sessKey = `game_session:${sessionId}`;
         await redisClient.set(sessKey, JSON.stringify(updatedGameState), { EX: 3600 });
 
+        if (isSurvivalMode && madeMistake && !survivalFailed) {
+            const itemType = gameState.game_mode === GameMode.Skin ? "skin" : "mapset";
+            await redisClient.sRem(`session_items:${sessionId}:${itemType}`, gameState.current_item_id.toString());
+        }
+
         if (isNextRound && nextBeatmap) {
             const itemId = "mapset_id" in nextBeatmap.data ? nextBeatmap.data.mapset_id : nextBeatmap.data.id;
             const itemType = "mapset_id" in nextBeatmap.data ? "mapset" : "skin";
@@ -639,7 +668,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             await redisClient.expire(sessionItemsKey, 3600);
         }
 
-        const pp = deathFailed ? await finishGameSession(sessionId, authSession.user.banchoId, "failed") : null;
+        const pp = runFailed ? await finishGameSession(sessionId, authSession.user.banchoId, "failed") : null;
 
         return {
             sessionId,
@@ -666,12 +695,13 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             },
             rounds: {
                 current: gameState.current_round + (isNextRound ? 1 : 0),
-                total: gameState.variant === "classic" ? MAX_ROUNDS : deathFailed ? gameState.current_round : Infinity,
+                total: gameState.variant === "classic" ? MAX_ROUNDS : runFailed ? gameState.current_round : Infinity,
                 correctGuesses: gameState.correct_guesses + (isCorrect ? 1 : 0),
                 totalTimeUsed: gameState.total_time_used + (!isNextRound ? ROUND_TIME - timeLeft : 0),
+                mistakes,
             },
-            timeLeft: deathFailed ? 0 : nextBeatmap ? ROUND_TIME : timeLeft,
-            gameStatus: deathFailed ? "finished" : "active",
+            timeLeft: runFailed ? 0 : nextBeatmap ? ROUND_TIME : timeLeft,
+            gameStatus: runFailed ? "finished" : "active",
             variant: gameState.variant as GameVariant,
             lastGuess: !isNextRound
                 ? {
@@ -738,6 +768,7 @@ export async function getGameStateAction(sessionId: string): Promise<GameState> 
             total: gameState.variant === "classic" ? MAX_ROUNDS : Infinity,
             correctGuesses: gameState.correct_guesses,
             totalTimeUsed: gameState.total_time_used,
+            mistakes: (gameState.round_history ?? []).filter((round) => !round.correct).length,
         },
         timeLeft,
         gameStatus: gameState.is_active ? "active" : "finished",
@@ -796,12 +827,4 @@ export async function getSuggestionsAction(str: string, gamemode: GameMode): Pro
         });
         return sortSuggestions(results.flatMap(({ title }) => (title ? [title] : [])));
     }
-}
-
-function calculateScore(isCorrect: boolean, timeLeft: number, streak: number): number {
-    timeLeft = Number(timeLeft) || 0;
-    streak = Number(streak) || 0;
-
-    if (!isCorrect) return -SKIP_PENALTY;
-    return BASE_POINTS + timeLeft * TIME_BONUS_MULTIPLIER + streak * STREAK_BONUS;
 }

@@ -1,13 +1,13 @@
 # osu!guessr
 
-osu!guessr is a browser guessing game for identifying osu! beatmaps from backgrounds, audio clips, and skin screenshots.
+Guess osu! songs from beatmap backgrounds or audio clips, and skins from screenshots. Play in your browser.
 
 ## Features
 
 - **Background Guessr**: identify songs from beatmap backgrounds.
 - **Audio Guessr**: identify songs from audio clips.
 - **Skin Guessr**: identify community skins from screenshots.
-- Classic and death variants, leaderboards, profiles, achievements, reports, and API keys.
+- Classic and survival variants, leaderboards, profiles, game statistics, reports, and API keys.
 - English, Turkish, Czech, Spanish, Polish, and Russian interfaces.
 
 ## Documentation
