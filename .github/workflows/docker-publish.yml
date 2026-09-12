@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v3
   pull_request:
     branches:
       - main
@@ -68,6 +69,7 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=v3,enable=${{ github.ref == 'refs/heads/v3' }}
             type=sha,prefix=sha-
 
       - name: Verify Server Actions key
