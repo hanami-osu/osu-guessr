@@ -6,6 +6,7 @@ import { MapsetResult } from "../../shared/components/MapsetResult";
 import { useTranslationsContext } from "@/context/translations-provider";
 import type { GameMediaProps } from "@/lib/game/types";
 import { Button } from "@/components/ui/button";
+import { AUDIO_AUTOPLAY_STORAGE_KEY, DEFAULT_AUDIO_AUTOPLAY, DEFAULT_AUDIO_VOLUME_PERCENT, readAudioVolumePreference, readBooleanPreference } from "@/lib/game/preferences";
 
 export default function GameAudio({ mediaUrl, isRevealed, result, songInfo }: GameMediaProps) {
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -17,7 +18,13 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo }: Ga
     isRevealedRef.current = isRevealed;
 
     useEffect(() => {
-        if (audioRef.current) audioRef.current.volume = 0.25;
+        if (!audioRef.current) return;
+
+        try {
+            audioRef.current.volume = readAudioVolumePreference(window.localStorage) / 100;
+        } catch {
+            audioRef.current.volume = DEFAULT_AUDIO_VOLUME_PERCENT / 100;
+        }
     }, []);
 
     useEffect(() => {
@@ -42,6 +49,10 @@ export default function GameAudio({ mediaUrl, isRevealed, result, songInfo }: Ga
             window.clearTimeout(loadTimeout);
             setIsLoading(false);
             if (isRevealedRef.current) return;
+
+            try {
+                if (!readBooleanPreference(window.localStorage, AUDIO_AUTOPLAY_STORAGE_KEY, DEFAULT_AUDIO_AUTOPLAY)) return;
+            } catch {}
 
             void audio.play().catch((error: unknown) => {
                 if (cancelled || (error instanceof Error && (error.name === "NotAllowedError" || error.name === "AbortError"))) return;

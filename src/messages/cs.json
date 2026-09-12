@@ -21,8 +21,8 @@
                 "description": "Hráči, kteří se zaregistrovali"
             },
             "gamesPlayed": {
-                "title": "Počet hraných her",
-                "description": "Počet dokončených her"
+                "title": "Hodnocené běhy",
+                "description": "Zaznamenané hodnocené běhy v klasickém režimu a režimu přežití"
             },
             "profilePp": {
                 "title": "Nejvyšší pp",
@@ -80,15 +80,15 @@
             "steps": {
                 "1": {
                     "title": "Vyberte svůj mód",
-                    "description": "Vyberte pozadí, zvuk nebo skiny."
+                    "description": "Vyberte pozadí, zvuk nebo skiny a potom klasický režim nebo režim přežití."
                 },
                 "2": {
                     "title": "Začít hádat",
-                    "description": "Na každé kolo máte {seconds} sekund. Napište odpověď nebo vyberte návrh."
+                    "description": "Na každé kolo máte {seconds} sekund. Napište odpověď, vyberte návrh nebo kolo přeskočte."
                 },
                 "3": {
                     "title": "Získejte body a pp",
-                    "description": "Správné odpovědi dávají body. Hodnocené běhy dávají také pp podle přesnosti, rychlosti, obtížnosti a konzistence."
+                    "description": "Správné tipy přidávají body; chybné tipy, přeskočení a vypršení času body odečítají. Hodnocené běhy také získávají pp."
                 }
             }
         },
@@ -98,31 +98,31 @@
                 "base": "Základní body: {points} za správnou odpověď",
                 "timeBonus": "Časový bonus: {multiplier} × zbývající sekundy",
                 "streakBonus": "Sériový bonus: {bonus} × současná série",
-                "skipPenalty": "Trest za přeskočení: {penalty} bodů"
+                "skipPenalty": "Chybný tip, přeskočení nebo vypršení času: -{penalty} bodů"
             },
             "gameInfo": {
-                "length": "Délka hry: {rounds} kol",
+                "length": "Klasický režim: {rounds} kol. Přežití: pokračuje, dokud neztratíte všech {lives} životů.",
                 "time": "Čas kola: {seconds} sekund"
             },
             "pp": {
                 "title": "pp",
-                "description": "Hodnocené běhy získávají pp podle přesnosti, rychlosti odpovědí, obtížnosti obsahu a konzistence. Režim přežití navíc odměňuje delší úspěšné běhy.",
-                "profile": "Hodnota pp režimu kombinuje 100 nejsilnějších hodnocených běhů, přičemž každý další běh má 95 % váhy předchozího. Žebříčky se řadí podle pp režimu."
+                "description": "Hodnocené běhy získávají pp podle přesnosti kol, rychlosti odpovědí, obtížnosti obsahu a konzistence. Přežití navíc škáluje podle počtu správných kol v běhu.",
+                "profile": "Profilové pp pro každý herní režim a variantu kombinuje 100 nejsilnějších hodnocených běhů, přičemž každý další běh má 95 % váhy předchozího. Žebříčky používají toto pp."
             }
         },
         "features": {
             "title": "Funkce",
             "leaderboards": {
                 "title": "Žebříček",
-                "description": "Pořadí podle pp režimu spolu se skóre a sériemi."
+                "description": "Pořadí podle pp spolu se skóre a sériemi."
             },
             "autoComplete": {
                 "title": "Automatické doplňování",
-                "description": "Při psaní se zobrazují návrhy písní."
+                "description": "Při psaní se zobrazují návrhy odpovědí."
             },
             "profiles": {
                 "title": "Profily hráčů",
-                "description": "Zobrazte své statistiky a pořadí podle herního režimu."
+                "description": "Zobrazte své statistiky a pořadí podle herního režimu a varianty."
             },
             "api": {
                 "title": "Přístup k API",
@@ -221,9 +221,9 @@
                     "streak": "Budujte sérii pro bonusové body"
                 },
                 "death": {
-                    "continuous": "Uhodněte správně všechny mapy a dokončete běh",
+                    "continuous": "Pokračujte, dokud neztratíte všechny životy; nezvládnuté položky se mohou objevit znovu",
                     "time": "{seconds} sekund na kolo",
-                    "mistakes": "Můžete udělat 3 chyby; čtvrtá běh ukončí"
+                    "lives": "Každý chybný tip, přeskočení nebo vypršení času stojí jeden z vašich {count} životů"
                 }
             },
             "scoring": {
@@ -232,23 +232,23 @@
                     "base": "Základní body: {points}",
                     "timeBonus": "Časový bonus: {points} bodů za zbývající sekundu",
                     "streakBonus": "Sériový bonus: {points} bodů za sériovou úroveň",
-                    "skipPenalty": "Trest za přeskočení: {points} bodů",
+                    "skipPenalty": "Chybný tip, přeskočení nebo vypršení času: -{points} bodů",
                     "pp": "Hodnocené běhy dávají také pp podle přesnosti, rychlosti, obtížnosti a konzistence"
                 },
                 "death": {
                     "score": "Arkádové skóre používá stejný bodový systém jako klasický režim",
-                    "streakOnly": "pp závisí na přesnosti, rychlosti, obtížnosti, konzistenci a délce série",
-                    "compete": "Žebříček řadí podle pp režimu"
+                    "streakOnly": "pp v režimu přežití navíc odměňuje více správných kol před koncem běhu",
+                    "compete": "Žebříček řadí podle pp pro zvolený herní režim a variantu"
                 }
             },
             "modes": {
                 "classic": {
                     "title": "Klasika",
-                    "description": "10 kol"
+                    "description": "{count} kol"
                 },
                 "death": {
                     "title": "Režim přežití",
-                    "description": "3 chyby povoleny"
+                    "description": "{count} životy"
                 }
             },
             "warning": {
@@ -263,11 +263,11 @@
         "modes": {
             "classic": {
                 "title": "Klasika",
-                "description": "10 kol"
+                "description": "15 kol"
             },
             "death": {
                 "title": "Režim přežití",
-                "description": "3 chyby povoleny"
+                "description": "3 životy"
             }
         },
         "status": {
@@ -291,12 +291,13 @@
             },
             "death": {
                 "lives": {
+                    "label": "Životy",
                     "oneShot": "One Shot",
-                    "gameOver": "Konec hry"
+                    "gameOver": "Konec hry",
+                    "remaining": "Životy: {current}/{total}"
                 },
                 "currentStreak": "Aktuální série: {count}",
-                "maxStreak": "Nejvyšší série: {count}",
-                "mistakes": "Chyby: {current}/{limit}"
+                "maxStreak": "Nejvyšší série: {count}"
             },
             "timeLeft": "{seconds}s"
         },
@@ -316,12 +317,12 @@
                 },
                 "maxStreak": "Nejdelší série",
                 "totalCorrect": "Celkový počet správných odpovědí",
-                "averageTime": "Průměrný čas",
-                "diedMessage": "Udělali jste 4 chyby.",
-                "mistakes": "Chyby"
+                "averageTime": "Průměrná doba odpovědi",
+                "diedMessage": "Přišli jste o všechny {count} životy.",
+                "livesRemaining": "Zbývající životy"
             },
             "labels": {
-                "averageTime": "Průměrný čas",
+                "averageTime": "Průměrná doba odpovědi",
                 "correctGuesses": "Správné odpovědi",
                 "runPp": "pp"
             },
@@ -350,7 +351,10 @@
         "audio": {
             "instructions": "Poslouchejte a hádejte název písně.",
             "browserNotSupported": "Your browser does not support the audio element."
-        }
+        },
+        "errors": {},
+        "result": {},
+        "media": {}
     },
     "leaderboard": {
         "title": "Žebříček",
@@ -370,15 +374,15 @@
             "rank": "#",
             "player": "Hráč",
             "totalScore": "Celkové skóre",
-            "gamesPlayed": "Počet her",
+            "gamesPlayed": "Hodnocené běhy",
             "hiScore": "Nejvyšší skóre",
             "bestStreak": "Nejlepší série",
             "profilePp": "pp",
             "bestRunPp": "Nejlepší pp hra"
         },
-        "empty": "Pro tento herní mód nebyl nalezen žádný hráč.",
+        "empty": "Pro tento herní režim a variantu nebyl nalezen žádný hráč.",
         "loading": "Načítání...",
-        "description": "Pořadí podle pp vybraného režimu."
+        "description": "Pořadí podle pp zvoleného herního režimu a varianty."
     },
     "user": {
         "profile": {
@@ -394,16 +398,16 @@
             "stats": {
                 "hiScore": "Nejvyšší skóre",
                 "totalGames": "Počet her",
-                "globalRank": "Světové umístění",
+                "globalRank": "Pořadí v režimu",
                 "profilePp": "Celkové pp",
-                "playtime": "Doba hraní",
+                "playtime": "Celková doba odpovědí",
                 "rankHistory": "Historie umístění"
             },
             "noPlays": "Zatím žádné hry",
             "gameStats": {
                 "title": "Statistiky",
                 "totalScore": "Celkem bodů",
-                "gamesPlayed": "Počet her",
+                "gamesPlayed": "Hodnocené běhy",
                 "highestScore": "Nejvyšší skóre",
                 "bestStreak": "Nejlepší série",
                 "lastPlayed": "Naposledy hrál/a",
@@ -412,10 +416,10 @@
                 "bestRunPp": "Nejlepší pp hra",
                 "guessAccuracy": "Přesnost tipů",
                 "totalGuesses": "Celkem tipů",
-                "averageCombo": "Průměrné kombo"
+                "averageCombo": "Průměrná nejlepší série"
             },
             "topGames": {
-                "title": "Nejlepší skóre",
+                "title": "Nejlepší pp běhy",
                 "points": "{points} bodů",
                 "streak": "{count}x série",
                 "pp": "{pp} pp",
@@ -446,8 +450,58 @@
     },
     "settings": {
         "title": "Nastavení",
+        "description": "Spravujte chování osu!guessr, relaci účtu, možnosti soukromí a přístup pro vývojáře.",
+        "profile": {
+            "title": "Profil",
+            "description": "Přizpůsobte vzhled svého profilu osu!guessr.",
+            "banner": {
+                "title": "Banner profilu",
+                "description": "Použijte HTTPS adresu obrázku pro banner v horní části profilu.",
+                "placeholder": "https://example.com/banner.webp",
+                "save": "Uložit banner",
+                "reset": "Použít výchozí banner",
+                "saved": "Banner profilu byl aktualizován.",
+                "resetDone": "Banner profilu byl obnoven na výchozí.",
+                "error": "Banner profilu se nepodařilo aktualizovat. Zkontrolujte, že jde o platnou HTTPS adresu obrázku."
+            }
+        },
+        "preferences": {
+            "title": "Předvolby",
+            "description": "Tyto předvolby se ukládají v tomto prohlížeči.",
+            "language": {
+                "title": "Jazyk rozhraní",
+                "description": "Vyberte jazyk používaný v osu!guessr."
+            },
+            "audioVolume": {
+                "title": "Výchozí hlasitost zvuku",
+                "description": "Počáteční hlasitost kol v režimu zvuku."
+            },
+            "audioAutoplay": {
+                "title": "Automaticky přehrávat zvuk",
+                "description": "Po načtení kola v režimu zvuku automaticky spusťte přehrávání."
+            },
+            "shortcuts": {
+                "title": "Zobrazit klávesové zkratky",
+                "description": "Při spuštění hry ponechte nápovědu klávesových zkratek rozbalenou."
+            }
+        },
+        "account": {
+            "title": "Účet",
+            "description": "Spravujte účet Hanami nebo ukončete tuto relaci osu!guessr.",
+            "hanami": {
+                "title": "Účet Hanami",
+                "description": "Spravujte propojené účty a profil Hanami.",
+                "action": "Otevřít Hanami"
+            },
+            "signOut": {
+                "title": "Odhlásit se",
+                "description": "Ukončete aktuální relaci osu!guessr v tomto prohlížeči.",
+                "action": "Odhlásit se"
+            }
+        },
         "apiKeys": {
             "title": "Klíče API",
+            "description": "Vytvářejte a rušte klíče pro veřejné API osu!guessr.",
             "usage": "{count}/5 klíčů použito",
             "security": {
                 "title": "Zabezpečení API klíčů",
@@ -503,6 +557,20 @@
                 "loadFailed": "Failed to load API keys",
                 "maxKeysReached": "Maximum number of API keys (5) reached"
             }
+        },
+        "privacy": {
+            "title": "Soukromí a data",
+            "description": "Hanami hostuje informace o soukromí a proces žádostí pro osu!guessr.",
+            "policy": {
+                "title": "Zásady ochrany soukromí",
+                "description": "Přečtěte si, jak služby Hanami včetně osu!guessr nakládají s daty.",
+                "action": "Zobrazit zásady soukromí"
+            },
+            "deletion": {
+                "title": "Požádat o smazání dat",
+                "description": "Pokračujte do Hanami pro pokyny a žádosti o smazání související s daty osu!guessr.",
+                "action": "Pokračovat do Hanami"
+            }
         }
     },
     "support": {
@@ -540,11 +608,19 @@
         "header": {
             "nav": {
                 "leaderboard": "Žebříček",
-                "about": "O {osu_guessr}",
+                "about": "O projektu",
                 "settings": "Nastavení",
                 "signIn": "Přihlásit se přes Hanami",
                 "signOut": "Odhlásit se",
-                "viewProfile": "Zobrazit profil"
+                "viewProfile": "Zobrazit profil",
+                "admin": "Admin"
+            },
+            "accessibility": {
+                "openMenu": "Open navigation menu",
+                "closeMenu": "Close navigation menu",
+                "mobileNavigation": "Mobile navigation",
+                "changeLanguage": "Change language",
+                "profileMenu": "Open profile menu"
             }
         },
         "footer": {
@@ -607,7 +683,7 @@
         "exitGame": {
             "classic": "Odejít? Tento běh se uloží až po dokončení všech kol.",
             "classicComplete": "Ukončit? Váš běh a pp budou uloženy.",
-            "death": "Ukončit tento běh? Běh a pp budou uloženy."
+            "death": "Ukončit tento běh nyní?"
         }
     },
     "notifications": {

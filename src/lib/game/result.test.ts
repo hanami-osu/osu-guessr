@@ -27,12 +27,12 @@ describe("getDeathEndReason", () => {
 });
 
 describe("getSurvivalEndReason", () => {
-    test("marks the fourth mistake as a failed run", () => {
-        expect(getSurvivalEndReason({ ...finishedState, variant: "survival", rounds: { ...finishedState.rounds, mistakes: 4 } })).toBe("died");
+    test("marks the third mistake as a failed run", () => {
+        expect(getSurvivalEndReason({ ...finishedState, variant: "survival", rounds: { ...finishedState.rounds, mistakes: 3 } })).toBe("died");
     });
 
-    test("marks content exhaustion before four mistakes as completion", () => {
-        expect(getSurvivalEndReason({ ...finishedState, variant: "survival", rounds: { ...finishedState.rounds, mistakes: 3 } })).toBe("completed");
+    test("marks content exhaustion before three mistakes as completion", () => {
+        expect(getSurvivalEndReason({ ...finishedState, variant: "survival", rounds: { ...finishedState.rounds, mistakes: 2 } })).toBe("completed");
     });
 
     test("distinguishes a manually ended active survival run", () => {

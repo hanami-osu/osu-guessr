@@ -3,6 +3,7 @@ import { validateApiKey } from "@/lib/api/validate-key";
 import { getUserStatsAction } from "@/actions/user-server";
 import { z } from "zod";
 import { apiErrorResponse } from "@/lib/api/errors";
+import { normalizeDatabaseValue } from "@/lib/database/normalize";
 
 const querySchema = z.object({
     mode: z.enum(["background", "audio", "skin"]).optional(),
@@ -29,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
 
         return NextResponse.json({
             success: true,
-            data: filteredStats,
+            data: normalizeDatabaseValue(filteredStats),
         });
     } catch (error) {
         return apiErrorResponse(error, "Failed to fetch user stats", "Stats error");

@@ -21,8 +21,8 @@
                 "description": "Players who signed up to play"
             },
             "gamesPlayed": {
-                "title": "Games Played",
-                "description": "Total games completed"
+                "title": "Ranked Runs",
+                "description": "Classic and Survival ranked runs recorded"
             },
             "profilePp": {
                 "title": "Top pp",
@@ -204,15 +204,15 @@
             "steps": {
                 "1": {
                     "title": "Choose Your Mode",
-                    "description": "Choose backgrounds, audio, or skins."
+                    "description": "Choose backgrounds, audio, or skins, then Classic or Survival."
                 },
                 "2": {
                     "title": "Start Guessing",
-                    "description": "You have {seconds} seconds per round. Type your answer or select a suggestion."
+                    "description": "You have {seconds} seconds per round. Type your answer, select a suggestion, or skip."
                 },
                 "3": {
                     "title": "Score Points and pp",
-                    "description": "Correct answers earn points. Ranked runs also earn pp from accuracy, speed, difficulty, and consistency."
+                    "description": "Correct guesses earn points; wrong guesses, skips, and timeouts lose points. Ranked runs also earn pp."
                 }
             }
         },
@@ -222,31 +222,31 @@
                 "base": "Base Points: {points} per correct guess",
                 "timeBonus": "Time Bonus: {multiplier} × seconds remaining",
                 "streakBonus": "Streak Bonus: {bonus} × current streak",
-                "skipPenalty": "Skip Penalty: {penalty} points"
+                "skipPenalty": "Wrong guess, skip, or timeout: -{penalty} points"
             },
             "gameInfo": {
-                "length": "Game Length: {rounds} rounds",
+                "length": "Classic: {rounds} rounds. Survival: keep going until all {lives} lives are lost.",
                 "time": "Round Time: {seconds} seconds"
             },
             "pp": {
                 "title": "pp",
-                "description": "Ranked runs earn pp from accuracy, response speed, content difficulty, and consistency. Survival mode also rewards longer successful runs.",
-                "profile": "Mode pp combines your 100 strongest ranked runs, with each lower run weighted at 95% of the previous one. Leaderboards rank by mode pp."
+                "description": "Ranked runs earn pp from round accuracy, response speed, content difficulty, and consistency. Survival also scales with the number of correct rounds in the run.",
+                "profile": "Profile pp for each game mode and variant combines your 100 strongest ranked runs, with each lower run weighted at 95% of the previous one. Leaderboards use that pp."
             }
         },
         "features": {
             "title": "Features",
             "leaderboards": {
                 "title": "Leaderboards",
-                "description": "Rankings by mode pp, alongside scores and streaks."
+                "description": "Rankings by pp, alongside scores and streaks."
             },
             "autoComplete": {
                 "title": "Auto-Complete",
-                "description": "Song suggestions appear as you type."
+                "description": "Answer suggestions appear as you type."
             },
             "profiles": {
                 "title": "Player Profiles",
-                "description": "View your stats and rankings by game mode."
+                "description": "View your stats and rankings by game mode and variant."
             },
             "api": {
                 "title": "API Access",
@@ -345,9 +345,9 @@
                     "streak": "Build a streak for bonus points"
                 },
                 "death": {
-                    "continuous": "Guess every map correctly to complete the run",
+                    "continuous": "Keep going until you lose all your lives; missed items can appear again",
                     "time": "{seconds} seconds per round",
-                    "mistakes": "You can make 3 mistakes; the fourth ends the run"
+                    "lives": "Wrong guesses, skips, and timeouts each cost one of your {count} lives"
                 }
             },
             "scoring": {
@@ -356,23 +356,23 @@
                     "base": "Base Points: {points}",
                     "timeBonus": "Time Bonus: {points} points per second remaining",
                     "streakBonus": "Streak Bonus: {points} points per streak level",
-                    "skipPenalty": "Skip Penalty: {points} points",
+                    "skipPenalty": "Wrong guess, skip, or timeout: -{points} points",
                     "pp": "Ranked runs also earn pp from accuracy, speed, difficulty, and consistency"
                 },
                 "death": {
                     "score": "Arcade score uses the same points formula as Classic Mode",
-                    "streakOnly": "pp depends on accuracy, speed, difficulty, consistency, and streak length",
-                    "compete": "The leaderboard ranks your mode pp"
+                    "streakOnly": "Survival pp also rewards more correct rounds before the run ends",
+                    "compete": "The leaderboard ranks pp for this game mode and variant"
                 }
             },
             "modes": {
                 "classic": {
                     "title": "Classic Mode",
-                    "description": "10 rounds"
+                    "description": "{count} rounds"
                 },
                 "death": {
                     "title": "Survival Mode",
-                    "description": "3 mistakes allowed"
+                    "description": "{count} lives"
                 }
             },
             "warning": {
@@ -387,11 +387,11 @@
         "modes": {
             "classic": {
                 "title": "Classic Mode",
-                "description": "10 rounds"
+                "description": "15 rounds"
             },
             "death": {
                 "title": "Survival Mode",
-                "description": "3 mistakes allowed"
+                "description": "3 lives"
             }
         },
         "status": {
@@ -418,12 +418,13 @@
             },
             "death": {
                 "lives": {
+                    "label": "Lives",
                     "oneShot": "One Shot",
-                    "gameOver": "Game Over"
+                    "gameOver": "Game Over",
+                    "remaining": "Lives: {current}/{total}"
                 },
                 "currentStreak": "Current Streak: {count}",
-                "maxStreak": "Max Streak: {count}",
-                "mistakes": "Mistakes: {current}/{limit}"
+                "maxStreak": "Max Streak: {count}"
             },
             "timeLeft": "{seconds}s"
         },
@@ -443,12 +444,12 @@
                 },
                 "maxStreak": "Maximum Streak",
                 "totalCorrect": "Total Correct",
-                "averageTime": "Average Time",
-                "diedMessage": "You made 4 mistakes.",
-                "mistakes": "Mistakes"
+                "averageTime": "Average Response Time",
+                "diedMessage": "You lost all {count} lives.",
+                "livesRemaining": "Lives Remaining"
             },
             "labels": {
-                "averageTime": "Average Time",
+                "averageTime": "Average Response Time",
                 "correctGuesses": "Correct Guesses",
                 "runPp": "pp"
             },
@@ -520,15 +521,15 @@
             "rank": "#",
             "player": "Player",
             "totalScore": "Total Score",
-            "gamesPlayed": "Games Played",
+            "gamesPlayed": "Ranked Runs",
             "hiScore": "Hi-Score",
             "bestStreak": "Best Streak",
             "profilePp": "pp",
             "bestRunPp": "Top pp Play"
         },
-        "empty": "No players found for this game mode.",
+        "empty": "No players found for this game mode and variant.",
         "loading": "Loading...",
-        "description": "Ranked by pp for the selected mode."
+        "description": "Ranked by pp for the selected game mode and variant."
     },
     "user": {
         "profile": {
@@ -544,16 +545,16 @@
             "stats": {
                 "hiScore": "Hi-Score",
                 "totalGames": "Total Games",
-                "globalRank": "Global Rank",
+                "globalRank": "Mode Rank",
                 "profilePp": "Overall pp",
-                "playtime": "Playtime",
+                "playtime": "Total Response Time",
                 "rankHistory": "Rank history"
             },
             "noPlays": "No plays yet",
             "gameStats": {
                 "title": "Game Statistics",
                 "totalScore": "Total Points",
-                "gamesPlayed": "Games Played",
+                "gamesPlayed": "Ranked Runs",
                 "highestScore": "Highest Score",
                 "bestStreak": "Best Streak",
                 "lastPlayed": "Last Played",
@@ -562,10 +563,10 @@
                 "bestRunPp": "Top pp Play",
                 "guessAccuracy": "Guess Accuracy",
                 "totalGuesses": "Total Guesses",
-                "averageCombo": "Average Combo"
+                "averageCombo": "Avg. Best Streak"
             },
             "topGames": {
-                "title": "Best Scores",
+                "title": "Top pp Plays",
                 "points": "{points} points",
                 "streak": "{count}x streak",
                 "pp": "{pp} pp",
@@ -604,8 +605,58 @@
     },
     "settings": {
         "title": "Settings",
+        "description": "Manage how osu!guessr behaves, your account session, privacy options, and developer access.",
+        "profile": {
+            "title": "Profile",
+            "description": "Customize how your osu!guessr profile looks.",
+            "banner": {
+                "title": "Profile banner",
+                "description": "Use an HTTPS image URL for the banner shown at the top of your profile.",
+                "placeholder": "https://example.com/banner.webp",
+                "save": "Save banner",
+                "reset": "Use default banner",
+                "saved": "Profile banner updated.",
+                "resetDone": "Profile banner reset to default.",
+                "error": "Could not update the profile banner. Check that the URL is a valid HTTPS image URL."
+            }
+        },
+        "preferences": {
+            "title": "Preferences",
+            "description": "These preferences are saved in this browser.",
+            "language": {
+                "title": "Interface language",
+                "description": "Choose the language used across osu!guessr."
+            },
+            "audioVolume": {
+                "title": "Default audio volume",
+                "description": "Starting volume for audio-mode rounds."
+            },
+            "audioAutoplay": {
+                "title": "Autoplay audio clips",
+                "description": "Start audio automatically when an audio-mode round loads."
+            },
+            "shortcuts": {
+                "title": "Show keyboard shortcuts",
+                "description": "Keep the keyboard-shortcuts help expanded when a game starts."
+            }
+        },
+        "account": {
+            "title": "Account",
+            "description": "Manage your Hanami account or end this osu!guessr session.",
+            "hanami": {
+                "title": "Hanami account",
+                "description": "Manage your connected accounts and Hanami profile.",
+                "action": "Open Hanami"
+            },
+            "signOut": {
+                "title": "Sign out",
+                "description": "End your current osu!guessr session on this browser.",
+                "action": "Sign out"
+            }
+        },
         "apiKeys": {
             "title": "API Keys",
+            "description": "Create and revoke keys for the public osu!guessr API.",
             "usage": "{count}/5 keys used",
             "security": {
                 "title": "API key security",
@@ -662,6 +713,20 @@
                 "loadFailed": "Failed to load API keys",
                 "copyFailed": "Failed to copy the API key",
                 "maxKeysReached": "Maximum number of API keys (5) reached"
+            }
+        },
+        "privacy": {
+            "title": "Privacy & data",
+            "description": "Hanami hosts the privacy information and request process for osu!guessr.",
+            "policy": {
+                "title": "Privacy policy",
+                "description": "Read how Hanami services, including osu!guessr, handle data.",
+                "action": "View privacy policy"
+            },
+            "deletion": {
+                "title": "Request data deletion",
+                "description": "Continue to Hanami for deletion instructions and requests related to osu!guessr data.",
+                "action": "Continue to Hanami"
             }
         }
     },
@@ -775,7 +840,7 @@
         "exitGame": {
             "classic": "Exit? This run will not be saved until you finish all rounds.",
             "classicComplete": "Exit? Your run and pp will be saved.",
-            "death": "End this run? Your run and pp will be saved."
+            "death": "End this run now?"
         }
     },
     "notifications": {

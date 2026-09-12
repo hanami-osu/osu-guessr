@@ -136,16 +136,16 @@ export default async function ScorePage({ params }: Props) {
                 {isDeath ? (
                     <dl className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
                         <ScoreStat label="Total Points" value={game.points.toLocaleString()} />
-                        <ScoreStat label="Streak" value={`${game.streak}x`} />
-                        <ScoreStat label="Average Time" value={`${averageResponseSeconds.toFixed(1)}s`} />
+                        <ScoreStat label="Best Streak" value={`${game.streak}x`} />
+                        <ScoreStat label="Avg. Response" value={`${averageResponseSeconds.toFixed(1)}s`} />
                     </dl>
                 ) : isSurvival ? (
                     <dl className="grid grid-cols-2 divide-x divide-y divide-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
                         <ScoreStat label="Total Points" value={game.points.toLocaleString()} />
                         <ScoreStat label="Correct" value={`${game.correctCount}/${roundsPlayed}`} />
-                        <ScoreStat label="Mistakes" value={mistakes.toString()} />
+                        <ScoreStat label="Lives Lost" value={mistakes.toString()} />
                         <ScoreStat label="Best Streak" value={`${game.streak}x`} />
-                        <ScoreStat label="Average Time" value={`${averageResponseSeconds.toFixed(1)}s`} />
+                        <ScoreStat label="Avg. Response" value={`${averageResponseSeconds.toFixed(1)}s`} />
                     </dl>
                 ) : (
                     <dl className="grid grid-cols-2 divide-x divide-y divide-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
@@ -153,7 +153,7 @@ export default async function ScorePage({ params }: Props) {
                         <ScoreStat label="Correct" value={`${game.correctCount}/${roundsPlayed}`} />
                         <ScoreStat label="Accuracy" value={`${accuracy.toFixed(1)}%`} />
                         <ScoreStat label="Best Streak" value={`${game.streak}x`} />
-                        <ScoreStat label="Average Time" value={`${averageResponseSeconds.toFixed(1)}s`} />
+                        <ScoreStat label="Avg. Response" value={`${averageResponseSeconds.toFixed(1)}s`} />
                     </dl>
                 )}
             </section>

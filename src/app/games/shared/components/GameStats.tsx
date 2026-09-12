@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { GameVariant } from "../../config";
+import { GameVariant, SURVIVAL_LIVES } from "../../config";
 import { useTranslationsContext } from "@/context/translations-provider";
 
 interface GameStatsProps {
@@ -35,6 +35,7 @@ export default function GameStats({ runPp, totalPoints, correctGuesses, maxStrea
     const isSurvival = gameVariant === "survival";
     const isContinuous = isSurvival || gameVariant === "death";
     const died = isContinuous && gameEndReason === "died";
+    const livesRemaining = Math.max(0, SURVIVAL_LIVES - mistakes);
     const title = isContinuous
         ? gameEndReason === "died"
             ? t.game.stats.death.title.died
@@ -48,7 +49,7 @@ export default function GameStats({ runPp, totalPoints, correctGuesses, maxStrea
             <div className="motion-fade-up">
                 <header className="border-b border-border/60 pb-4">
                     <h1 className={`text-3xl font-bold tracking-tight sm:text-4xl ${died ? "text-destructive" : "text-foreground"}`}>{title}</h1>
-                    {died && <p className="mt-2 text-sm font-medium text-destructive/90">{t.game.stats.death.diedMessage}</p>}
+                    {died && <p className="mt-2 text-sm font-medium text-destructive/90">{t.game.stats.death.diedMessage.replace("{count}", SURVIVAL_LIVES.toString())}</p>}
                 </header>
 
                 <section className="border-b border-border/60 py-5 sm:py-6">
@@ -66,7 +67,7 @@ export default function GameStats({ runPp, totalPoints, correctGuesses, maxStrea
                                 <ResultStat label={t.game.stats.death.maxStreak} value={maxStreak} />
                             </div>
                             <div className="pr-4 pt-0 sm:px-6">
-                                <ResultStat label={isSurvival ? t.game.stats.death.mistakes : t.game.stats.death.totalCorrect} value={isSurvival ? mistakes : correctGuesses} />
+                                <ResultStat label={isSurvival ? t.game.stats.death.livesRemaining : t.game.stats.death.totalCorrect} value={isSurvival ? livesRemaining : correctGuesses} />
                             </div>
                             <div className="pl-4 pt-0 sm:pl-6">
                                 <ResultStat label={t.game.stats.labels.averageTime} value={t.game.stats.classic.averageTime.replace("{time}", averageTime.toFixed(1))} />

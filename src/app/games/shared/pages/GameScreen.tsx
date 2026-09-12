@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GameClient } from "@/lib/game/client";
 import { GameState, GameMode } from "@/actions/types";
 
-import { AUTO_ADVANCE_DELAY_MS, GameVariant, SURVIVAL_FAILURE_MISTAKES } from "../../config";
+import { AUTO_ADVANCE_DELAY_MS, GameVariant, SURVIVAL_LIVES } from "../../config";
 import GameStats from "../components/GameStats";
 import GuessInput from "../components/GuessInput";
 import LoadingScreen from "../components/LoadingScreen";
@@ -20,6 +20,7 @@ import { AlertCircle } from "lucide-react";
 import { getDeathEndReason, getSurvivalEndReason } from "@/lib/game/result";
 import type { GameMediaProps } from "@/lib/game/types";
 import { isClassicGameIncomplete } from "@/lib/game/completion";
+import { SHORTCUTS_STORAGE_KEY } from "@/lib/game/preferences";
 
 interface GameScreenProps {
     onExit(): void;
@@ -27,8 +28,6 @@ interface GameScreenProps {
     gameMode: GameMode;
     GameMedia: React.ComponentType<GameMediaProps>;
 }
-
-const SHORTCUTS_STORAGE_KEY = "osu-guessr:keyboard-shortcuts-open";
 
 export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }: GameScreenProps) {
     const { t } = useTranslationsContext();
@@ -39,6 +38,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     const [isLoading, setIsLoading] = useState(true);
     const [countdown, setCountdown] = useState<number>(AUTO_ADVANCE_DELAY_MS / 1000);
     const [showStats, setShowStats] = useState(false);
+    const [statsEndReason, setStatsEndReason] = useState<"completed" | "died" | "ended" | undefined>();
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [startupError, setStartupError] = useState<string | null>(null);
@@ -50,6 +50,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         try {
             setIsLoading(true);
             setShowStats(false);
+            setStatsEndReason(undefined);
             setGuess("");
             setGameState(null);
             setStartupError(null);
@@ -183,6 +184,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         try {
             await gameClient.current.endGame();
             if (gameVariant === "survival" || gameVariant === "death") {
+                setStatsEndReason("ended");
                 setShowStats(true);
             } else {
                 onExit();
@@ -273,6 +275,8 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     if (!gameState) return <LoadingScreen />;
 
     if (showStats && gameState) {
+        const playedRounds = gameState.rounds.correctGuesses + gameState.rounds.mistakes;
+
         return (
             <GameStats
                 runPp={gameState.pp ?? 0}
@@ -280,11 +284,11 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 correctGuesses={gameState.rounds.correctGuesses}
                 maxStreak={gameState.score.highestStreak}
                 totalRounds={gameState.rounds.total}
-                averageTime={gameState.rounds.totalTimeUsed / gameState.rounds.current}
+                averageTime={playedRounds > 0 ? gameState.rounds.totalTimeUsed / playedRounds : 0}
                 mistakes={gameState.rounds.mistakes}
                 onPlayAgain={handleStartGame}
                 gameVariant={gameVariant}
-                gameEndReason={gameVariant === "survival" ? getSurvivalEndReason(gameState) : gameVariant === "death" ? getDeathEndReason(gameState) : undefined}
+                gameEndReason={statsEndReason ?? (gameVariant === "survival" ? getSurvivalEndReason(gameState) : gameVariant === "death" ? getDeathEndReason(gameState) : undefined)}
             />
         );
     }
@@ -301,7 +305,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 gameVariant={gameVariant}
                 maxStreak={gameState.score.highestStreak}
                 mistakes={gameState.rounds.mistakes}
-                mistakeLimit={SURVIVAL_FAILURE_MISTAKES}
+                lifeCount={SURVIVAL_LIVES}
                 timerDuration={gameState.currentBeatmap.revealed ? AUTO_ADVANCE_DELAY_MS / 1000 : undefined}
             />
 

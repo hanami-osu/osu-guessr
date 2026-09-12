@@ -1,6 +1,7 @@
-import { ROUND_TIME } from "../../config";
+import { ROUND_TIME, SURVIVAL_LIVES } from "../../config";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { useTranslationsContext } from "@/context/translations-provider";
+import { Heart, HeartCrack } from "lucide-react";
 
 interface GameHeaderProps {
     streak: number;
@@ -12,13 +13,14 @@ interface GameHeaderProps {
     gameVariant: GameVariant;
     maxStreak?: number;
     mistakes?: number;
-    mistakeLimit?: number;
+    lifeCount?: number;
     timerDuration?: number;
 }
 
-export default function GameHeader({ streak, points, timeLeft, currentRound, totalRounds, mode, gameVariant, maxStreak = 0, mistakes = 0, mistakeLimit = 4, timerDuration = ROUND_TIME }: GameHeaderProps) {
+export default function GameHeader({ streak, points, timeLeft, currentRound, totalRounds, mode, gameVariant, maxStreak = 0, mistakes = 0, lifeCount = SURVIVAL_LIVES, timerDuration = ROUND_TIME }: GameHeaderProps) {
     const { t, locale } = useTranslationsContext();
     const statClass = "min-w-0 border-l border-border/60 pl-4 first:border-l-0 first:pl-0 sm:pl-6 pr-4 sm:pr-6";
+    const livesRemaining = Math.max(0, lifeCount - mistakes);
 
     return (
         <header className="mb-5">
@@ -52,8 +54,23 @@ export default function GameHeader({ streak, points, timeLeft, currentRound, tot
                 ) : gameVariant === "survival" ? (
                     <>
                         <div className={statClass}>
-                            <div className={`font-semibold tabular-nums ${mistakes >= mistakeLimit ? "text-destructive" : "text-foreground"}`}>
-                                {t.game.header.death.mistakes.replace("{current}", mistakes.toString()).replace("{limit}", mistakeLimit.toString())}
+                            <div
+                                className="flex items-center gap-1.5"
+                                aria-label={t.game.header.death.lives.remaining.replace("{current}", livesRemaining.toString()).replace("{total}", lifeCount.toString())}
+                            >
+                                <span className="font-semibold">{t.game.header.death.lives.label}:</span>
+                                {Array.from({ length: lifeCount }, (_, index) => {
+                                    const lost = index < mistakes;
+                                    const Icon = lost ? HeartCrack : Heart;
+
+                                    return (
+                                        <Icon
+                                            key={index}
+                                            aria-hidden="true"
+                                            className={lost ? "size-5 fill-foreground/10 text-muted-foreground/50 sm:size-6" : "size-5 fill-destructive text-destructive sm:size-6"}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
                         <div className={statClass}>

@@ -4,7 +4,7 @@ import { getAuthSession } from "./server";
 import { prisma } from "@/lib/database/prisma";
 import redisClient from "@/lib/redis";
 import { z } from "zod";
-import { MAX_ROUNDS, ROUND_TIME, SURVIVAL_FAILURE_MISTAKES, type GameVariant } from "../app/games/config";
+import { MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES, type GameVariant } from "../app/games/config";
 import { getRandomAudioAction, getRandomBackgroundAction, getRandomSkinAction } from "./mapsets-server";
 import { GameMode, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "./types";
 import { getMediaData } from "./media";
@@ -540,7 +540,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         const existingMistakes = (gameState.round_history ?? []).filter((round) => !round.correct).length;
         const mistakes = existingMistakes + (madeMistake ? 1 : 0);
         const legacyDeathFailed = isLegacyDeathMode && madeMistake;
-        const survivalFailed = isSurvivalMode && mistakes >= SURVIVAL_FAILURE_MISTAKES;
+        const survivalFailed = isSurvivalMode && mistakes >= SURVIVAL_LIVES;
         const runFailed = legacyDeathFailed || survivalFailed;
 
         let nextBeatmap: { data: MapsetDataWithTags | SkinData; backgroundData?: string; audioData?: string; skinData?: string } | null = null;

@@ -228,20 +228,20 @@ describe("game server lifecycle", () => {
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
     });
 
-    test("survival requeues mistakes and ends on the fourth one", async () => {
+    test("survival requeues mistakes and ends on the third one", async () => {
         putSession(makeSession({ variant: "survival" }));
 
-        for (let mistakes = 1; mistakes <= 3; mistakes++) {
+        for (let mistakes = 1; mistakes <= 2; mistakes++) {
             const failedGuess = await submitGuessAction(sessionId, "wrong answer");
             expect(failedGuess.gameStatus).toBe("active");
             expect(failedGuess.rounds.mistakes).toBe(mistakes);
             await submitGuessAction(sessionId);
         }
 
-        const fourthMistake = await submitGuessAction(sessionId, "wrong answer");
-        expect(fourthMistake.gameStatus).toBe("finished");
-        expect(fourthMistake.rounds.mistakes).toBe(4);
-        expect(redisClientMock.sRem).toHaveBeenCalledTimes(3);
+        const thirdMistake = await submitGuessAction(sessionId, "wrong answer");
+        expect(thirdMistake.gameStatus).toBe("finished");
+        expect(thirdMistake.rounds.mistakes).toBe(3);
+        expect(redisClientMock.sRem).toHaveBeenCalledTimes(2);
         expect(transactionMock).toHaveBeenCalledTimes(1);
         expect(gameCreateMock).toHaveBeenCalledTimes(1);
     });
@@ -335,7 +335,7 @@ describe("game server lifecycle", () => {
     });
 
     test("does not persist an unanswered classic final round", async () => {
-        putSession(makeSession({ current_round: 10, has_guessed_current_round: false }));
+        putSession(makeSession({ current_round: 15, has_guessed_current_round: false }));
 
         await endGameAction(sessionId);
 

@@ -21,8 +21,8 @@
                 "description": "Jugadores que se han registrado"
             },
             "gamesPlayed": {
-                "title": "Partidas jugadas",
-                "description": "Total de partidas completadas"
+                "title": "Partidas clasificadas",
+                "description": "Partidas clasificadas registradas de Clásico y Supervivencia"
             },
             "profilePp": {
                 "title": "pp más alto",
@@ -80,15 +80,15 @@
             "steps": {
                 "1": {
                     "title": "Elige un modo",
-                    "description": "Elige fondos, audio o skins."
+                    "description": "Elige fondos, audio o skins, y después Clásico o Supervivencia."
                 },
                 "2": {
                     "title": "Empieza a adivinar",
-                    "description": "Tienes {seconds} segundos por ronda. Escribe tu respuesta o elige una sugerencia."
+                    "description": "Tienes {seconds} segundos por ronda. Escribe tu respuesta, elige una sugerencia u omite la ronda."
                 },
                 "3": {
                     "title": "Consigue puntos y pp",
-                    "description": "Las respuestas correctas dan puntos. Las partidas clasificadas también dan pp según precisión, velocidad, dificultad y consistencia."
+                    "description": "Los aciertos suman puntos; los fallos, omisiones y tiempos agotados restan puntos. Las partidas clasificadas también dan pp."
                 }
             }
         },
@@ -98,31 +98,31 @@
                 "base": "Puntos de base: {points} por acierto",
                 "timeBonus": "Bonificación de tiempo: {multiplier} × segundos restantes",
                 "streakBonus": "Bonificación por racha: {bonus} × racha actual",
-                "skipPenalty": "Penalización por omitir: {penalty} puntos"
+                "skipPenalty": "Respuesta incorrecta, omisión o tiempo agotado: -{penalty} puntos"
             },
             "gameInfo": {
-                "length": "Duración de la partida: {rounds} rondas",
+                "length": "Clásico: {rounds} rondas. Supervivencia: continúa hasta perder las {lives} vidas.",
                 "time": "Tiempo por ronda: {seconds} segundos"
             },
             "pp": {
                 "title": "pp",
-                "description": "Las partidas clasificadas otorgan pp según la precisión, la velocidad de respuesta, la dificultad del contenido y la consistencia. El modo supervivencia también premia las partidas exitosas más largas.",
-                "profile": "El pp del modo combina tus 100 mejores partidas clasificadas, y cada partida inferior pesa un 95 % de la anterior. Las clasificaciones se ordenan por pp del modo."
+                "description": "Las partidas clasificadas otorgan pp según la precisión por ronda, la velocidad de respuesta, la dificultad del contenido y la consistencia. Supervivencia también escala con el número de rondas acertadas.",
+                "profile": "El pp del perfil para cada modo de juego y variante combina tus 100 mejores partidas clasificadas, y cada partida inferior pesa un 95 % de la anterior. Las clasificaciones usan ese pp."
             }
         },
         "features": {
             "title": "Características",
             "leaderboards": {
                 "title": "Tablas de clasificación",
-                "description": "Clasificaciones por pp del modo, junto con puntuaciones y rachas."
+                "description": "Clasificaciones por pp, junto con puntuaciones y rachas."
             },
             "autoComplete": {
                 "title": "Autocompletado",
-                "description": "Las sugerencias de canciones aparecen al escribir."
+                "description": "Las sugerencias de respuesta aparecen al escribir."
             },
             "profiles": {
                 "title": "Perfiles de jugadores",
-                "description": "Consulta tus estadísticas y posiciones por modo de juego."
+                "description": "Consulta tus estadísticas y posiciones por modo de juego y variante."
             },
             "api": {
                 "title": "Acceso a la API",
@@ -221,9 +221,9 @@
                     "streak": "Consigue una racha para obtener puntos extra"
                 },
                 "death": {
-                    "continuous": "Acierta todos los mapas para completar la partida",
+                    "continuous": "Continúa hasta perder todas tus vidas; los elementos fallados pueden volver a aparecer",
                     "time": "{seconds} segundos por ronda",
-                    "mistakes": "Puedes cometer 3 errores; el cuarto termina la partida"
+                    "lives": "Cada respuesta incorrecta, omisión o tiempo agotado cuesta una de tus {count} vidas"
                 }
             },
             "scoring": {
@@ -232,23 +232,23 @@
                     "base": "Puntos de base: {points}",
                     "timeBonus": "Bonificación de tiempo: {points} puntos por segundo restante",
                     "streakBonus": "Bonificación por racha: {points} puntos por nivel de racha",
-                    "skipPenalty": "Penalización por omitir: {points} puntos",
+                    "skipPenalty": "Respuesta incorrecta, omisión o tiempo agotado: -{points} puntos",
                     "pp": "Las partidas clasificadas también dan pp según precisión, velocidad, dificultad y consistencia"
                 },
                 "death": {
                     "score": "La puntuación arcade usa la misma fórmula de puntos que el modo clásico",
-                    "streakOnly": "El pp depende de la precisión, velocidad, dificultad, consistencia y longitud de la racha",
-                    "compete": "La clasificación usa el pp del modo"
+                    "streakOnly": "El pp de Supervivencia también premia acertar más rondas antes de que termine la partida",
+                    "compete": "La clasificación usa el pp de este modo de juego y variante"
                 }
             },
             "modes": {
                 "classic": {
                     "title": "Modo clásico",
-                    "description": "10 rondas"
+                    "description": "{count} rondas"
                 },
                 "death": {
                     "title": "Modo supervivencia",
-                    "description": "3 errores permitidos"
+                    "description": "{count} vidas"
                 }
             },
             "warning": {
@@ -263,11 +263,11 @@
         "modes": {
             "classic": {
                 "title": "Modo clásico",
-                "description": "10 rondas"
+                "description": "15 rondas"
             },
             "death": {
                 "title": "Modo supervivencia",
-                "description": "3 errores permitidos"
+                "description": "3 vidas"
             }
         },
         "status": {
@@ -291,12 +291,13 @@
             },
             "death": {
                 "lives": {
+                    "label": "Vidas",
                     "oneShot": "Un disparo",
-                    "gameOver": "Se acabó el juego"
+                    "gameOver": "Se acabó el juego",
+                    "remaining": "Vidas: {current}/{total}"
                 },
                 "currentStreak": "Racha actual: {count}",
-                "maxStreak": "Racha máxima: {count}",
-                "mistakes": "Errores: {current}/{limit}"
+                "maxStreak": "Racha máxima: {count}"
             },
             "timeLeft": "{seconds}s"
         },
@@ -316,12 +317,12 @@
                 },
                 "maxStreak": "Racha máxima",
                 "totalCorrect": "Aciertos totales",
-                "averageTime": "Tiempo promedio",
-                "diedMessage": "Cometiste 4 errores.",
-                "mistakes": "Errores"
+                "averageTime": "Tiempo medio de respuesta",
+                "diedMessage": "Perdiste tus {count} vidas.",
+                "livesRemaining": "Vidas restantes"
             },
             "labels": {
-                "averageTime": "Tiempo promedio",
+                "averageTime": "Tiempo medio de respuesta",
                 "correctGuesses": "Suposiciones correctas",
                 "runPp": "pp"
             },
@@ -350,7 +351,10 @@
         "audio": {
             "instructions": "Escucha y adivina el título de la canción.",
             "browserNotSupported": "Your browser does not support the audio element."
-        }
+        },
+        "errors": {},
+        "result": {},
+        "media": {}
     },
     "leaderboard": {
         "title": "Clasificaciones",
@@ -370,15 +374,15 @@
             "rank": "#",
             "player": "Jugador",
             "totalScore": "Puntuación total",
-            "gamesPlayed": "Partidas jugadas",
+            "gamesPlayed": "Partidas clasificadas",
             "hiScore": "Puntuación más alta",
             "bestStreak": "Mejor racha",
             "profilePp": "pp",
             "bestRunPp": "Mejor partida de pp"
         },
-        "empty": "No se han encontrado jugadores para este modo de juego.",
+        "empty": "No se han encontrado jugadores para este modo de juego y variante.",
         "loading": "Cargando...",
-        "description": "Clasificación por pp del modo seleccionado."
+        "description": "Clasificación por pp del modo de juego y variante seleccionados."
     },
     "user": {
         "profile": {
@@ -394,16 +398,16 @@
             "stats": {
                 "hiScore": "Puntuación más alta",
                 "totalGames": "Partidas totales",
-                "globalRank": "Clasificación global",
+                "globalRank": "Posición del modo",
                 "profilePp": "pp totales",
-                "playtime": "Tiempo de juego",
+                "playtime": "Tiempo total de respuesta",
                 "rankHistory": "Historial de clasificación"
             },
             "noPlays": "Aún no hay jugadas",
             "gameStats": {
                 "title": "Estadísticas del juego",
                 "totalScore": "Puntos totales",
-                "gamesPlayed": "Partidas jugadas",
+                "gamesPlayed": "Partidas clasificadas",
                 "highestScore": "Puntuación más alta",
                 "bestStreak": "Mejor racha",
                 "lastPlayed": "Última partida",
@@ -412,10 +416,10 @@
                 "bestRunPp": "Mejor partida de pp",
                 "guessAccuracy": "Precisión de respuestas",
                 "totalGuesses": "Respuestas totales",
-                "averageCombo": "Combo promedio"
+                "averageCombo": "Media de mejor racha"
             },
             "topGames": {
-                "title": "Mejores puntuaciones",
+                "title": "Mejores jugadas por pp",
                 "points": "{points} puntos",
                 "streak": "{count}x racha",
                 "pp": "{pp} pp",
@@ -446,8 +450,58 @@
     },
     "settings": {
         "title": "Ajustes",
+        "description": "Gestiona el comportamiento de osu!guessr, tu sesión, las opciones de privacidad y el acceso para desarrolladores.",
+        "profile": {
+            "title": "Perfil",
+            "description": "Personaliza el aspecto de tu perfil de osu!guessr.",
+            "banner": {
+                "title": "Banner del perfil",
+                "description": "Usa una URL de imagen HTTPS para el banner que aparece en la parte superior de tu perfil.",
+                "placeholder": "https://example.com/banner.webp",
+                "save": "Guardar banner",
+                "reset": "Usar banner predeterminado",
+                "saved": "Banner del perfil actualizado.",
+                "resetDone": "Banner del perfil restablecido al predeterminado.",
+                "error": "No se pudo actualizar el banner del perfil. Comprueba que la URL sea una imagen HTTPS válida."
+            }
+        },
+        "preferences": {
+            "title": "Preferencias",
+            "description": "Estas preferencias se guardan en este navegador.",
+            "language": {
+                "title": "Idioma de la interfaz",
+                "description": "Elige el idioma que se usa en osu!guessr."
+            },
+            "audioVolume": {
+                "title": "Volumen de audio predeterminado",
+                "description": "Volumen inicial de las rondas del modo de audio."
+            },
+            "audioAutoplay": {
+                "title": "Reproducir audio automáticamente",
+                "description": "Inicia el audio automáticamente al cargar una ronda del modo de audio."
+            },
+            "shortcuts": {
+                "title": "Mostrar atajos de teclado",
+                "description": "Mantén abierta la ayuda de atajos de teclado al iniciar una partida."
+            }
+        },
+        "account": {
+            "title": "Cuenta",
+            "description": "Gestiona tu cuenta de Hanami o cierra esta sesión de osu!guessr.",
+            "hanami": {
+                "title": "Cuenta de Hanami",
+                "description": "Gestiona tus cuentas conectadas y tu perfil de Hanami.",
+                "action": "Abrir Hanami"
+            },
+            "signOut": {
+                "title": "Cerrar sesión",
+                "description": "Finaliza tu sesión actual de osu!guessr en este navegador.",
+                "action": "Cerrar sesión"
+            }
+        },
         "apiKeys": {
             "title": "Claves de API",
+            "description": "Crea y revoca claves para la API pública de osu!guessr.",
             "usage": "{count}/5 claves utilizadas",
             "security": {
                 "title": "Seguridad de las claves de API",
@@ -503,6 +557,20 @@
                 "loadFailed": "No se ha podido cargar la clave de API",
                 "maxKeysReached": "Número máximo de claves de API alcanzado (5)"
             }
+        },
+        "privacy": {
+            "title": "Privacidad y datos",
+            "description": "Hanami aloja la información de privacidad y el proceso de solicitudes de osu!guessr.",
+            "policy": {
+                "title": "Política de privacidad",
+                "description": "Consulta cómo los servicios de Hanami, incluido osu!guessr, gestionan los datos.",
+                "action": "Ver política de privacidad"
+            },
+            "deletion": {
+                "title": "Solicitar eliminación de datos",
+                "description": "Continúa en Hanami para ver las instrucciones y solicitudes de eliminación relacionadas con datos de osu!guessr.",
+                "action": "Continuar a Hanami"
+            }
         }
     },
     "support": {
@@ -544,7 +612,15 @@
                 "settings": "Ajustes",
                 "signIn": "Inicia sesión con Hanami",
                 "signOut": "Cerrar sesión",
-                "viewProfile": "Ver perfil"
+                "viewProfile": "Ver perfil",
+                "admin": "Admin"
+            },
+            "accessibility": {
+                "openMenu": "Open navigation menu",
+                "closeMenu": "Close navigation menu",
+                "mobileNavigation": "Mobile navigation",
+                "changeLanguage": "Change language",
+                "profileMenu": "Open profile menu"
             }
         },
         "footer": {
@@ -607,7 +683,7 @@
         "exitGame": {
             "classic": "¿Salir? Esta partida no se guardará hasta completar todas las rondas.",
             "classicComplete": "¿Salir? Se guardarán tu partida y pp.",
-            "death": "¿Terminar esta partida? Se guardarán la partida y el pp."
+            "death": "¿Terminar esta partida ahora?"
         }
     },
     "notifications": {

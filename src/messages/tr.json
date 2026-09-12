@@ -21,8 +21,8 @@
                 "description": "Oynamak için kayıt olan oyuncular"
             },
             "gamesPlayed": {
-                "title": "Oynanan Oyunlar",
-                "description": "Toplam tamamlanan oyunlar"
+                "title": "Sıralamalı Koşular",
+                "description": "Kaydedilmiş Klasik ve Hayatta Kalma sıralamalı koşuları"
             },
             "profilePp": {
                 "title": "En Yüksek pp",
@@ -80,15 +80,15 @@
             "steps": {
                 "1": {
                     "title": "Modunu Seç",
-                    "description": "Arka plan, ses veya skin modunu seç."
+                    "description": "Arka plan, ses veya skin modunu, ardından Klasik veya Hayatta Kalma varyantını seç."
                 },
                 "2": {
                     "title": "Tahmin Etmeye Başla",
-                    "description": "Her turda {seconds} saniyen var. Cevabını yaz veya önerilerden birini seç."
+                    "description": "Her turda {seconds} saniyen var. Cevabını yaz, önerilerden birini seç veya turu atla."
                 },
                 "3": {
                     "title": "Puan ve pp Kazan",
-                    "description": "Doğru cevaplar puan kazandırır. Sıralamalı koşular doğruluk, hız, zorluk ve tutarlılığa göre pp de kazandırır."
+                    "description": "Doğru tahminler puan kazandırır; yanlış tahminler, atlamalar ve süre aşımı puan kaybettirir. Sıralamalı koşular ayrıca pp kazandırır."
                 }
             }
         },
@@ -98,31 +98,31 @@
                 "base": "Temel Puan: Doğru tahmin başına {points}",
                 "timeBonus": "Zaman Bonusu: {multiplier} × kalan saniye",
                 "streakBonus": "Seri Bonusu: {bonus} × mevcut seri",
-                "skipPenalty": "Atlama Cezası: {penalty} puan"
+                "skipPenalty": "Yanlış tahmin, atlama veya süre aşımı: -{penalty} puan"
             },
             "gameInfo": {
-                "length": "Oyun Uzunluğu: {rounds} tur",
+                "length": "Klasik: {rounds} tur. Hayatta Kalma: {lives} canın bitene kadar devam eder.",
                 "time": "Tur Süresi: {seconds} saniye"
             },
             "pp": {
                 "title": "pp",
-                "description": "Sıralamalı koşular doğruluk, cevap hızı, içerik zorluğu ve tutarlılığa göre pp kazandırır. Hayatta kalma modu ayrıca daha uzun başarılı koşuları ödüllendirir.",
-                "profile": "Mod pp'si en iyi 100 sıralamalı koşunu birleştirir ve her alt koşuyu bir öncekine göre %95 ağırlıkla sayar. Liderlik tablosu mod pp'sine göre sıralanır."
+                "description": "Sıralamalı koşular tur doğruluğu, cevap hızı, içerik zorluğu ve tutarlılığa göre pp kazandırır. Hayatta Kalma ayrıca koşudaki doğru tur sayısına göre ölçeklenir.",
+                "profile": "Her oyun modu ve varyant için profil pp'si en iyi 100 sıralamalı koşunu birleştirir ve her alt koşuyu bir öncekine göre %95 ağırlıkla sayar. Liderlik tablosu bu pp'yi kullanır."
             }
         },
         "features": {
             "title": "Özellikler",
             "leaderboards": {
                 "title": "Sıralama Tabloları",
-                "description": "Mod pp'sine göre sıralama, skorlar ve seriler."
+                "description": "pp sıralamaları, skorlar ve seriler."
             },
             "autoComplete": {
                 "title": "Otomatik Tamamlama",
-                "description": "Yazarken şarkı önerileri gösterilir."
+                "description": "Yazarken cevap önerileri gösterilir."
             },
             "profiles": {
                 "title": "Oyuncu Profilleri",
-                "description": "Oyun moduna göre istatistiklerini ve sıralamanı gör."
+                "description": "Oyun modu ve varyanta göre istatistiklerini ve sıralamanı gör."
             },
             "api": {
                 "title": "API Erişimi",
@@ -221,9 +221,9 @@
                     "streak": "Bonus puanlar için seri yap"
                 },
                 "death": {
-                    "continuous": "Koşuyu tamamlamak için tüm haritaları doğru tahmin et",
+                    "continuous": "Tüm canlarını kaybedene kadar devam et; kaçırdığın içerikler tekrar gelebilir",
                     "time": "Her turda {seconds} saniye",
-                    "mistakes": "3 hata yapabilirsin; dördüncü hata koşuyu bitirir"
+                    "lives": "Her yanlış tahmin, atlama veya süre aşımı {count} canından birini götürür"
                 }
             },
             "scoring": {
@@ -232,23 +232,23 @@
                     "base": "Temel Puan: {points}",
                     "timeBonus": "Zaman Bonusu: Kalan saniye başına {points} puan",
                     "streakBonus": "Seri Bonusu: Seri seviyesi başına {points} puan",
-                    "skipPenalty": "Atlama Cezası: {points} puan",
+                    "skipPenalty": "Yanlış tahmin, atlama veya süre aşımı: -{points} puan",
                     "pp": "Sıralamalı koşular doğruluk, hız, zorluk ve tutarlılığa göre pp de kazandırır"
                 },
                 "death": {
                     "score": "Arcade skoru Klasik Mod ile aynı puan formülünü kullanır",
-                    "streakOnly": "pp değeri doğruluk, hız, zorluk, tutarlılık ve seri uzunluğuna göre hesaplanır",
-                    "compete": "Sıralama mod pp'sine göre yapılır"
+                    "streakOnly": "Hayatta Kalma pp'si koşu bitmeden önceki doğru tur sayısını da ödüllendirir",
+                    "compete": "Sıralama bu oyun modu ve varyantın pp'sine göre yapılır"
                 }
             },
             "modes": {
                 "classic": {
                     "title": "Klasik Mod",
-                    "description": "10 tur"
+                    "description": "{count} tur"
                 },
                 "death": {
                     "title": "Hayatta Kalma Modu",
-                    "description": "3 hata hakkı"
+                    "description": "{count} can"
                 }
             },
             "warning": {
@@ -275,11 +275,11 @@
         "modes": {
             "classic": {
                 "title": "Klasik Mod",
-                "description": "10 tur"
+                "description": "15 tur"
             },
             "death": {
                 "title": "Hayatta Kalma Modu",
-                "description": "3 hata hakkı"
+                "description": "3 can"
             }
         },
         "header": {
@@ -291,12 +291,13 @@
             },
             "death": {
                 "lives": {
+                    "label": "Can",
                     "oneShot": "Tek Şans",
-                    "gameOver": "Oyun Bitti"
+                    "gameOver": "Oyun Bitti",
+                    "remaining": "Can: {current}/{total}"
                 },
                 "currentStreak": "Mevcut Seri: {count}",
-                "maxStreak": "En Yüksek Seri: {count}",
-                "mistakes": "Hata: {current}/{limit}"
+                "maxStreak": "En Yüksek Seri: {count}"
             },
             "timeLeft": "{seconds}sn"
         },
@@ -316,12 +317,12 @@
                 },
                 "maxStreak": "Maksimum Seri",
                 "totalCorrect": "Toplam Doğru",
-                "averageTime": "Ortalama Süre",
-                "diedMessage": "4 hata yaptın.",
-                "mistakes": "Hata"
+                "averageTime": "Ortalama Yanıt Süresi",
+                "diedMessage": "Tüm {count} canını kaybettin.",
+                "livesRemaining": "Kalan Can"
             },
             "labels": {
-                "averageTime": "Ortalama Süre",
+                "averageTime": "Ortalama Yanıt Süresi",
                 "correctGuesses": "Doğru Tahminler",
                 "runPp": "pp"
             },
@@ -350,7 +351,10 @@
         "audio": {
             "instructions": "Dinle ve şarkının adını tahmin et.",
             "browserNotSupported": "Your browser does not support the audio element."
-        }
+        },
+        "errors": {},
+        "result": {},
+        "media": {}
     },
     "leaderboard": {
         "title": "Sıralama",
@@ -370,15 +374,15 @@
             "rank": "#",
             "player": "Oyuncu",
             "totalScore": "Toplam Puan",
-            "gamesPlayed": "Oynanan Oyun",
+            "gamesPlayed": "Sıralamalı Koşular",
             "hiScore": "En Yüksek Skor",
             "bestStreak": "En İyi Seri",
             "profilePp": "pp",
             "bestRunPp": "En İyi pp Oyunu"
         },
-        "empty": "Bu oyun modu için oyuncu bulunamadı.",
+        "empty": "Bu oyun modu ve varyant için oyuncu bulunamadı.",
         "loading": "Yükleniyor...",
-        "description": "Seçili modun pp değerine göre sıralanır."
+        "description": "Seçili oyun modu ve varyantın pp değerine göre sıralanır."
     },
     "user": {
         "profile": {
@@ -394,16 +398,16 @@
             "stats": {
                 "hiScore": "En Yüksek Skor",
                 "totalGames": "Toplam Oyun",
-                "globalRank": "Küresel Sıralama",
+                "globalRank": "Mod Sıralaması",
                 "profilePp": "Genel pp",
-                "playtime": "Oynama süresi",
+                "playtime": "Toplam Yanıt Süresi",
                 "rankHistory": "Sıralama geçmişi"
             },
             "noPlays": "Henüz oyun yok",
             "gameStats": {
                 "title": "Oyun İstatistikleri",
                 "totalScore": "Toplam Puan",
-                "gamesPlayed": "Oynanan Oyun",
+                "gamesPlayed": "Sıralamalı Koşular",
                 "highestScore": "En Yüksek Skor",
                 "bestStreak": "En İyi Seri",
                 "lastPlayed": "Son Oynama",
@@ -412,10 +416,10 @@
                 "bestRunPp": "En İyi pp Oyunu",
                 "guessAccuracy": "Tahmin doğruluğu",
                 "totalGuesses": "Toplam tahmin",
-                "averageCombo": "Ortalama kombo"
+                "averageCombo": "Ortalama En İyi Seri"
             },
             "topGames": {
-                "title": "En İyi Skorlar",
+                "title": "En İyi pp Koşuları",
                 "points": "{points} puan",
                 "streak": "{count}x seri",
                 "pp": "{pp} pp",
@@ -446,8 +450,58 @@
     },
     "settings": {
         "title": "Ayarlar",
+        "description": "osu!guessr davranışını, hesap oturumunuzu, gizlilik seçeneklerini ve geliştirici erişimini yönetin.",
+        "profile": {
+            "title": "Profil",
+            "description": "osu!guessr profilinizin görünümünü özelleştirin.",
+            "banner": {
+                "title": "Profil bannerı",
+                "description": "Profilinizin üstünde gösterilecek banner için bir HTTPS görsel adresi kullanın.",
+                "placeholder": "https://example.com/banner.webp",
+                "save": "Bannerı kaydet",
+                "reset": "Varsayılan bannerı kullan",
+                "saved": "Profil bannerı güncellendi.",
+                "resetDone": "Profil bannerı varsayılana döndürüldü.",
+                "error": "Profil bannerı güncellenemedi. Adresin geçerli bir HTTPS görsel adresi olduğunu kontrol edin."
+            }
+        },
+        "preferences": {
+            "title": "Tercihler",
+            "description": "Bu tercihler bu tarayıcıya kaydedilir.",
+            "language": {
+                "title": "Arayüz dili",
+                "description": "osu!guessr genelinde kullanılacak dili seçin."
+            },
+            "audioVolume": {
+                "title": "Varsayılan ses düzeyi",
+                "description": "Ses modundaki turlar için başlangıç ses düzeyi."
+            },
+            "audioAutoplay": {
+                "title": "Ses kliplerini otomatik oynat",
+                "description": "Ses modunda bir tur yüklendiğinde sesi otomatik başlat."
+            },
+            "shortcuts": {
+                "title": "Klavye kısayollarını göster",
+                "description": "Oyun başladığında klavye kısayolları yardımını açık tut."
+            }
+        },
+        "account": {
+            "title": "Hesap",
+            "description": "Hanami hesabınızı yönetin veya bu osu!guessr oturumunu sonlandırın.",
+            "hanami": {
+                "title": "Hanami hesabı",
+                "description": "Bağlı hesaplarınızı ve Hanami profilinizi yönetin.",
+                "action": "Hanami'yi aç"
+            },
+            "signOut": {
+                "title": "Çıkış yap",
+                "description": "Bu tarayıcıdaki mevcut osu!guessr oturumunuzu sonlandırın.",
+                "action": "Çıkış yap"
+            }
+        },
         "apiKeys": {
             "title": "API Anahtarları",
+            "description": "Herkese açık osu!guessr API'si için anahtar oluşturun veya iptal edin.",
             "usage": "{count}/5 anahtar kullanılıyor",
             "security": {
                 "title": "API anahtarı güvenliği",
@@ -503,6 +557,20 @@
                 "loadFailed": "Failed to load API keys",
                 "maxKeysReached": "Maximum number of API keys (5) reached"
             }
+        },
+        "privacy": {
+            "title": "Gizlilik ve veriler",
+            "description": "Hanami, osu!guessr için gizlilik bilgilerini ve talep sürecini barındırır.",
+            "policy": {
+                "title": "Gizlilik politikası",
+                "description": "osu!guessr dahil Hanami hizmetlerinin verileri nasıl işlediğini okuyun.",
+                "action": "Gizlilik politikasını görüntüle"
+            },
+            "deletion": {
+                "title": "Veri silme talebi",
+                "description": "osu!guessr verileriyle ilgili silme talimatları ve talepleri için Hanami'ye devam edin.",
+                "action": "Hanami'ye devam et"
+            }
         }
     },
     "support": {
@@ -544,7 +612,15 @@
                 "settings": "Ayarlar",
                 "signIn": "Hanami ile Giriş Yap",
                 "signOut": "Çıkış Yap",
-                "viewProfile": "Profili Görüntüle"
+                "viewProfile": "Profili Görüntüle",
+                "admin": "Admin"
+            },
+            "accessibility": {
+                "openMenu": "Open navigation menu",
+                "closeMenu": "Close navigation menu",
+                "mobileNavigation": "Mobile navigation",
+                "changeLanguage": "Change language",
+                "profileMenu": "Open profile menu"
             }
         },
         "footer": {
@@ -607,7 +683,7 @@
         "exitGame": {
             "classic": "Çıkılsın mı? Tüm turları bitirmeden bu koşu kaydedilmez.",
             "classicComplete": "Çıkılsın mı? Koşun ve pp'n kaydedilecek.",
-            "death": "Koşu bitirilsin mi? Koşun ve pp'n kaydedilecek."
+            "death": "Bu koşu şimdi bitirilsin mi?"
         }
     },
     "notifications": {

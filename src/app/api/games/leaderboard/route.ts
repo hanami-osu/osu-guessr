@@ -4,6 +4,7 @@ import { getTopPlayersAction } from "@/actions/user-server";
 import { GameMode } from "@/actions/types";
 import { z } from "zod";
 import { apiErrorResponse } from "@/lib/api/errors";
+import { normalizeDatabaseValue } from "@/lib/database/normalize";
 
 const querySchema = z.object({
     mode: z.nativeEnum(GameMode).default(GameMode.Background),
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             success: true,
-            data: leaderboard,
+            data: normalizeDatabaseValue(leaderboard),
         });
     } catch (error) {
         return apiErrorResponse(error, "Failed to fetch leaderboard", "Leaderboard error");
