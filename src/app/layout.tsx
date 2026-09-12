@@ -43,8 +43,14 @@ export const metadata: Metadata = {
         description: "Guess osu! songs from audio clips or beatmap backgrounds, and skins from screenshots.",
         url: publicOrigin,
         siteName: "osu!guessr",
-        images: [{ url: `${publicOrigin}/main_bg.webp`, width: 1200, height: 630 }],
+        images: [{ url: `${publicOrigin}/main_bg.webp`, width: 1200, height: 630, alt: "osu!guessr" }],
         type: "website",
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "osu!guessr",
+        description: "Guess osu! songs from audio clips or beatmap backgrounds, and skins from screenshots.",
+        images: [{ url: `${publicOrigin}/main_bg.webp`, alt: "osu!guessr" }],
     },
 };
 

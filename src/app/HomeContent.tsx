@@ -21,7 +21,7 @@ interface HomeContentProps {
     highStats: {
         total_users: number;
         total_games: number;
-        highest_points: number;
+        highest_run_pp: number;
     };
     latestAnnouncement?: { title: string; content: string; created_at: string } | null;
 }
@@ -31,7 +31,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
 
     return (
         <section className="pb-10 pt-2">
-            <div className="container mx-auto max-w-6xl px-4">
+            <div className="page-container">
                 <h2 className="text-2xl font-bold tracking-tight mb-6">{t.home.statistics.title}</h2>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
                     <div>
@@ -52,9 +52,9 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
                     </div>
                     <div>
                         <StatsCard
-                            title={t.home.statistics.highScore.title}
-                            value={highStats.highest_points.toLocaleString(locale)}
-                            description={t.home.statistics.highScore.description}
+                            title={t.home.statistics.profilePp.title}
+                            value={highStats.highest_run_pp.toLocaleString(locale, { maximumFractionDigits: 1 })}
+                            description={t.home.statistics.profilePp.description}
                             icon={<Trophy className="h-6 w-6" />}
                         />
                     </div>
@@ -73,7 +73,7 @@ export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeConten
 
     return (
         <section className="py-10 md:py-12">
-            <div className="container mx-auto max-w-6xl px-4">
+            <div className="page-container">
                 <div className="mb-5 flex items-center justify-between gap-4">
                     <h2 className="text-2xl font-bold tracking-tight">{t.home.announcements.title}</h2>
                     <Link href="/announcements" className="subtle-link shrink-0 text-sm text-foreground/65 transition-colors hover:text-primary">

@@ -10,7 +10,12 @@ import { ChangelogsSection } from "./components/Changelogs";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-    const [highStats, announcements, changelogs] = await Promise.all([getHighestStatsAction(), listRecentAnnouncements(1), readChangelogs()]);
+    const [classicStats, survivalStats, announcements, changelogs] = await Promise.all([getHighestStatsAction("classic"), getHighestStatsAction("survival"), listRecentAnnouncements(1), readChangelogs()]);
+    const highStats = {
+        total_users: classicStats.total_users,
+        total_games: classicStats.total_games + survivalStats.total_games,
+        highest_run_pp: Math.max(classicStats.highest_run_pp, survivalStats.highest_run_pp),
+    };
 
     return (
         <>
@@ -18,7 +23,7 @@ export default async function Home() {
             <GameModeCards />
             <HomeAnnouncementsSection latestAnnouncement={announcements[0] ?? null} />
             <HomeStatsSection highStats={highStats} />
-            <section className="bg-secondary/20 py-12">
+            <section className="bg-muted/30 py-12">
                 <SupportersSection />
             </section>
             {changelogs.length > 0 && (

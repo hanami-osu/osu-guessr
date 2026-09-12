@@ -10,13 +10,8 @@ export const PUBLIC_SITEMAP_ROUTES: SitemapRoute[] = [
     { path: "/", changeFrequency: "daily", priority: 1 },
     { path: "/about", changeFrequency: "monthly", priority: 0.7 },
     { path: "/announcements", changeFrequency: "weekly", priority: 0.6 },
-    { path: "/games/audio", changeFrequency: "weekly", priority: 0.6 },
-    { path: "/games/background", changeFrequency: "weekly", priority: 0.8 },
-    { path: "/games/skin", changeFrequency: "weekly", priority: 0.6 },
     { path: "/leaderboard", changeFrequency: "daily", priority: 0.7 },
-    { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
     { path: "/support", changeFrequency: "monthly", priority: 0.4 },
-    { path: "/tos", changeFrequency: "yearly", priority: 0.2 },
 ];
 
 function escapeSitemapXml(value: string): string {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslationsContext } from "@/context/translations-provider";
-import { TIME_BONUS_MULTIPLIER, BASE_POINTS, SKIP_PENALTY, STREAK_BONUS, MAX_ROUNDS, ROUND_TIME } from "../games/config";
+import { MAX_ROUNDS, ROUND_TIME } from "../games/config";
 import React from "react";
 import Link from "next/link";
 
@@ -27,7 +27,7 @@ export default function AboutClient() {
     const { t } = useTranslationsContext();
 
     return (
-        <div className="container mx-auto px-4 py-10 md:py-16 max-w-4xl">
+        <div className="page-container py-10 md:py-16">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">{t.about.title}</h1>
             <div className="space-y-10">
                 <section>
@@ -40,7 +40,7 @@ export default function AboutClient() {
                     <div className="grid gap-x-10 gap-y-6 md:grid-cols-3">
                         <div className="min-w-0">
                             <h3 className="text-lg font-semibold mb-2 text-foreground">
-                                <Link href="/games/background" className="underline decoration-border underline-offset-4 hover:text-primary">
+                                <Link href="/?game=background" scroll={false} className="underline decoration-border underline-offset-4 hover:text-primary">
                                     {t.about.gameModes.background.title}
                                 </Link>
                             </h3>
@@ -48,7 +48,7 @@ export default function AboutClient() {
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-lg font-semibold mb-2 text-foreground">
-                                <Link href="/games/audio" className="underline decoration-border underline-offset-4 hover:text-primary">
+                                <Link href="/?game=audio" scroll={false} className="underline decoration-border underline-offset-4 hover:text-primary">
                                     {t.about.gameModes.audio.title}
                                 </Link>
                             </h3>
@@ -56,7 +56,7 @@ export default function AboutClient() {
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-lg font-semibold mb-2 text-foreground">
-                                <Link href="/games/skin" className="underline decoration-border underline-offset-4 hover:text-primary">
+                                <Link href="/?game=skin" scroll={false} className="underline decoration-border underline-offset-4 hover:text-primary">
                                     {t.about.gameModes.skin.title}
                                 </Link>
                             </h3>
@@ -85,8 +85,8 @@ export default function AboutClient() {
                         <div className="flex items-start gap-4">
                             <div className="text-muted-foreground tabular-nums w-5 flex-shrink-0 pt-0.5">3</div>
                             <div>
-                                <h3 className="text-lg font-medium mb-1">{t.about.howToPlay.steps[3].title}</h3>
-                                <p className="text-muted-foreground leading-7">{t.about.howToPlay.steps[3].description}</p>
+                                <h3 className="text-lg font-medium mb-1">{t.about.scoringSystem.pp.title}</h3>
+                                <p className="text-muted-foreground leading-7">{t.about.scoringSystem.pp.description}</p>
                             </div>
                         </div>
                     </div>
@@ -94,16 +94,15 @@ export default function AboutClient() {
 
                 <section id="scoringSystem" className="scroll-mt-24 border-t border-border/60 pt-8">
                     <h2 className="text-xl font-semibold tracking-tight mb-4">{t.about.scoringSystem.title}</h2>
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <p className="text-muted-foreground leading-7">{t.about.scoringSystem.points.base.replace("{points}", BASE_POINTS.toString())}</p>
-                            <p className="text-muted-foreground leading-7">{t.about.scoringSystem.points.timeBonus.replace("{multiplier}", TIME_BONUS_MULTIPLIER.toString())}</p>
-                            <p className="text-muted-foreground leading-7">{t.about.scoringSystem.points.streakBonus.replace("{bonus}", STREAK_BONUS.toString())}</p>
-                        </div>
-                        <div className="space-y-2">
-                            <p className="text-muted-foreground leading-7">{t.about.scoringSystem.gameInfo.length.replace("{rounds}", MAX_ROUNDS.toString())}</p>
-                            <p className="text-muted-foreground leading-7">{t.about.scoringSystem.gameInfo.time.replace("{seconds}", ROUND_TIME.toString())}</p>
-                            <p className="text-muted-foreground leading-7">{t.about.scoringSystem.points.skipPenalty.replace("{penalty}", SKIP_PENALTY.toString())}</p>
+                    <div className="space-y-2">
+                        <p className="text-muted-foreground leading-7">{t.about.scoringSystem.gameInfo.length.replace("{rounds}", MAX_ROUNDS.toString())}</p>
+                        <p className="text-muted-foreground leading-7">{t.about.scoringSystem.gameInfo.time.replace("{seconds}", ROUND_TIME.toString())}</p>
+                    </div>
+                    <div className="mt-5 border-t border-border/60 pt-5">
+                        <h3 className="mb-2 text-lg font-medium">{t.about.scoringSystem.pp.title}</h3>
+                        <div className="space-y-2 text-muted-foreground leading-7">
+                            <p>{t.about.scoringSystem.pp.description}</p>
+                            <p>{t.about.scoringSystem.pp.profile}</p>
                         </div>
                     </div>
                 </section>
@@ -113,7 +112,7 @@ export default function AboutClient() {
                     <div className="grid gap-x-10 gap-y-6 md:grid-cols-2">
                         <div className="min-w-0">
                             <h3 className="text-lg font-semibold mb-2 text-foreground">{t.about.features.leaderboards.title}</h3>
-                            <p className="text-muted-foreground leading-7">{t.about.features.leaderboards.description}</p>
+                            <p className="text-muted-foreground leading-7">{t.leaderboard.description}</p>
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-lg font-semibold mb-2 text-foreground">{t.about.features.autoComplete.title}</h3>

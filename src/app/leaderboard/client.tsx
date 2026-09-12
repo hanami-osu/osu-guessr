@@ -7,7 +7,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDownIcon } from "lucide-react";
 import { getTopPlayersAction } from "@/actions/user-server";
 import { GameMode, type TopPlayer } from "@/actions/types";
 import type { GameVariant } from "@/app/games/config";
@@ -28,7 +27,6 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
     const [leaderboardData, setLeaderboardData] = useState<Array<TopPlayer>>(initialData);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(initialError);
-    const [orderMetric, setOrderMetric] = useState<"total" | "highest">("highest");
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
     const requestGate = useRef(createLatestRequestGate());
@@ -50,7 +48,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
 
             try {
                 const offset = (page - 1) * pageSize;
-                const data = await getTopPlayersAction(selectedMode, selectedVariant, pageSize, orderMetric, offset);
+                const data = await getTopPlayersAction(selectedMode, selectedVariant, pageSize, offset);
                 if (request.isCurrent()) {
                     setLeaderboardData(data);
                 }
@@ -68,25 +66,27 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
 
         void fetchLeaderboard();
         return () => request.cancel();
-    }, [selectedMode, selectedVariant, orderMetric, page, pageSize, errorMessage]);
+    }, [selectedMode, selectedVariant, page, pageSize, errorMessage]);
 
     const gameModes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin];
 
     return (
-        <div className="container mx-auto max-w-6xl px-4 py-10 md:py-16">
+        <div className="page-container py-10 md:py-16">
             <div className="mb-8 md:mb-10">
                 <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t.leaderboard.title}</h1>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">{t.leaderboard.description}</p>
             </div>
 
-            <div className="mb-8 flex flex-col gap-5 border-y border-border/60 py-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-10">
+            <div className="mb-8 flex flex-col gap-5 border-b border-border/60 py-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-10">
                 <div className="min-w-0">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Mode</div>
-                    <div className="flex flex-wrap gap-x-5 gap-y-2">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.user.profile.modeLabel}</div>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2" role="radiogroup" aria-label={t.user.profile.modeLabel}>
                         {gameModes.map((mode) => (
                             <button
                                 key={mode}
                                 type="button"
-                                aria-pressed={selectedMode === mode}
+                                role="radio"
+                                aria-checked={selectedMode === mode}
                                 onClick={() => {
                                     setSelectedMode(mode);
                                     setPage(1);
@@ -100,20 +100,21 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                 </div>
 
                 <div className="min-w-0">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Variant</div>
-                    <div className="flex flex-wrap gap-x-5 gap-y-2">
-                        {(["classic", "death"] as const).map((variant) => (
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.user.profile.variantLabel}</div>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2" role="radiogroup" aria-label={t.user.profile.variantLabel}>
+                        {(["classic", "survival"] as const).map((variant) => (
                             <button
                                 key={variant}
                                 type="button"
-                                aria-pressed={selectedVariant === variant}
+                                role="radio"
+                                aria-checked={selectedVariant === variant}
                                 onClick={() => {
                                     setSelectedVariant(variant);
                                     setPage(1);
                                 }}
                                 className={`border-b-2 pb-1 text-sm font-medium transition-colors ${
                                     selectedVariant === variant
-                                        ? variant === "death"
+                                        ? variant === "survival"
                                             ? "border-destructive text-foreground"
                                             : "border-primary text-foreground"
                                         : "border-transparent text-muted-foreground hover:text-foreground"
@@ -126,7 +127,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                 </div>
             </div>
 
-            <div className="border-y border-border/60">
+            <div className="border-b border-border/60">
                 {isLoading ? (
                     <div className="p-8 text-center" role="status">
                         {t.common.loading}
@@ -147,46 +148,19 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                             <tr>
                                 <th scope="col" className="w-14 px-3 py-3 text-left font-medium sm:w-auto sm:px-5 sm:py-4">{t.leaderboard.table.rank}</th>
                                 <th scope="col" className="px-2 py-3 text-left font-medium sm:px-5 sm:py-4">{t.leaderboard.table.player}</th>
-                                {selectedVariant === "classic" && (
+                                <th scope="col" className="w-24 px-3 py-3 text-right text-xs font-medium sm:w-auto sm:px-5 sm:py-4 sm:text-sm">{t.leaderboard.table.profilePp}</th>
+                                <th scope="col" className="hidden px-5 py-4 text-right font-medium lg:table-cell">{t.leaderboard.table.bestRunPp}</th>
+                                {selectedVariant === "survival" && (
                                     <th scope="col" className="hidden px-3 py-3 text-right sm:table-cell sm:px-5 sm:py-4">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setOrderMetric("total");
-                                                setPage(1);
-                                            }}
-                                            className="h-auto p-0 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
-                                        >
-                                            {t.leaderboard.table.totalScore}
-                                            {orderMetric === "total" && <ChevronDownIcon className="ml-1 h-3 w-3" />}
-                                        </Button>
+                                        {t.leaderboard.table.bestStreak}
                                     </th>
                                 )}
                                 <th scope="col" className="hidden px-5 py-4 text-right font-medium md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
-                                <th scope="col" className="w-20 px-3 py-3 text-right text-xs font-medium sm:w-auto sm:px-5 sm:py-4 sm:text-sm">
-                                    {selectedVariant === "classic" ? (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setOrderMetric("highest");
-                                                setPage(1);
-                                            }}
-                                            className="h-auto p-0 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
-                                        >
-                                            {t.leaderboard.table.hiScore}
-                                            {orderMetric === "highest" && <ChevronDownIcon className="ml-1 h-3 w-3" />}
-                                        </Button>
-                                    ) : (
-                                        t.leaderboard.table.bestStreak
-                                    )}
-                                </th>
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-border/50">
                                 {leaderboardData.map((player, index) => (
-                                    <tr key={player.bancho_id} className={`transition-colors hover:bg-secondary/20 ${session?.user?.name === player.username ? "bg-primary/10" : ""}`}>
+                                    <tr key={player.bancho_id} className={`transition-colors hover:bg-muted/30 ${session?.user?.name === player.username ? "bg-primary/10" : ""}`}>
                                         <td className="px-3 py-4 sm:px-5 sm:py-5">
                                             <span className={`${index + 1 <= 3 && page === 1 ? "font-semibold text-primary" : "text-muted-foreground"} font-mono tabular-nums`}>
                                                 {(page - 1) * pageSize + index + 1}
@@ -199,6 +173,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                                     alt=""
                                                     width={32}
                                                     height={32}
+                                                    unoptimized
                                                     className="rounded-full ring-2 ring-transparent group-hover:ring-primary/20 transition-all"
                                                 />
                                                 <div className="flex min-w-0 items-center gap-2">
@@ -221,9 +196,18 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                                 </div>
                                             </Link>
                                         </td>
-                                        {selectedVariant === "classic" && <td className="hidden px-5 py-5 text-right font-mono text-sm tabular-nums sm:table-cell">{BigInt(player.total_score).toLocaleString(locale)}</td>}
+                                        <td className="px-3 py-4 text-right font-mono text-sm font-semibold tabular-nums sm:px-5 sm:py-5">
+                                            {Number(player.profile_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}
+                                        </td>
+                                        <td className="hidden px-5 py-5 text-right font-mono text-sm tabular-nums text-muted-foreground lg:table-cell">
+                                            {Number(player.best_run_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}
+                                        </td>
+                                        {selectedVariant === "survival" && (
+                                            <td className="hidden px-5 py-5 text-right font-mono text-sm tabular-nums sm:table-cell">
+                                                {player.highest_streak.toLocaleString(locale)}
+                                            </td>
+                                        )}
                                         <td className="hidden px-5 py-5 text-right font-mono text-sm tabular-nums text-muted-foreground md:table-cell">{player.games_played}</td>
-                                        <td className="px-3 py-4 text-right font-mono text-sm font-semibold tabular-nums sm:px-5 sm:py-5">{selectedVariant === "classic" ? player.highest_score : player.highest_streak}</td>
                                     </tr>
                                 ))}
                             </tbody>
