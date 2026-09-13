@@ -16,6 +16,8 @@ const envSchema = z.object({
     NEXTAUTH_URL: optionalUrl("NEXTAUTH_URL must be a valid URL"),
 
     OSU_API_KEY: z.string().min(1, "OSU_API_KEY is required"),
+    OSU_CLIENT_ID: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1).optional()),
+    OSU_CLIENT_SECRET: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1).optional()),
     OSUCK_API_KEY: z.string().optional(),
     OSUCK_API_BASE: z.string().optional(),
     DISCORD_WEBHOOK: optionalUrl("DISCORD_WEBHOOK must be a valid URL"),
@@ -36,6 +38,8 @@ const processEnv = {
     HANAMI_CLIENT_ID: process.env.HANAMI_CLIENT_ID,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     OSU_API_KEY: process.env.OSU_API_KEY,
+    OSU_CLIENT_ID: process.env.OSU_CLIENT_ID,
+    OSU_CLIENT_SECRET: process.env.OSU_CLIENT_SECRET,
     OSUCK_API_KEY: process.env.OSUCK_API_KEY,
     OSUCK_API_BASE: process.env.OSUCK_API_BASE,
     DISCORD_WEBHOOK: process.env.DISCORD_WEBHOOK,

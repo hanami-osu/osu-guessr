@@ -16,12 +16,17 @@ const globalForPrisma = globalThis as unknown as {
     prisma?: PrismaClient;
 };
 
+function hasCurrentSchema(client: PrismaClient | undefined): client is PrismaClient {
+    return typeof (client as unknown as { scorePpPair?: { findMany?: unknown } } | undefined)?.scorePpPair?.findMany === "function";
+}
+
 export const prisma =
-    globalForPrisma.prisma ??
-    new PrismaClient({
-        adapter,
-        log: process.env.NODE_ENV === "production" ? ["error"] : ["warn", "error"],
-    });
+    hasCurrentSchema(globalForPrisma.prisma)
+        ? globalForPrisma.prisma
+        : new PrismaClient({
+              adapter,
+              log: process.env.NODE_ENV === "production" ? ["error"] : ["warn", "error"],
+          });
 
 if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = prisma;

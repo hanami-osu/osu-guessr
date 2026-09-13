@@ -197,6 +197,10 @@
             "skin": {
                 "title": "Skin Guessr",
                 "description": "Угадай скин из {osu_base} по скриншоту."
+            },
+            "score_pp": {
+                "title": "Счёт pp",
+                "description": "Выбери, какой из двух счетов osu! стоит больше pp."
             }
         }
     },
@@ -205,15 +209,20 @@
             "title": {
                 "audio": "Audio Guessr",
                 "background": "Background Guessr",
-                "skin": "Skin Guessr"
+                "skin": "Skin Guessr",
+                "score_pp": "Счёт pp"
             },
             "description": {
                 "audio": "Угадай песню по аудиофрагменту.",
                 "background": "Угадай песню по фону карты.",
-                "skin": "Угадай скин из {osu_base} по скриншоту."
+                "skin": "Угадай скин из {osu_base} по скриншоту.",
+                "score_pp": "Сравни два настоящих результата osu! и выбери тот, который стоит больше pp."
             },
             "howToPlay": {
                 "title": "Как играть",
+                "scorePp": {
+                    "choose": "Сравни карту, моды, точность, комбо и количество попаданий, затем выбери счёт, который, по твоему мнению, стоит больше pp"
+                },
                 "classic": {
                     "rounds": "{count} раундов",
                     "time": "{seconds} секунд на раунд",
@@ -336,7 +345,8 @@
             "exitGame": "Выйти из игры",
             "nextRound": "Следующий раунд",
             "nextRoundTime": "Следующий раунд ({seconds}с)",
-            "viewResults": "Посмотреть результаты"
+            "viewResults": "Посмотреть результаты",
+            "retry": "Попробовать снова"
         },
         "shortcuts": {
             "title": "Горячие клавиши",
@@ -352,7 +362,60 @@
             "instructions": "Послушай и угадай название песни.",
             "browserNotSupported": "Your browser does not support the audio element."
         },
-        "errors": {},
+        "errors": {
+            "startFailed": "Не удалось начать игру",
+            "actionFailed": "Не удалось выполнить действие игры"
+        },
+        "scorePp": {
+            "question": "Какой счёт osu! стоит больше PP?",
+            "helper": "Нажми на любую сторону, чтобы подтвердить выбор",
+            "globalRank": "Мировой рейтинг",
+            "chooseScore": "Выбрать счёт {side}",
+            "beatmap": "Битмапа",
+            "accuracy": "Точность",
+            "combo": "Комбо",
+            "score": "Счёт",
+            "miss": "Промахи",
+            "pp": "PP",
+            "unranked": "Без рейтинга",
+            "correct": "Верно",
+            "wrong": "Неверно",
+            "higherResult": "Счёт {side} имел больше PP",
+            "timeUp": "Время вышло",
+            "loading": "Загрузка пары счетов...",
+            "unavailable": "Счёт pp недоступен",
+            "errors": {
+                "start": "Не удалось запустить Score pp. Попробуйте ещё раз.",
+                "load": "Не удалось загрузить этот раунд Score pp. Попробуйте ещё раз.",
+                "submit": "Не удалось подтвердить ваш выбор. Состояние игры проверено; попробуйте ещё раз.",
+                "end": "Не удалось завершить эту игру Score pp. Попробуйте ещё раз.",
+                "unavailable": "Для этого раунда нет доступных подготовленных пар Score pp."
+            },
+            "results": {
+                "gameComplete": "Игра завершена",
+                "runComplete": "Забег завершён",
+                "totalPoints": "Всего очков",
+                "correctPicks": "Правильные выборы",
+                "bestStreak": "Лучшее комбо",
+                "averageResponse": "Средний ответ",
+                "responses": "Ответы",
+                "round": "Раунд {round}",
+                "yourPick": "Твой выбор",
+                "answer": "Ответ",
+                "playAgain": "Играть снова",
+                "comparedPlays": "Сравненные результаты",
+                "winningChoice": "Победивший выбор",
+                "scoreSide": "Счёт {side}",
+                "noSelection": "Нет выбора (время вышло)",
+                "pointsEarned": "Получено очков",
+                "hitCounts": "Количество попаданий",
+                "great": "300",
+                "ok": "100",
+                "meh": "50",
+                "miss": "Промахи",
+                "reviewUnavailable": "Подробности сравнения для этого раунда недоступны."
+            }
+        },
         "result": {},
         "media": {}
     },
@@ -362,7 +425,8 @@
             "mode": {
                 "background": "Фон",
                 "audio": "Аудио",
-                "skin": "Скин"
+                "skin": "Скин",
+                "score_pp": "Счёт pp"
             },
             "variant": {
                 "classic": "Классический режим",

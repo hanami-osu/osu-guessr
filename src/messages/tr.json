@@ -197,6 +197,10 @@
             "skin": {
                 "title": "Skin Tahmin",
                 "description": "{osu_base} skinini ekran görüntüsünden tahmin et."
+            },
+            "score_pp": {
+                "title": "Skor pp",
+                "description": "İki osu! skorundan hangisinin daha fazla pp ettiğini seç."
             }
         }
     },
@@ -205,15 +209,20 @@
             "title": {
                 "audio": "Ses Tahmin",
                 "background": "Arkaplan Tahmin",
-                "skin": "Skin Guessr"
+                "skin": "Skin Guessr",
+                "score_pp": "Skor pp"
             },
             "description": {
                 "audio": "Şarkıyı ses kaydından tahmin et.",
                 "background": "Şarkıyı beatmap arka planından tahmin et.",
-                "skin": "{osu_base} skinini ekran görüntüsünden tahmin et."
+                "skin": "{osu_base} skinini ekran görüntüsünden tahmin et.",
+                "score_pp": "İki gerçek osu! oyununu karşılaştır ve daha fazla pp değerine sahip olanı seç."
             },
             "howToPlay": {
                 "title": "Nasıl Oynanır",
+                "scorePp": {
+                    "choose": "Haritayı, modları, isabetliliği, komboyu ve isabet sayılarını karşılaştır; daha fazla pp değerine sahip olduğunu düşündüğün skoru seç"
+                },
                 "classic": {
                     "rounds": "{count} tur",
                     "time": "Her turda {seconds} saniye",
@@ -336,7 +345,8 @@
             "exitGame": "Oyundan Çık",
             "nextRound": "Sonraki Tur",
             "nextRoundTime": "Sonraki Tur ({seconds}sn)",
-            "viewResults": "Sonuçları Görüntüle"
+            "viewResults": "Sonuçları Görüntüle",
+            "retry": "Tekrar Dene"
         },
         "shortcuts": {
             "title": "Klavye kısayolları",
@@ -352,7 +362,60 @@
             "instructions": "Dinle ve şarkının adını tahmin et.",
             "browserNotSupported": "Your browser does not support the audio element."
         },
-        "errors": {},
+        "errors": {
+            "startFailed": "Oyun başlatılamadı",
+            "actionFailed": "Oyun işlemi tamamlanamadı"
+        },
+        "scorePp": {
+            "question": "Hangi osu! skoru daha fazla PP değerinde?",
+            "helper": "Seçimini kilitlemek için iki taraftan birine tıkla",
+            "globalRank": "Global sıralama",
+            "chooseScore": "Skor {side} seç",
+            "beatmap": "Beatmap",
+            "accuracy": "İsabetlilik",
+            "combo": "Kombo",
+            "score": "Skor",
+            "miss": "Kaçırma",
+            "pp": "PP",
+            "unranked": "Derecelendirilmemiş",
+            "correct": "Doğru",
+            "wrong": "Yanlış",
+            "higherResult": "Skor {side} daha fazla PP değerindeydi",
+            "timeUp": "Süre doldu",
+            "loading": "Skor çifti yükleniyor...",
+            "unavailable": "Skor pp kullanılamıyor",
+            "errors": {
+                "start": "Score pp başlatılamadı. Lütfen tekrar deneyin.",
+                "load": "Bu Score pp turu yüklenemedi. Lütfen tekrar deneyin.",
+                "submit": "Seçiminiz onaylanamadı. Oyun durumu kontrol edildi; lütfen tekrar deneyin.",
+                "end": "Score pp oyunu sonlandırılamadı. Lütfen tekrar deneyin.",
+                "unavailable": "Bu tur için hazırlanmış kullanılabilir bir Score pp çifti yok."
+            },
+            "results": {
+                "gameComplete": "Oyun tamamlandı",
+                "runComplete": "Koşu tamamlandı",
+                "totalPoints": "Toplam puan",
+                "correctPicks": "Doğru seçimler",
+                "bestStreak": "En uzun seri",
+                "averageResponse": "Ortalama yanıt",
+                "responses": "Yanıtlar",
+                "round": "Tur {round}",
+                "yourPick": "Seçimin",
+                "answer": "Cevap",
+                "playAgain": "Tekrar oyna",
+                "comparedPlays": "Karşılaştırılan oyunlar",
+                "winningChoice": "Kazanan seçim",
+                "scoreSide": "Skor {side}",
+                "noSelection": "Seçim yok (süre doldu)",
+                "pointsEarned": "Kazanılan puan",
+                "hitCounts": "İsabet sayıları",
+                "great": "300",
+                "ok": "100",
+                "meh": "50",
+                "miss": "Kaçırmalar",
+                "reviewUnavailable": "Bu tur için karşılaştırma ayrıntıları kullanılamıyor."
+            }
+        },
         "result": {},
         "media": {}
     },
@@ -362,7 +425,8 @@
             "mode": {
                 "background": "Arkaplan",
                 "audio": "Ses",
-                "skin": "Skin"
+                "skin": "Skin",
+                "score_pp": "Skor pp"
             },
             "variant": {
                 "classic": "Klasik Mod",

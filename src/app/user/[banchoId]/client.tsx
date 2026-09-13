@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 import UserNotFound from "./NotFound";
 
-const gamemodes = [GameMode.Background, GameMode.Audio, GameMode.Skin];
+const gamemodes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp];
 
 interface UserProfileClientProps {
     currentMode: GameMode;

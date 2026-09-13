@@ -15,4 +15,5 @@ export const GAME_MODES = [
     { id: GameMode.Background, image: "/ghostrule.webp", url: "/games/background" },
     { id: GameMode.Audio, image: "/audio-mode.webp", url: "/games/audio" },
     { id: GameMode.Skin, image: "/skin-mode.webp", url: "/games/skin" },
+    { id: GameMode.ScorePp, image: "/main_bg.webp", url: "/games/score-pp" },
 ] as const;

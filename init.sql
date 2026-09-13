@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 CREATE TABLE IF NOT EXISTS user_achievements (
     user_id INT NOT NULL,
-    game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
+    game_mode ENUM ('background', 'audio', 'skin', 'score_pp') NOT NULL,
     variant ENUM ('classic', 'survival', 'death') DEFAULT 'classic',
     ruleset_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     pp_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS games (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     session_id CHAR(36),
     user_id INT NOT NULL,
-    game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
+    game_mode ENUM ('background', 'audio', 'skin', 'score_pp') NOT NULL,
     points INT DEFAULT 0,
     streak INT UNSIGNED DEFAULT 0,
     variant ENUM ('classic', 'survival', 'death') DEFAULT 'classic',
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS game_rounds (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     game_id BIGINT UNSIGNED NOT NULL,
     round_number INT UNSIGNED NOT NULL,
-    item_type ENUM ('mapset', 'skin') NOT NULL,
+    item_type ENUM ('mapset', 'skin', 'score_pair') NOT NULL,
     item_id INT UNSIGNED NOT NULL,
     submitted_guess VARCHAR(500),
     answer_snapshot VARCHAR(500) NOT NULL,
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS game_challenges (
     challenge_type ENUM ('daily', 'shared') NOT NULL,
     creator_user_id INT,
     source_game_id BIGINT UNSIGNED,
-    game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
+    game_mode ENUM ('background', 'audio', 'skin', 'score_pp') NOT NULL,
     variant ENUM ('classic', 'survival', 'death') NOT NULL DEFAULT 'classic',
     ruleset_version SMALLINT UNSIGNED NOT NULL,
     pp_version SMALLINT UNSIGNED NOT NULL,
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS game_challenges (
 CREATE TABLE IF NOT EXISTS game_challenge_rounds (
     challenge_id CHAR(36) NOT NULL,
     round_number INT UNSIGNED NOT NULL,
-    item_type ENUM ('mapset', 'skin') NOT NULL,
+    item_type ENUM ('mapset', 'skin', 'score_pair') NOT NULL,
     item_id INT UNSIGNED NOT NULL,
     answer_snapshot VARCHAR(500) NOT NULL,
     difficulty_snapshot DECIMAL(8, 4),
@@ -165,8 +165,8 @@ CREATE TABLE IF NOT EXISTS game_challenge_rounds (
 );
 
 CREATE TABLE IF NOT EXISTS content_stats (
-    game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
-    item_type ENUM ('mapset', 'skin') NOT NULL,
+    game_mode ENUM ('background', 'audio', 'skin', 'score_pp') NOT NULL,
+    item_type ENUM ('mapset', 'skin', 'score_pair') NOT NULL,
     item_id INT UNSIGNED NOT NULL,
     ruleset_version SMALLINT UNSIGNED NOT NULL,
     pp_version SMALLINT UNSIGNED NOT NULL,
@@ -183,8 +183,8 @@ CREATE TABLE IF NOT EXISTS content_stats (
 
 CREATE TABLE IF NOT EXISTS content_stat_contributions (
     user_id INT NOT NULL,
-    game_mode ENUM ('background', 'audio', 'skin') NOT NULL,
-    item_type ENUM ('mapset', 'skin') NOT NULL,
+    game_mode ENUM ('background', 'audio', 'skin', 'score_pp') NOT NULL,
+    item_type ENUM ('mapset', 'skin', 'score_pair') NOT NULL,
     item_id INT UNSIGNED NOT NULL,
     ruleset_version SMALLINT UNSIGNED NOT NULL,
     pp_version SMALLINT UNSIGNED NOT NULL,
@@ -210,6 +210,24 @@ CREATE TABLE IF NOT EXISTS mapset_data (
     ranked_at DATETIME(3),
     star_rating_min DECIMAL(6, 3),
     star_rating_max DECIMAL(6, 3)
+);
+
+CREATE TABLE IF NOT EXISTS score_pp_pairs (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    source VARCHAR(64) NOT NULL,
+    left_score_id VARCHAR(64) NOT NULL,
+    right_score_id VARCHAR(64) NOT NULL,
+    left_snapshot JSON NOT NULL,
+    right_snapshot JSON NOT NULL,
+    higher_side ENUM ('left', 'right') NOT NULL,
+    pp_gap DECIMAL(12, 3) NOT NULL,
+    pp_gap_ratio DECIMAL(8, 6) NOT NULL DEFAULT 0,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    UNIQUE KEY score_pp_pair_source_scores (source, left_score_id, right_score_id),
+    INDEX idx_score_pp_pairs_active_gap (active, pp_gap),
+    INDEX idx_score_pp_pairs_active_ratio (active, pp_gap_ratio)
 );
 
 CREATE TABLE IF NOT EXISTS skins (

@@ -30,6 +30,12 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
         <section>
             <h2 className={sectionTitleClass}><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.game.preGame.howToPlay.title}</h2>
             <ul className={listClass}>
+                {gameMode === GameMode.ScorePp && (
+                    <li className={listItemClass}>
+                        <span aria-hidden="true" className={markerClass} />
+                        {t.game.preGame.howToPlay.scorePp.choose}
+                    </li>
+                )}
                 <li className={listItemClass}>
                     <span aria-hidden="true" className={markerClass} />
                     {t.game.preGame.howToPlay.classic.rounds.replace("{count}", MAX_ROUNDS.toString())}
@@ -46,6 +52,12 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
         <section>
             <h2 className={sectionTitleClass}><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.game.preGame.howToPlay.title}</h2>
             <ul className={listClass}>
+                {gameMode === GameMode.ScorePp && (
+                    <li className={listItemClass}>
+                        <span aria-hidden="true" className={markerClass} />
+                        {t.game.preGame.howToPlay.scorePp.choose}
+                    </li>
+                )}
                 <li className={listItemClass}>
                     <span aria-hidden="true" className={markerClass} />
                     {t.game.preGame.howToPlay.death.continuous}

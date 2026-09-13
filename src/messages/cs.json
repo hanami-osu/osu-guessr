@@ -197,6 +197,10 @@
             "skin": {
                 "title": "Hádání skinů",
                 "description": "Hádejte skin z {osu_base} podle snímku obrazovky."
+            },
+            "score_pp": {
+                "title": "Skóre pp",
+                "description": "Vyberte, které ze dvou skóre osu! má vyšší pp."
             }
         }
     },
@@ -205,15 +209,20 @@
             "title": {
                 "audio": "Hádání hudby",
                 "background": "Hádání pozadí",
-                "skin": "Skin Guessr"
+                "skin": "Skin Guessr",
+                "score_pp": "Skóre pp"
             },
             "description": {
                 "audio": "Hádejte píseň podle zvukové ukázky.",
                 "background": "Hádejte píseň podle pozadí beatmapy.",
-                "skin": "Hádejte skin z {osu_base} podle snímku obrazovky."
+                "skin": "Hádejte skin z {osu_base} podle snímku obrazovky.",
+                "score_pp": "Porovnejte dvě skutečná skóre osu! a vyberte to s vyšším pp."
             },
             "howToPlay": {
                 "title": "Jak hrát",
+                "scorePp": {
+                    "choose": "Porovnejte mapu, mody, přesnost, kombo a počty zásahů a vyberte skóre, o kterém si myslíte, že má vyšší pp"
+                },
                 "classic": {
                     "rounds": "{count} kol",
                     "time": "{seconds} sekund na kolo",
@@ -336,7 +345,8 @@
             "exitGame": "Ukončit hru",
             "nextRound": "Další kolo",
             "nextRoundTime": "Další kolo ({seconds}s)",
-            "viewResults": "Zobrazit výsledky"
+            "viewResults": "Zobrazit výsledky",
+            "retry": "Zkusit znovu"
         },
         "shortcuts": {
             "title": "Klávesové zkratky",
@@ -352,7 +362,60 @@
             "instructions": "Poslouchejte a hádejte název písně.",
             "browserNotSupported": "Your browser does not support the audio element."
         },
-        "errors": {},
+        "errors": {
+            "startFailed": "Hru se nepodařilo spustit",
+            "actionFailed": "Akci hry se nepodařilo dokončit"
+        },
+        "scorePp": {
+            "question": "Které skóre osu! má vyšší PP?",
+            "helper": "Kliknutím na jednu stranu uzamknete svou volbu",
+            "globalRank": "Globální pořadí",
+            "chooseScore": "Vybrat skóre {side}",
+            "beatmap": "Beatmapa",
+            "accuracy": "Přesnost",
+            "combo": "Kombo",
+            "score": "Skóre",
+            "miss": "Chyby",
+            "pp": "PP",
+            "unranked": "Bez pořadí",
+            "correct": "Správně",
+            "wrong": "Špatně",
+            "higherResult": "Skóre {side} mělo více PP",
+            "timeUp": "Čas vypršel",
+            "loading": "Načítání dvojice skóre...",
+            "unavailable": "Skóre pp není k dispozici",
+            "errors": {
+                "start": "Score pp se nepodařilo spustit. Zkuste to znovu.",
+                "load": "Toto kolo Score pp se nepodařilo načíst. Zkuste to znovu.",
+                "submit": "Vaši volbu se nepodařilo potvrdit. Stav hry byl zkontrolován; zkuste to znovu.",
+                "end": "Tento pokus Score pp se nepodařilo ukončit. Zkuste to znovu.",
+                "unavailable": "Pro toto kolo nejsou k dispozici žádné připravené dvojice Score pp."
+            },
+            "results": {
+                "gameComplete": "Hra dokončena",
+                "runComplete": "Běh dokončen",
+                "totalPoints": "Celkem bodů",
+                "correctPicks": "Správné volby",
+                "bestStreak": "Nejdelší série",
+                "averageResponse": "Průměrná odpověď",
+                "responses": "Odpovědi",
+                "round": "Kolo {round}",
+                "yourPick": "Vaše volba",
+                "answer": "Odpověď",
+                "playAgain": "Hrát znovu",
+                "comparedPlays": "Porovnávaná skóre",
+                "winningChoice": "Vítězná volba",
+                "scoreSide": "Skóre {side}",
+                "noSelection": "Bez volby (čas vypršel)",
+                "pointsEarned": "Získané body",
+                "hitCounts": "Počty zásahů",
+                "great": "300",
+                "ok": "100",
+                "meh": "50",
+                "miss": "Chyby",
+                "reviewUnavailable": "Podrobnosti porovnání pro toto kolo nejsou k dispozici."
+            }
+        },
         "result": {},
         "media": {}
     },
@@ -362,7 +425,8 @@
             "mode": {
                 "background": "Pozadí",
                 "audio": "Zvuk",
-                "skin": "Skin"
+                "skin": "Skin",
+                "score_pp": "Skóre pp"
             },
             "variant": {
                 "classic": "Klasika",

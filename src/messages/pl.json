@@ -263,6 +263,10 @@
             "skin": {
                 "title": "Skin Guessr",
                 "description": "Zgadnij skin z {osu_base} na podstawie zrzutu ekranu."
+            },
+            "score_pp": {
+                "title": "Wynik pp",
+                "description": "Wybierz, który z dwóch wyników osu! jest wart więcej pp."
             }
         }
     },
@@ -271,15 +275,20 @@
             "title": {
                 "audio": "Audio Guessr",
                 "background": "Background Guessr",
-                "skin": "Skin Guessr"
+                "skin": "Skin Guessr",
+                "score_pp": "Wynik pp"
             },
             "description": {
                 "audio": "Zgadnij utwór na podstawie fragmentu audio.",
                 "background": "Zgadnij utwór na podstawie tła beatmapy.",
-                "skin": "Zgadnij skin z {osu_base} na podstawie zrzutu ekranu."
+                "skin": "Zgadnij skin z {osu_base} na podstawie zrzutu ekranu.",
+                "score_pp": "Porównaj dwie prawdziwe zagrywki osu! i wybierz tę, która jest warta więcej pp."
             },
             "howToPlay": {
                 "title": "Jak Grać",
+                "scorePp": {
+                    "choose": "Porównaj mapę, mody, celność, serię i liczbę trafień, a następnie wybierz wynik, który według Ciebie jest wart więcej pp"
+                },
                 "classic": {
                     "rounds": "{count} rund",
                     "time": "{seconds} sekund na rundę",
@@ -402,7 +411,8 @@
             "exitGame": "Wyjdź Z Gry",
             "nextRound": "Następna Runda",
             "nextRoundTime": "Następna Runda ({seconds}s)",
-            "viewResults": "Zobacz Wynik"
+            "viewResults": "Zobacz Wynik",
+            "retry": "Spróbuj ponownie"
         },
         "shortcuts": {
             "title": "Skróty klawiszowe",
@@ -418,7 +428,60 @@
             "instructions": "Posłuchaj i zgadnij tytuł utworu.",
             "browserNotSupported": "Your browser does not support the audio element."
         },
-        "errors": {},
+        "errors": {
+            "startFailed": "Nie udało się rozpocząć gry",
+            "actionFailed": "Nie udało się wykonać akcji gry"
+        },
+        "scorePp": {
+            "question": "Który wynik osu! jest wart więcej PP?",
+            "helper": "Kliknij dowolną stronę, aby zatwierdzić wybór",
+            "globalRank": "Ranking globalny",
+            "chooseScore": "Wybierz wynik {side}",
+            "beatmap": "Beatmapa",
+            "accuracy": "Celność",
+            "combo": "Seria",
+            "score": "Wynik",
+            "miss": "Pudła",
+            "pp": "PP",
+            "unranked": "Brak rankingu",
+            "correct": "Dobrze",
+            "wrong": "Źle",
+            "higherResult": "Wynik {side} miał więcej PP",
+            "timeUp": "Czas minął",
+            "loading": "Wczytywanie pary wyników...",
+            "unavailable": "Wynik pp jest niedostępny",
+            "errors": {
+                "start": "Nie udało się uruchomić Score pp. Spróbuj ponownie.",
+                "load": "Nie udało się wczytać tej rundy Score pp. Spróbuj ponownie.",
+                "submit": "Nie udało się potwierdzić wyboru. Sprawdzono stan gry; spróbuj ponownie.",
+                "end": "Nie udało się zakończyć tej rozgrywki Score pp. Spróbuj ponownie.",
+                "unavailable": "Brak przygotowanych par Score pp dla tej rundy."
+            },
+            "results": {
+                "gameComplete": "Gra ukończona",
+                "runComplete": "Rozgrywka ukończona",
+                "totalPoints": "Suma punktów",
+                "correctPicks": "Poprawne wybory",
+                "bestStreak": "Najdłuższa seria",
+                "averageResponse": "Średnia odpowiedź",
+                "responses": "Odpowiedzi",
+                "round": "Runda {round}",
+                "yourPick": "Twój wybór",
+                "answer": "Odpowiedź",
+                "playAgain": "Zagraj ponownie",
+                "comparedPlays": "Porównane zagrywki",
+                "winningChoice": "Zwycięski wybór",
+                "scoreSide": "Wynik {side}",
+                "noSelection": "Brak wyboru (czas minął)",
+                "pointsEarned": "Zdobyte punkty",
+                "hitCounts": "Liczba trafień",
+                "great": "300",
+                "ok": "100",
+                "meh": "50",
+                "miss": "Pudła",
+                "reviewUnavailable": "Szczegóły porównania dla tej rundy są niedostępne."
+            }
+        },
         "result": {},
         "media": {}
     },
@@ -428,7 +491,8 @@
             "mode": {
                 "background": "Tło",
                 "audio": "Audio",
-                "skin": "Skin"
+                "skin": "Skin",
+                "score_pp": "Wynik pp"
             },
             "variant": {
                 "classic": "Tryb Klasyczny",

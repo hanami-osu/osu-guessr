@@ -35,7 +35,7 @@ const gameSchema = z.object({
         .nullable()
         .transform((g) => (typeof g === "string" ? g.trim() : g)),
 });
-const gameModeSchema = z.nativeEnum(GameMode);
+const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin]);
 const gameVariantSchema = z.enum(["classic", "survival"]);
 
 type SessionLock = {
@@ -140,7 +140,7 @@ async function resolveRoundDifficulties(gameState: DatabaseGameSession, rounds: 
     }));
 }
 
-async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<number | null> {
+export async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<number | null> {
     const cacheKey = `game_session:${sessionId}`;
     const gameState = await getGameSession(sessionId, userId);
     if (!gameState.is_active && !gameState.end_pending) return gameState.pp ?? null;

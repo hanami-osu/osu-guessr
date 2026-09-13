@@ -46,6 +46,8 @@ Guess osu! songs from beatmap backgrounds or audio clips, and skins from screens
     HANAMI_ISSUER="https://hanami.yorunoken.com/api/auth"
     HANAMI_CLIENT_ID="your_public_client_id"
     OSU_API_KEY="your_api_key"
+    OSU_CLIENT_ID="your_oauth_client_id"
+    OSU_CLIENT_SECRET="your_oauth_client_secret"
 
     NEXTAUTH_URL="http://localhost:3000"
     NEXT_PUBLIC_APP_URL="http://localhost:3000"

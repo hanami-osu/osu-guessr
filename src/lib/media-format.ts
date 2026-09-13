@@ -11,7 +11,7 @@ const MIME_TYPES: Record<string, string> = {
     ".wav": "audio/wav",
 };
 
-const MODE_EXTENSIONS: Record<GameMode, Set<string>> = {
+const MODE_EXTENSIONS: Partial<Record<GameMode, Set<string>>> = {
     [GameMode.Background]: new Set([".webp", ".jpg", ".jpeg", ".png"]),
     [GameMode.Audio]: new Set([".mp3", ".ogg", ".wav"]),
     [GameMode.Skin]: new Set([".webp", ".jpg", ".jpeg", ".png"]),

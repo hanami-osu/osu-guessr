@@ -6,6 +6,7 @@ describe("parseProfileFilters", () => {
     test("accepts supported profile filters", () => {
         expect(parseProfileFilters("audio", "survival")).toEqual({ mode: GameMode.Audio, variant: "survival" });
         expect(parseProfileFilters("audio", "death")).toEqual({ mode: GameMode.Audio, variant: "death" });
+        expect(parseProfileFilters("score_pp", "classic")).toEqual({ mode: GameMode.ScorePp, variant: "classic" });
     });
 
     test("falls back when profile filters are missing or invalid", () => {

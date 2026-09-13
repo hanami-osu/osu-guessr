@@ -1,13 +1,15 @@
 export enum GameMode {
     Background = "background",
     Audio = "audio",
-    Skin = "skin"
+    Skin = "skin",
+    ScorePp = "score_pp"
 }
+export type GuessGameMode = Exclude<GameMode, GameMode.ScorePp>;
 export type GameVariant = "classic" | "survival" | "death";
 export type GameRunType = "standard" | "daily" | "challenge" | "practice";
 export type GameEndReason = "completed" | "failed" | "quit" | "content_exhausted";
 export type GameRoundResult = "guess" | "skip" | "timeout";
-export type GameItemType = "mapset" | "skin";
+export type GameItemType = "mapset" | "skin" | "score_pair";
 export type ReportType = "incorrect_title" | "inappropriate_content" | "wrong_audio" | "wrong_background" | "other";
 type ReportStatus = "pending" | "investigating" | "resolved" | "rejected";
 

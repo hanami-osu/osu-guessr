@@ -68,7 +68,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
         return () => request.cancel();
     }, [selectedMode, selectedVariant, page, pageSize, errorMessage]);
 
-    const gameModes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin];
+    const gameModes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp];
 
     return (
         <main className="page-container pb-5 pt-3 md:pb-8 md:pt-4">

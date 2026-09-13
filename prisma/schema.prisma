@@ -11,6 +11,7 @@ enum GameMode {
   background
   audio
   skin
+  score_pp
 }
 
 enum GameVariant {
@@ -42,6 +43,12 @@ enum GameRoundResult {
 enum GameItemType {
   mapset
   skin
+  score_pair
+}
+
+enum ScorePpSide {
+  left
+  right
 }
 
 enum GameChallengeType {
@@ -286,6 +293,26 @@ model MapsetData {
   @@index([rankedAt], map: "idx_mapset_data_ranked_at")
   @@index([starRatingMin, starRatingMax], map: "idx_mapset_data_star_rating")
   @@map("mapset_data")
+}
+
+model ScorePpPair {
+  id            Int         @id @default(autoincrement()) @db.UnsignedInt
+  source        String      @db.VarChar(64)
+  leftScoreId   String      @map("left_score_id") @db.VarChar(64)
+  rightScoreId  String      @map("right_score_id") @db.VarChar(64)
+  leftSnapshot  Json        @map("left_snapshot")
+  rightSnapshot Json        @map("right_snapshot")
+  higherSide    ScorePpSide @map("higher_side")
+  ppGap         Decimal     @map("pp_gap") @db.Decimal(12, 3)
+  relativePpGap Decimal     @default(0) @map("pp_gap_ratio") @db.Decimal(8, 6)
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@unique([source, leftScoreId, rightScoreId], map: "score_pp_pair_source_scores")
+  @@index([active, ppGap], map: "idx_score_pp_pairs_active_gap")
+  @@index([active, relativePpGap], map: "idx_score_pp_pairs_active_ratio")
+  @@map("score_pp_pairs")
 }
 
 model Skin {

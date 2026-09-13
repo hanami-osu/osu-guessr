@@ -321,6 +321,10 @@
             "skin": {
                 "title": "Skin Guessr",
                 "description": "Guess the {osu_base} skin from a screenshot."
+            },
+            "score_pp": {
+                "title": "Score pp",
+                "description": "Pick which of two {osu_base} scores is worth more pp."
             }
         }
     },
@@ -329,15 +333,20 @@
             "title": {
                 "audio": "Audio Guessr",
                 "background": "Background Guessr",
-                "skin": "Skin Guessr"
+                "skin": "Skin Guessr",
+                "score_pp": "Score pp"
             },
             "description": {
                 "audio": "Guess the song from an audio clip.",
                 "background": "Guess the song from its beatmap background.",
-                "skin": "Guess the {osu_base} skin from a screenshot."
+                "skin": "Guess the {osu_base} skin from a screenshot.",
+                "score_pp": "Compare two real {osu_base} plays and choose the one worth more pp."
             },
             "howToPlay": {
                 "title": "How to Play",
+                "scorePp": {
+                    "choose": "Compare the map, mods, accuracy, combo, and hit counts, then choose the score you think is worth more pp"
+                },
                 "classic": {
                     "rounds": "{count} rounds",
                     "time": "{seconds} seconds per round",
@@ -486,6 +495,56 @@
             "loadFailed": "The audio could not be loaded or played.",
             "retry": "Retry audio"
         },
+        "scorePp": {
+            "question": "Which osu! score is worth more PP?",
+            "helper": "Click either side to lock your answer",
+            "globalRank": "Global rank",
+            "chooseScore": "Choose Score {side}",
+            "beatmap": "Beatmap",
+            "accuracy": "Accuracy",
+            "combo": "Combo",
+            "score": "Score",
+            "miss": "Miss",
+            "pp": "PP",
+            "unranked": "Unranked",
+            "correct": "Correct",
+            "wrong": "Wrong",
+            "higherResult": "Score {side} had more PP",
+            "timeUp": "Time's up",
+            "loading": "Loading score pair...",
+            "unavailable": "Score pp unavailable",
+            "errors": {
+                "start": "Could not start Score pp. Please try again.",
+                "load": "Could not load this Score pp round. Please try again.",
+                "submit": "Your choice could not be confirmed. The game state was checked; please try again.",
+                "end": "Could not end this Score pp run. Please try again.",
+                "unavailable": "No prepared Score pp pairs are available for this round."
+            },
+            "results": {
+                "gameComplete": "Game complete",
+                "runComplete": "Run complete",
+                "totalPoints": "Total points",
+                "correctPicks": "Correct picks",
+                "bestStreak": "Best streak",
+                "averageResponse": "Average response",
+                "responses": "Responses",
+                "round": "Round {round}",
+                "yourPick": "Your pick",
+                "answer": "Answer",
+                "playAgain": "Play again",
+                "comparedPlays": "Compared plays",
+                "winningChoice": "Winning choice",
+                "scoreSide": "Score {side}",
+                "noSelection": "No choice (time up)",
+                "pointsEarned": "Points earned",
+                "hitCounts": "Hit counts",
+                "great": "300",
+                "ok": "100",
+                "meh": "50",
+                "miss": "Misses",
+                "reviewUnavailable": "Comparison details are unavailable for this round."
+            }
+        },
         "result": {
             "correct": "Correct Guess!",
             "wrong": "Wrong Guess!",
@@ -509,7 +568,8 @@
             "mode": {
                 "background": "Background",
                 "audio": "Audio",
-                "skin": "Skin"
+                "skin": "Skin",
+                "score_pp": "Score pp"
             },
             "variant": {
                 "classic": "Classic Mode",

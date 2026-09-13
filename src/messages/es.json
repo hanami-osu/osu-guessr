@@ -197,6 +197,10 @@
             "skin": {
                 "title": "Adivina la skin",
                 "description": "Adivina la skin de {osu_base} por una captura de pantalla."
+            },
+            "score_pp": {
+                "title": "Puntuación pp",
+                "description": "Elige cuál de dos puntuaciones de osu! vale más pp."
             }
         }
     },
@@ -205,15 +209,20 @@
             "title": {
                 "audio": "Adivina el audio",
                 "background": "Adivina el fondo",
-                "skin": "Skin Guessr"
+                "skin": "Skin Guessr",
+                "score_pp": "Puntuación pp"
             },
             "description": {
                 "audio": "Adivina la canción por un fragmento de audio.",
                 "background": "Adivina la canción por el fondo del beatmap.",
-                "skin": "Adivina la skin de {osu_base} por una captura de pantalla."
+                "skin": "Adivina la skin de {osu_base} por una captura de pantalla.",
+                "score_pp": "Compara dos jugadas reales de osu! y elige la que tenga más pp."
             },
             "howToPlay": {
                 "title": "Cómo jugar",
+                "scorePp": {
+                    "choose": "Compara el mapa, los mods, la precisión, el combo y los aciertos; después elige la puntuación que creas que vale más pp"
+                },
                 "classic": {
                     "rounds": "{count} rondas",
                     "time": "{seconds} segundos por ronda",
@@ -336,7 +345,8 @@
             "exitGame": "Salir del juego",
             "nextRound": "Próxima ronda",
             "nextRoundTime": "Próxima ronda ({seconds}s)",
-            "viewResults": "Ver resultados"
+            "viewResults": "Ver resultados",
+            "retry": "Intentar de nuevo"
         },
         "shortcuts": {
             "title": "Atajos de teclado",
@@ -352,7 +362,60 @@
             "instructions": "Escucha y adivina el título de la canción.",
             "browserNotSupported": "Your browser does not support the audio element."
         },
-        "errors": {},
+        "errors": {
+            "startFailed": "No se pudo iniciar la partida",
+            "actionFailed": "No se pudo completar la acción del juego"
+        },
+        "scorePp": {
+            "question": "¿Qué puntuación de osu! vale más PP?",
+            "helper": "Haz clic en cualquiera de los lados para fijar tu elección",
+            "globalRank": "Clasificación global",
+            "chooseScore": "Elegir puntuación {side}",
+            "beatmap": "Beatmap",
+            "accuracy": "Precisión",
+            "combo": "Combo",
+            "score": "Puntuación",
+            "miss": "Fallos",
+            "pp": "PP",
+            "unranked": "Sin clasificación",
+            "correct": "Correcto",
+            "wrong": "Incorrecto",
+            "higherResult": "La puntuación {side} tenía más PP",
+            "timeUp": "Se acabó el tiempo",
+            "loading": "Cargando el par de puntuaciones...",
+            "unavailable": "La puntuación pp no está disponible",
+            "errors": {
+                "start": "No se pudo iniciar Score pp. Inténtalo de nuevo.",
+                "load": "No se pudo cargar esta ronda de Score pp. Inténtalo de nuevo.",
+                "submit": "No se pudo confirmar tu elección. Se comprobó el estado de la partida; inténtalo de nuevo.",
+                "end": "No se pudo finalizar esta partida de Score pp. Inténtalo de nuevo.",
+                "unavailable": "No hay pares de Score pp preparados disponibles para esta ronda."
+            },
+            "results": {
+                "gameComplete": "Partida completada",
+                "runComplete": "Partida completada",
+                "totalPoints": "Puntos totales",
+                "correctPicks": "Elecciones correctas",
+                "bestStreak": "Mejor racha",
+                "averageResponse": "Respuesta media",
+                "responses": "Respuestas",
+                "round": "Ronda {round}",
+                "yourPick": "Tu elección",
+                "answer": "Respuesta",
+                "playAgain": "Jugar de nuevo",
+                "comparedPlays": "Jugadas comparadas",
+                "winningChoice": "Elección ganadora",
+                "scoreSide": "Puntuación {side}",
+                "noSelection": "Sin elección (se acabó el tiempo)",
+                "pointsEarned": "Puntos obtenidos",
+                "hitCounts": "Cantidad de aciertos",
+                "great": "300",
+                "ok": "100",
+                "meh": "50",
+                "miss": "Fallos",
+                "reviewUnavailable": "Los detalles de comparación no están disponibles para esta ronda."
+            }
+        },
         "result": {},
         "media": {}
     },
@@ -362,7 +425,8 @@
             "mode": {
                 "background": "Fondo",
                 "audio": "Audio",
-                "skin": "Skin"
+                "skin": "Skin",
+                "score_pp": "Puntuación pp"
             },
             "variant": {
                 "classic": "Modo clásico",

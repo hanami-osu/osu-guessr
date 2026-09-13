@@ -191,6 +191,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
         [GameMode.Background]: {},
         [GameMode.Audio]: {},
         [GameMode.Skin]: {},
+        [GameMode.ScorePp]: {},
     };
 
     await Promise.all(

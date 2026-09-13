@@ -1,4 +1,4 @@
-import { GameMode, type GameVariant } from "@/actions/types";
+import { type GameVariant, type GuessGameMode } from "@/actions/types";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import MenuManager from "./MenuManager";
@@ -8,7 +8,7 @@ function isGameVariant(value: string | undefined): value is GameVariant {
     return value === "classic" || value === "survival";
 }
 
-export default async function GamePage({ gameMode, gameVariant }: { gameMode: GameMode; gameVariant?: string | string[] }) {
+export default async function GamePage({ gameMode, gameVariant }: { gameMode: GuessGameMode; gameVariant?: string | string[] }) {
     const selectedVariant = Array.isArray(gameVariant) ? gameVariant[0] : gameVariant;
 
     if (!isGameVariant(selectedVariant)) {
