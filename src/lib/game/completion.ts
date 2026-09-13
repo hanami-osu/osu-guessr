@@ -12,7 +12,7 @@ export function isClassicGameIncomplete(gameState: GameState): boolean {
 }
 
 export function canPersistGameResult(state: PersistableGameState, maxRounds: number): boolean {
-    if (state.variant === "death") return state.highestStreak > 0;
+    if (state.variant === "death") return state.highestStreak > 0 || state.hasGuessedCurrentRound;
     if (state.variant === "survival") return state.currentRound > 1 || state.hasGuessedCurrentRound;
     return state.currentRound === maxRounds && state.hasGuessedCurrentRound;
 }

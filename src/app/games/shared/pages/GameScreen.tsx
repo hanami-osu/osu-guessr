@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GameClient } from "@/lib/game/client";
 import { GameState, GameMode } from "@/actions/types";
 
-import { AUTO_ADVANCE_DELAY_MS, GameVariant, SURVIVAL_LIVES } from "../../config";
-import GameStats from "../components/GameStats";
+import { AUTO_ADVANCE_DELAY_MS, GameVariant, MAX_ROUNDS, SURVIVAL_LIVES } from "../../config";
 import GuessInput from "../components/GuessInput";
 import LoadingScreen from "../components/LoadingScreen";
 import GameHeader from "../components/Header";
@@ -17,9 +16,8 @@ import { AdSlider } from "@/components/Ads";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { getDeathEndReason, getSurvivalEndReason } from "@/lib/game/result";
 import type { GameMediaProps } from "@/lib/game/types";
-import { isClassicGameIncomplete } from "@/lib/game/completion";
+import { canPersistGameResult, isClassicGameIncomplete } from "@/lib/game/completion";
 import { SHORTCUTS_STORAGE_KEY } from "@/lib/game/preferences";
 
 interface GameScreenProps {
@@ -37,8 +35,6 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     const [guess, setGuess] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [countdown, setCountdown] = useState<number>(AUTO_ADVANCE_DELAY_MS / 1000);
-    const [showStats, setShowStats] = useState(false);
-    const [statsEndReason, setStatsEndReason] = useState<"completed" | "died" | "ended" | undefined>();
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [startupError, setStartupError] = useState<string | null>(null);
@@ -49,8 +45,6 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     const handleStartGame = useCallback(async () => {
         try {
             setIsLoading(true);
-            setShowStats(false);
-            setStatsEndReason(undefined);
             setGuess("");
             setGameState(null);
             setStartupError(null);
@@ -123,13 +117,9 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
 
         return handleAction(async () => {
             await gameClient.current!.endGame();
-            if (gameVariant === "death" && gameState.score.highestStreak === 0) {
-                setShowStats(true);
-                return;
-            }
-            router.push(`/scores/${gameState.sessionId}`);
+            router.replace(`/scores/${gameState.sessionId}`);
         });
-    }, [gameState, gameVariant, handleAction, router]);
+    }, [gameState, handleAction, router]);
 
     const handleGuess = useCallback(() => {
         if (!gameClient.current || !guess.trim() || gameState?.currentBeatmap.revealed) return;
@@ -183,9 +173,17 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         setActionError(null);
         try {
             await gameClient.current.endGame();
-            if (gameVariant === "survival" || gameVariant === "death") {
-                setStatsEndReason("ended");
-                setShowStats(true);
+            const hasSavedScore = canPersistGameResult(
+                {
+                    variant: gameVariant,
+                    currentRound: gameState.rounds.current,
+                    hasGuessedCurrentRound: gameState.currentBeatmap.revealed,
+                    highestStreak: gameState.score.highestStreak,
+                },
+                MAX_ROUNDS,
+            );
+            if (hasSavedScore) {
+                router.replace(`/scores/${gameState.sessionId}`);
             } else {
                 onExit();
             }
@@ -197,7 +195,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         } finally {
             setIsLoading(false);
         }
-    }, [gameState, onExit, gameVariant, t.confirmations.exitGame, t.errors.game.unknown]);
+    }, [gameState, onExit, gameVariant, router, t.confirmations.exitGame, t.errors.game.unknown]);
 
     useEffect(() => {
         if (!gameClient.current || !gameState) return;
@@ -273,25 +271,6 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     }
 
     if (!gameState) return <LoadingScreen />;
-
-    if (showStats && gameState) {
-        const playedRounds = gameState.rounds.correctGuesses + gameState.rounds.mistakes;
-
-        return (
-            <GameStats
-                runPp={gameState.pp ?? 0}
-                totalPoints={gameState.score.total}
-                correctGuesses={gameState.rounds.correctGuesses}
-                maxStreak={gameState.score.highestStreak}
-                totalRounds={gameState.rounds.total}
-                averageTime={playedRounds > 0 ? gameState.rounds.totalTimeUsed / playedRounds : 0}
-                mistakes={gameState.rounds.mistakes}
-                onPlayAgain={handleStartGame}
-                gameVariant={gameVariant}
-                gameEndReason={statsEndReason ?? (gameVariant === "survival" ? getSurvivalEndReason(gameState) : gameVariant === "death" ? getDeathEndReason(gameState) : undefined)}
-            />
-        );
-    }
 
     return (
         <div className="page-container py-4 md:py-6">

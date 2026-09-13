@@ -343,16 +343,16 @@ describe("game server lifecycle", () => {
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
     });
 
-    test("does not persist a death run that fails on the first map", async () => {
+    test("persists a death run that fails on the first map", async () => {
         putSession(makeSession({ variant: "death" }));
 
         const finished = await submitGuessAction(sessionId, "wrong answer");
 
         expect(finished.gameStatus).toBe("finished");
         expect(finished.score.highestStreak).toBe(0);
-        expect(transactionMock).not.toHaveBeenCalled();
-        expect(gameCreateMock).not.toHaveBeenCalled();
-        expect(userAchievementUpsertMock).not.toHaveBeenCalled();
+        expect(transactionMock).toHaveBeenCalledTimes(1);
+        expect(gameCreateMock).toHaveBeenCalledTimes(1);
+        expect(userAchievementUpsertMock).toHaveBeenCalledTimes(1);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
     });

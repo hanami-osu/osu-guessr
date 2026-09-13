@@ -25,8 +25,8 @@ describe("classic game completion", () => {
         expect(canPersistGameResult({ variant: "classic", currentRound: 15, hasGuessedCurrentRound: false, highestStreak: 0 }, 15)).toBe(false);
     });
 
-    test("does not persist a death run with no cleared maps", () => {
-        expect(canPersistGameResult({ variant: "death", currentRound: 1, hasGuessedCurrentRound: true, highestStreak: 0 }, 10)).toBe(false);
+    test("persists a death run after the first answered map", () => {
+        expect(canPersistGameResult({ variant: "death", currentRound: 1, hasGuessedCurrentRound: true, highestStreak: 0 }, 10)).toBe(true);
     });
 
     test("persists a death run after at least one cleared map", () => {
