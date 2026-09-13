@@ -86,7 +86,7 @@ export function AdSlider({ compact = false }: { compact?: boolean }) {
     const currentPromo = promos[currentIndex];
 
     return (
-        <div className={compact ? "mt-5 border-t border-border/60 text-xs text-muted-foreground" : "max-w-md mx-auto border-t border-border/60 my-8"}>
+        <div className={compact ? "mt-5 text-xs text-muted-foreground" : "max-w-md mx-auto my-8"}>
             <div className="h-full">
                 {"kind" in currentPromo ? (
                     <AdSlot compact={compact} />

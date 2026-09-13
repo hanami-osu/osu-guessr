@@ -11,7 +11,7 @@ export const supporters: Array<Supporter> = [
         name: "Eric",
         url: "https://osuguessr.com/user/4573558",
         amount: 5,
-        message: `yoru — Yesterday at 5:41 am
+        message: `yoru - Yesterday at 5:41 am
     osu!guessr`,
     },
     {

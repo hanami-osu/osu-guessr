@@ -23,8 +23,6 @@ export default function Header() {
     const { t } = useTranslationsContext();
     const pathname = usePathname();
 
-    if (pathname.startsWith("/games/")) return null;
-
     const getNavLabel = (key: string) => {
         try {
             const val = (t.components.header.nav as Record<string, string>)[key];
