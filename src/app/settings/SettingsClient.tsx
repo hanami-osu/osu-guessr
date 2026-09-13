@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createApiKeyAction, deleteApiKeyAction, ApiKey, listApiKeysAction } from "@/actions/api-keys-server";
@@ -31,11 +31,13 @@ interface SettingsClientProps {
     initialLoadError?: boolean;
 }
 
+const sections = ["preferences", "profile", "account", "apiKeys", "privacy"] as const;
+type SettingsSection = (typeof sections)[number];
+
 export default function SettingsClient({ initialApiKeys, initialBannerUrl, initialLoadError = false }: SettingsClientProps) {
     const { t, locale, setLanguage } = useTranslationsContext();
 
-    const [activeSection, setActiveSection] = useState("preferences");
-    const sections = ["preferences", "profile", "account", "apiKeys", "privacy"] as const;
+    const [activeSection, setActiveSection] = useState<SettingsSection>("preferences");
 
     const [apiKeys, setApiKeys] = useState<Array<ApiKey>>(initialApiKeys);
     const [loading, setLoading] = useState({
@@ -80,6 +82,20 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
         const nextVolume = Math.min(100, Math.max(0, value));
         setAudioVolume(nextVolume);
         storePreference(AUDIO_VOLUME_STORAGE_KEY, String(nextVolume));
+    }
+
+    function handleSectionKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+        let nextIndex = index;
+        if (event.key === "ArrowRight") nextIndex = (index + 1) % sections.length;
+        else if (event.key === "ArrowLeft") nextIndex = (index - 1 + sections.length) % sections.length;
+        else if (event.key === "Home") nextIndex = 0;
+        else if (event.key === "End") nextIndex = sections.length - 1;
+        else return;
+
+        event.preventDefault();
+        const nextSection = sections[nextIndex];
+        setActiveSection(nextSection);
+        document.getElementById(`settings-tab-${nextSection}`)?.focus();
     }
 
     async function saveBanner(nextValue = bannerUrl) {
@@ -226,28 +242,32 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
 
     return (
         <main className="page-container pb-8 pt-3 md:pt-4">
-            <div className="overflow-hidden rounded-2xl bg-card/70 shadow-sm">
-                <header className="px-5 py-6 sm:px-7 md:px-9">
+            <div>
+                <header className="border-b border-border/60 py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t.settings.title}</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">{t.settings.description}</p>
+                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{t.settings.description}</p>
                 </header>
-                <nav aria-label={t.settings.title} className="flex flex-wrap gap-1.5 bg-muted/35 p-2.5 sm:px-4">
-                    {sections.map((section) => (
+                <nav role="tablist" aria-label={t.settings.title} className="-mx-1 flex gap-1 overflow-x-auto border-b border-border/60 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {sections.map((section, index) => (
                         <button
                             key={section}
+                            id={`settings-tab-${section}`}
                             type="button"
-                            aria-pressed={activeSection === section}
+                            role="tab"
+                            aria-selected={activeSection === section}
                             aria-controls={`settings-${section}`}
+                            tabIndex={activeSection === section ? 0 : -1}
                             onClick={() => setActiveSection(section)}
-                            className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${activeSection === section ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            onKeyDown={(event) => handleSectionKeyDown(event, index)}
+                            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-2px] ${activeSection === section ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
                         >
                             {t.settings[section].title}
                         </button>
                     ))}
                 </nav>
-                <div className="px-5 py-6 sm:px-7 md:px-9">
+                <div className="py-6 sm:py-7">
 
-                    <section id="settings-profile" hidden={activeSection !== "profile"} aria-labelledby="settings-profile-title">
+                    <section id="settings-profile" role="tabpanel" hidden={activeSection !== "profile"} aria-labelledby="settings-tab-profile">
                         <h2 id="settings-profile-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.profile.title}</h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.profile.description}</p>
 
@@ -266,7 +286,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-background/70 to-transparent" />
                             </div>
 
-                            <div className="mt-5 rounded-xl bg-muted/35 p-4 sm:p-5">
+                            <div className="mt-5 border-t border-border/60 pt-5">
                                 <label htmlFor="profile-banner-url" className="font-medium">
                                     {t.settings.profile.banner.title}
                                 </label>
@@ -303,7 +323,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         </div>
                     </section>
 
-                    <section id="settings-preferences" hidden={activeSection !== "preferences"} aria-labelledby="settings-preferences-title">
+                    <section id="settings-preferences" role="tabpanel" hidden={activeSection !== "preferences"} aria-labelledby="settings-tab-preferences">
                         <h2 id="settings-preferences-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.preferences.title}</h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.preferences.description}</p>
 
@@ -379,7 +399,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         </div>
                     </section>
 
-                    <section id="settings-account" hidden={activeSection !== "account"} aria-labelledby="settings-account-title">
+                    <section id="settings-account" role="tabpanel" hidden={activeSection !== "account"} aria-labelledby="settings-tab-account">
                         <h2 id="settings-account-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.account.title}</h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.account.description}</p>
 
@@ -410,7 +430,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         </div>
                     </section>
 
-                    <section id="settings-apiKeys" hidden={activeSection !== "apiKeys"} aria-labelledby="settings-apiKeys-title">
+                    <section id="settings-apiKeys" role="tabpanel" hidden={activeSection !== "apiKeys"} aria-labelledby="settings-tab-apiKeys">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                             <div>
                                 <h2 id="settings-apiKeys-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.apiKeys.title}</h2>
@@ -458,7 +478,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         </div>
                     </section>
 
-                    <section id="settings-privacy" hidden={activeSection !== "privacy"} aria-labelledby="settings-privacy-title">
+                    <section id="settings-privacy" role="tabpanel" hidden={activeSection !== "privacy"} aria-labelledby="settings-tab-privacy">
                         <h2 id="settings-privacy-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.privacy.title}</h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.privacy.description}</p>
 

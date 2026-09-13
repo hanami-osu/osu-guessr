@@ -20,6 +20,6 @@ export default async function BeatmapsPage() {
         return <NotFound />;
     }
 
-    const initialMapsets = await listMapsets(1, 50);
+    const initialMapsets = await listMapsets(1, 25);
     return <BeatmapsAdmin initialMapsets={initialMapsets} />;
 }

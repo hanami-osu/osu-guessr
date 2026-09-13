@@ -13,13 +13,15 @@ export function CollapsibleSection({ id, title, description, icon, children, def
     return (
         <section id={id} className="scroll-mt-24 border-b border-border/60">
             <details className="group" open={defaultOpen}>
-                <summary className="list-none cursor-pointer py-6 [&::-webkit-details-marker]:hidden">
+                <summary className="-mx-2 list-none cursor-pointer px-2 py-6 transition-colors hover:bg-muted/20 [&::-webkit-details-marker]:hidden">
                     <div className="flex items-start gap-4">
                         <div className="mt-0.5 text-primary [&>svg]:size-5">{icon}</div>
                         <div className="min-w-0 flex-1">
                             <h2 className="text-lg font-semibold leading-tight sm:text-xl">{title}</h2>
                             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
                         </div>
+                        <span className="mt-1 text-xs font-medium text-muted-foreground group-open:hidden">Open</span>
+                        <span className="mt-1 hidden text-xs font-medium text-muted-foreground group-open:inline">Close</span>
                         <ChevronDown className="mt-1 size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
                     </div>
                 </summary>

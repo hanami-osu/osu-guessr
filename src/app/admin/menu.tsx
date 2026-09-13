@@ -548,9 +548,9 @@ export default function AdminMenu() {
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     {isLoading && (
-                        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground" role="status">
                             <Loader2 className="size-4 animate-spin" />
-                            Working
+                            Running admin action…
                         </span>
                     )}
                     <Button asChild variant="outline">

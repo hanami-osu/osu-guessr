@@ -6,7 +6,7 @@ import { ArrowLeft, ExternalLink, Loader2, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { listMapsets, removeMapset, fetchBackgroundImage, Mapset } from "../actions/mapsets";
+import { fetchBackgroundImage, listMapsets, removeMapset, Mapset } from "../actions/mapsets";
 
 interface BeatmapsAdminProps {
     initialMapsets: Mapset[];
@@ -23,25 +23,25 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
     const [page, setPage] = useState(1);
     const isInitialRender = useRef(true);
     const initialMapsetsRef = useRef(initialMapsets);
-    const limit = 50;
+    const limit = 25;
 
     const fetchImages = useCallback(async (list: Mapset[]) => {
-        const imgs: Record<number, string | null> = {};
+        const nextImages: Record<number, string | null> = {};
         await Promise.all(
             list.map(async (mapset) => {
                 if (!mapset.image_filename) {
-                    imgs[mapset.mapset_id] = null;
+                    nextImages[mapset.mapset_id] = null;
                     return;
                 }
 
                 try {
-                    imgs[mapset.mapset_id] = await fetchBackgroundImage(mapset.image_filename);
+                    nextImages[mapset.mapset_id] = await fetchBackgroundImage(mapset.image_filename);
                 } catch {
-                    imgs[mapset.mapset_id] = null;
+                    nextImages[mapset.mapset_id] = null;
                 }
-            })
+            }),
         );
-        setImages(imgs);
+        setImages(nextImages);
     }, []);
 
     const fetchMapsets = useCallback(async (p = 1, q = "") => {
@@ -53,7 +53,6 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
             const list = await listMapsets(p, limit, q);
             setMapsets(list || []);
             setOutput(`Loaded ${list.length} mapsets`);
-
             await fetchImages(list || []);
         } catch (err) {
             setOutput(`Error loading mapsets: ${String(err)}`);
@@ -178,45 +177,51 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
                 </div>
             </form>
 
+            <div className="hidden grid-cols-[auto_5rem_minmax(0,1fr)_6rem_auto] items-center gap-4 border-b border-border/60 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
+                <span className="w-4" aria-hidden="true" />
+                <span aria-hidden="true" />
+                <span>Mapset</span>
+                <span>ID</span>
+                <span className="text-right">Actions</span>
+            </div>
+
             <div className="divide-y divide-border/60 border-b border-border/60">
                 {mapsets.map((mapset) => (
-                    <div key={mapset.mapset_id} className="grid gap-4 py-4 sm:grid-cols-[auto_8rem_minmax(0,1fr)_auto] sm:items-center">
+                    <div key={mapset.mapset_id} className="grid grid-cols-[auto_4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 py-3 sm:grid-cols-[auto_5rem_minmax(0,1fr)_6rem_auto] sm:items-center sm:gap-x-4">
                         <input
                             type="checkbox"
                             aria-label={`Select ${mapset.title}`}
                             checked={!!selected[mapset.mapset_id]}
                             onChange={() => handleToggle(mapset.mapset_id)}
-                            className="size-4 accent-primary"
+                            className="mt-1 size-4 accent-primary sm:mt-0"
                         />
 
-                        <div className="h-[4.5rem] w-32 overflow-hidden rounded-md bg-muted sm:w-full">
+                        <div className="h-12 w-[4.5rem] overflow-hidden rounded-md bg-muted sm:h-14 sm:w-20">
                             {images[mapset.mapset_id] ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={images[mapset.mapset_id] as string} alt="" className="h-full w-full object-cover" />
                             ) : mapset.image_filename ? (
-                                <div className="flex h-full items-center justify-center px-2 text-center text-xs text-muted-foreground">Loading image...</div>
+                                <div className="flex h-full items-center justify-center px-1 text-center text-[10px] leading-tight text-muted-foreground">Loading</div>
                             ) : (
-                                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No image</div>
+                                <div className="flex h-full items-center justify-center px-1 text-center text-[10px] leading-tight text-muted-foreground">No image</div>
                             )}
                         </div>
 
                         <div className="min-w-0">
                             <div className="truncate font-medium">{mapset.title}</div>
-                            <div className="mt-1 truncate text-sm text-muted-foreground">{mapset.artist}</div>
-                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                <span>mapped by {mapset.mapper}</span>
-                                <span>ID {mapset.mapset_id}</span>
-                            </div>
+                            <div className="mt-0.5 truncate text-sm text-muted-foreground">{mapset.artist} · mapped by {mapset.mapper}</div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 sm:justify-end">
-                            <Button asChild size="sm" variant="ghost">
-                                <a href={`https://osu.ppy.sh/beatmapsets/${mapset.mapset_id}`} target="_blank" rel="noreferrer">
-                                    Open <ExternalLink />
+                        <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:block">{mapset.mapset_id}</span>
+
+                        <div className="col-start-3 flex gap-1 sm:col-start-auto sm:justify-end">
+                            <Button asChild size="icon" variant="ghost">
+                                <a href={`https://osu.ppy.sh/beatmapsets/${mapset.mapset_id}`} target="_blank" rel="noreferrer" aria-label={`Open ${mapset.title} on osu!`} title="Open on osu!">
+                                    <ExternalLink />
                                 </a>
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDelete(mapset.mapset_id)} disabled={isLoading} className="text-destructive hover:text-destructive">
-                                <Trash2 /> Remove
+                            <Button size="icon" variant="ghost" aria-label={`Remove ${mapset.title}`} title="Remove mapset" onClick={() => handleDelete(mapset.mapset_id)} disabled={isLoading} className="text-destructive hover:text-destructive">
+                                <Trash2 />
                             </Button>
                         </div>
                     </div>
