@@ -33,7 +33,7 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
         <section className="pb-6 pt-2">
             <div className="page-container">
                 <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight mb-3"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.home.statistics.title}</h2>
-                <div className="grid grid-cols-1 divide-y divide-border/60 rounded-xl bg-muted/35 md:grid-cols-3 md:divide-x md:divide-y-0">
+                <div className="grid grid-cols-1 divide-y divide-border/60 border-y border-border/60 md:grid-cols-3 md:divide-x md:divide-y-0">
                     <div>
                         <StatsCard
                             title={t.home.statistics.totalPlayers.title}
@@ -83,7 +83,7 @@ export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeConten
 
                 <Link
                     href="/announcements"
-                    className="group grid gap-5 rounded-xl bg-muted/45 p-4 ring-1 ring-inset ring-border/35 transition-colors hover:bg-muted/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                    className="group grid gap-5 border-y border-border/60 px-3 py-4 transition-colors hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-4"
                 >
                     <div className="min-w-0">
                         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">

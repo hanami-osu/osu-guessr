@@ -24,7 +24,7 @@ const RedditThreadLink = () => (
 );
 
 const SectionHeading = ({ children }: { children: React.ReactNode }) => (
-    <div className="mb-4 flex items-center gap-2 bg-muted/35 px-3 py-2.5">
+    <div className="mb-3 flex items-center gap-2">
         <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
         <h2 className="text-sm font-semibold tracking-tight text-foreground">{children}</h2>
     </div>
@@ -35,12 +35,12 @@ export default function AboutClient() {
 
     return (
         <main className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
-            <div className="overflow-hidden rounded-2xl bg-card/70 shadow-sm">
-                <header className="bg-muted/35 px-5 py-5 sm:px-7 md:px-9">
+            <div>
+                <header className="border-b border-border/60 py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.about.title}</h1>
                 </header>
 
-                <div className="px-5 sm:px-7 md:px-9">
+                <div>
                     <section className="py-5 sm:py-6">
                         <SectionHeading>{t.about.whatIs.title}</SectionHeading>
                         <p className="text-sm leading-6 text-muted-foreground">{t.about.whatIs.description1}</p>

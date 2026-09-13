@@ -3,9 +3,13 @@
 import { useTranslationsContext } from "@/context/translations-provider";
 import Link from "next/link";
 import React from "react";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
     const { t } = useTranslationsContext();
+    const pathname = usePathname();
+
+    if (pathname.startsWith("/games/")) return null;
 
     const AuthorLink = () => (
         <a className="text-primary hover:text-primary/80 transition-colors duration-200" href="https://osu.ppy.sh/u/yorunoken" target="_blank" rel="noopener noreferrer">

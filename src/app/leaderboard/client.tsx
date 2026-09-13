@@ -72,12 +72,12 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
 
     return (
         <main className="page-container pb-5 pt-3 md:pb-8 md:pt-4">
-            <div className="overflow-hidden rounded-2xl bg-card/70 shadow-sm">
-                <header className="bg-muted/35 px-4 py-4 sm:px-6 sm:py-5">
+            <div>
+                <header className="border-b border-border/60 py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.leaderboard.title}</h1>
                     <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{t.leaderboard.description}</p>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                         <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.modeLabel}>
                             {gameModes.map((mode) => (
                                 <button
@@ -89,14 +89,14 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                         setSelectedMode(mode);
                                         setPage(1);
                                     }}
-                                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === mode ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                                    className={`border-b-2 px-2 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === mode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
                                 >
                                     {t.leaderboard.filters.mode[mode]}
                                 </button>
                             ))}
                         </div>
 
-                        <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-border sm:block" />
+                        <span aria-hidden="true" className="hidden h-5 w-px bg-border sm:block" />
 
                         <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.variantLabel}>
                             {(["classic", "survival"] as const).map((variant) => (
@@ -109,7 +109,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                         setSelectedVariant(variant);
                                         setPage(1);
                                     }}
-                                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedVariant === variant ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                                    className={`border-b-2 px-2 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedVariant === variant ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
                                 >
                                     {t.leaderboard.filters.variant[variant]}
                                 </button>
@@ -118,21 +118,21 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                     </div>
                 </header>
 
-                <div className="p-2 sm:p-3">
+                <div className="py-4">
                     {isLoading ? (
-                        <div className="rounded-xl bg-muted/35 px-4 py-8 text-center text-sm text-muted-foreground" role="status">
+                        <div className="border-y border-border/60 px-4 py-8 text-center text-sm text-muted-foreground" role="status">
                             {t.common.loading}
                         </div>
                     ) : error ? (
-                        <div className="rounded-xl bg-muted/35 px-4 py-8 text-center text-sm text-destructive" role="alert">
+                        <div className="border-y border-border/60 px-4 py-8 text-center text-sm text-destructive" role="alert">
                             {error}
                         </div>
                     ) : leaderboardData.length === 0 ? (
-                        <div className="rounded-xl bg-muted/35 px-4 py-8 text-center text-sm text-muted-foreground" role="status">
+                        <div className="border-y border-border/60 px-4 py-8 text-center text-sm text-muted-foreground" role="status">
                             {t.leaderboard.empty}
                         </div>
                     ) : (
-                        <div className="overflow-hidden rounded-xl ring-1 ring-inset ring-border/35">
+                        <div className="overflow-hidden border-y border-border/60">
                             <div className="overflow-x-auto">
                                 <table className="w-full table-fixed sm:table-auto">
                                     <caption className="sr-only">{t.leaderboard.title}</caption>
@@ -150,7 +150,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                             <th scope="col" className="hidden px-5 py-2.5 text-right md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-border/35 bg-card/35">
+                                    <tbody className="divide-y divide-border/35">
                                         {leaderboardData.map((player, index) => (
                                             <tr key={player.bancho_id} className={`transition-colors hover:bg-muted/45 ${session?.user?.name === player.username ? "bg-primary/10" : ""}`}>
                                                 <td className="px-3 py-3 sm:px-5 sm:py-3.5">
@@ -209,7 +209,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                     )}
                 </div>
 
-                <div className="flex flex-col-reverse items-center justify-between gap-3 border-t border-border/50 bg-muted/35 px-4 py-3 sm:flex-row">
+                <div className="flex flex-col-reverse items-center justify-between gap-3 border-b border-border/50 py-3 sm:flex-row">
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">Page size</span>
                         <Select

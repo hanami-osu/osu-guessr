@@ -23,6 +23,8 @@ export default function Header() {
     const { t } = useTranslationsContext();
     const pathname = usePathname();
 
+    if (pathname.startsWith("/games/")) return null;
+
     const getNavLabel = (key: string) => {
         try {
             const val = (t.components.header.nav as Record<string, string>)[key];
@@ -119,9 +121,9 @@ export default function Header() {
                 </div>
 
                 {isMenuOpen && (
-                    <nav id={MOBILE_NAV_ID} aria-label={t.components.header.accessibility.mobileNavigation} className="absolute left-0 top-full w-full bg-background shadow-md md:hidden">
-                        <ul className="flex flex-col items-center space-y-4 py-4">
-                            <li className="w-full px-4">
+                    <nav id={MOBILE_NAV_ID} aria-label={t.components.header.accessibility.mobileNavigation} className="absolute left-0 top-full w-full border-b border-border/60 bg-background/98 shadow-lg md:hidden">
+                        <ul className="page-container flex flex-col gap-1 py-3">
+                            <li className="w-full pb-2">
                                 <UserSearch />
                             </li>
                             {NAV_ITEMS.map((item) => (
@@ -129,7 +131,7 @@ export default function Header() {
                                     <Link
                                         href={`/${item}`}
                                         aria-current={pathname === `/${item}` ? "page" : undefined}
-                                        className="w-full px-4 py-2 text-center font-medium text-foreground/80 transition-colors duration-200 hover:text-primary"
+                                        className={`w-full rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-muted/60 hover:text-primary ${pathname === `/${item}` ? "bg-muted/45 text-primary" : "text-foreground/80"}`}
                                         onClick={() => setIsMenuOpen(false)}
                                     >
                                         {getNavLabel(item)}
@@ -137,7 +139,7 @@ export default function Header() {
                                 </li>
                             ))}
                             <li className="flex w-full items-center">
-                                <div className="w-full px-4 py-2 text-center" onClick={() => setIsMenuOpen(false)}>
+                                <div className="w-full px-1 py-1" onClick={() => setIsMenuOpen(false)}>
                                     <SupportPageLink />
                                 </div>
                             </li>

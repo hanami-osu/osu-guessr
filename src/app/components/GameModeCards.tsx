@@ -55,7 +55,7 @@ export default function GameModeCards() {
 
             <Dialog open={!!selectedGame} onOpenChange={(open) => !open && closeGameModal()}>
                 {selectedGame && (
-                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl border-border/50 bg-card p-0 sm:max-w-4xl">
+                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-xl border-border/50 bg-card p-0 sm:max-w-2xl">
                         <DialogTitle className="sr-only">{t.game.preGame.title[selectedGame.id]}</DialogTitle>
                         <PreGameMenu
                             gameMode={selectedGame.id}

@@ -14,20 +14,27 @@ export default async function AnnouncementsPage() {
 
     return (
         <main className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
-            <div className="overflow-hidden rounded-2xl bg-card/70 shadow-sm">
-                <header className="bg-muted/35 px-5 py-5 sm:px-7 md:px-9">
+            <div>
+                <header className="flex flex-col gap-3 border-b border-border/60 py-5 sm:flex-row sm:items-end sm:justify-between sm:py-6">
+                    <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Announcements</h1>
+                        <p className="mt-1.5 text-sm leading-6 text-muted-foreground">Updates, release notes, and service news from osu!guessr.</p>
+                    </div>
+                    <span className="text-xs tabular-nums text-muted-foreground">{announcements.length} {announcements.length === 1 ? "post" : "posts"}</span>
                 </header>
 
-                <div className="px-5 sm:px-7 md:px-9">
+                <div className="max-w-3xl">
                     {announcements.length === 0 ? (
-                        <div className="py-8 text-center text-sm text-muted-foreground">No announcements</div>
+                        <div className="border-b border-border/60 py-10 text-sm text-muted-foreground">No announcements</div>
                     ) : (
-                        <div className="space-y-0">
-                            {announcements.map((a) => (
-                                <article key={a.id} className="border-t border-border/60 py-5 first:border-t-0 sm:py-6">
-                                    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 bg-muted/35 px-3 py-2.5">
-                                        <h2 className="text-sm font-semibold tracking-tight text-foreground">{a.title}</h2>
+                        <div>
+                            {announcements.map((a, index) => (
+                                <article key={a.id} className="border-b border-border/60 py-6 sm:py-7">
+                                    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                        <div className="flex min-w-0 items-center gap-2">
+                                            {index === 0 && <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Latest</span>}
+                                            <h2 className="text-base font-semibold tracking-tight text-foreground">{a.title}</h2>
+                                        </div>
                                         <time className="text-[11px] tabular-nums text-muted-foreground" dateTime={new Date(a.created_at).toISOString()}>
                                             {new Date(a.created_at).toLocaleDateString("en", { dateStyle: "medium", timeZone: "UTC" })}
                                         </time>
