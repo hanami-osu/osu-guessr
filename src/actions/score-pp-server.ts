@@ -5,9 +5,9 @@ import redisClient from "@/lib/redis";
 import { authenticatedAction } from "./server";
 import { finishGameSession } from "./game-server";
 import { GameMode, type DatabaseGameSession, type GameRoundResult, type GameVariant, type PersistedGameRound } from "./types";
-import { getStoredScorePpPair, selectStoredScorePpPair } from "@/lib/score-pp/store";
-import type { ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunState, ScorePpScoreSnapshot } from "@/lib/score-pp/types";
+import type { ScorePpPairSnapshot, ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunState, ScorePpScoreSnapshot } from "@/lib/score-pp/types";
 import { getBeatmapMaxCombo } from "@/lib/score-pp/beatmap-max-combo";
+import { selectStoredScorePpPair } from "@/lib/score-pp/store";
 import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES } from "@/app/games/config";
@@ -25,7 +25,6 @@ return 0
 `;
 
 const exclusionsSchema = z.object({
-    pairIds: z.array(z.number().int().positive()).max(10_000).default([]),
     scoreIds: z.array(z.string().min(1).max(64)).max(20_000).default([]),
     userIds: z.array(z.number().int().positive()).max(20_000).default([]),
     beatmapIds: z.array(z.number().int().positive()).max(20_000).default([]),
@@ -36,6 +35,26 @@ const scoreIdSchema = z.string().min(1).max(64).nullable();
 const sessionIdSchema = z.string().uuid();
 const variantSchema = z.enum(["classic", "survival"]);
 const submissionTypeSchema = z.enum(["guess", "skip", "timeout"]);
+
+function getRoundExclusions(run: DatabaseGameSession, requested: { scoreIds: string[]; userIds: number[]; beatmapIds: number[] }) {
+    const scoreIds = new Set(requested.scoreIds);
+    const userIds = new Set(requested.userIds);
+    const beatmapIds = new Set(requested.beatmapIds);
+
+    for (const round of run.round_history) {
+        const snapshot = round.content_snapshot;
+        if (!snapshot) continue;
+        for (const side of ["left", "right"] as const) {
+            const score = snapshot[side] as ScorePpScoreSnapshot | undefined;
+            if (!score) continue;
+            scoreIds.add(score.sourceScoreId);
+            userIds.add(score.player.userId);
+            beatmapIds.add(score.beatmap.beatmapId);
+        }
+    }
+
+    return { scoreIds: [...scoreIds], userIds: [...userIds], beatmapIds: [...beatmapIds] };
+}
 
 async function hidePp(score: ScorePpScoreSnapshot): Promise<ScorePpPublicScore> {
     const beatmap = score.beatmap.maxCombo
@@ -55,7 +74,7 @@ async function hidePp(score: ScorePpScoreSnapshot): Promise<ScorePpPublicScore> 
     };
 }
 
-async function toPublicPair(pair: Awaited<ReturnType<typeof getStoredScorePpPair>> & {}): Promise<ScorePpPublicPair> {
+async function toPublicPair(pair: ScorePpPairSnapshot): Promise<ScorePpPublicPair> {
     const [left, right] = await Promise.all([hidePp(pair.left), hidePp(pair.right)]);
     return {
         id: pair.id,
@@ -98,7 +117,7 @@ async function getResolution(run: DatabaseGameSession): Promise<ScorePpResolutio
     const latestRound = run.round_history.at(-1);
     if (!latestRound || latestRound.round_number !== run.current_round || latestRound.item_id !== run.current_item_id) return null;
 
-    const pair = await getStoredScorePpPair(run.current_item_id);
+    const pair = run.current_score_pp_pair;
     if (!pair) return null;
     const snapshot = latestRound.content_snapshot ?? {};
     const selectedScoreId = typeof snapshot.selectedScoreId === "string" ? snapshot.selectedScoreId : null;
@@ -128,7 +147,7 @@ async function getResolution(run: DatabaseGameSession): Promise<ScorePpResolutio
 async function toRunState(run: DatabaseGameSession): Promise<ScorePpRunState> {
     const terminal = !run.is_active && !run.end_pending;
     const saved = terminal && run.pp !== undefined;
-    const pairSnapshot = run.is_active && run.current_item_id > 0 ? await getStoredScorePpPair(run.current_item_id) : null;
+    const pairSnapshot = run.is_active && run.current_item_id > 0 ? run.current_score_pp_pair ?? null : null;
     const pair = pairSnapshot ? await toPublicPair(pairSnapshot) : null;
     const resolution = run.is_active ? await getResolution(run) : null;
 
@@ -210,6 +229,8 @@ export async function startScorePpRunAction(variant: GameVariant): Promise<strin
             image_filename: "",
             audio_filename: "",
             has_guessed_current_round: false,
+            score_pp_batch_id: null,
+            current_score_pp_pair: null,
         };
         await writeRun(run);
         return sessionId;
@@ -219,7 +240,7 @@ export async function startScorePpRunAction(variant: GameVariant): Promise<strin
 export async function getScorePpRoundAction(
     sessionId: string,
     round: number,
-    exclusions: { pairIds: number[]; scoreIds: string[]; userIds: number[]; beatmapIds: number[] },
+    exclusions: { scoreIds: string[]; userIds: number[]; beatmapIds: number[] },
 ): Promise<ScorePpRoundLoad> {
     const parsedSessionId = sessionIdSchema.parse(sessionId);
     const parsedRound = roundSchema.parse(round);
@@ -233,7 +254,7 @@ export async function getScorePpRoundAction(
             if (parsedRound !== expectedRound) throw new Error("Unexpected Score PP round");
 
             if (!run.has_guessed_current_round && run.current_item_id > 0 && run.current_round === parsedRound) {
-                const existing = await getStoredScorePpPair(run.current_item_id);
+                const existing = run.current_score_pp_pair ?? null;
                 return {
                     pair: existing ? await toPublicPair(existing) : null,
                     deadlineAt: existing ? getRoundDeadline(run) : null,
@@ -242,12 +263,17 @@ export async function getScorePpRoundAction(
                 };
             }
 
-            const pair = await selectStoredScorePpPair(parsedRound, {
-                pairIds: new Set(parsedExclusions.pairIds),
-                scoreIds: new Set(parsedExclusions.scoreIds),
-                userIds: new Set(parsedExclusions.userIds),
-                beatmapIds: new Set(parsedExclusions.beatmapIds),
-            });
+            const exclusions = getRoundExclusions(run, parsedExclusions);
+            const pair = await selectStoredScorePpPair(
+                parsedRound,
+                {
+                    pairIds: new Set(run.round_history.map((item) => item.item_id)),
+                    scoreIds: new Set(exclusions.scoreIds),
+                    userIds: new Set(exclusions.userIds),
+                    beatmapIds: new Set(exclusions.beatmapIds),
+                },
+                run.score_pp_batch_id,
+            );
             if (!pair) {
                 if (run.variant !== "survival") {
                     return { pair: null, deadlineAt: null, terminal: false, saved: false };
@@ -273,6 +299,8 @@ export async function getScorePpRoundAction(
                 last_guess_correct: null,
                 last_points: null,
                 has_guessed_current_round: false,
+                score_pp_batch_id: run.score_pp_batch_id ?? pair.batchId,
+                current_score_pp_pair: pair,
             };
             await writeRun(nextRun);
             return {
@@ -340,8 +368,8 @@ export async function submitScorePpGuessAction(
             if (run.has_guessed_current_round) throw new Error("Already submitted a choice for this round");
             if (run.current_item_id !== parsedPairId) throw new Error("Score pair does not belong to the current round");
 
-            const pair = await getStoredScorePpPair(parsedPairId);
-            if (!pair) throw new Error("Score pair is no longer available");
+            const pair = run.current_score_pp_pair;
+            if (!pair || pair.id !== parsedPairId) throw new Error("Score pair is no longer available");
             if (parsedSelectedScoreId && parsedSelectedScoreId !== pair.left.sourceScoreId && parsedSelectedScoreId !== pair.right.sourceScoreId) {
                 throw new Error("Selected score does not belong to this pair");
             }

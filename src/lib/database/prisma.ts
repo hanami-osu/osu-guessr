@@ -17,7 +17,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function hasCurrentSchema(client: PrismaClient | undefined): client is PrismaClient {
-    return typeof (client as unknown as { scorePpPair?: { findMany?: unknown } } | undefined)?.scorePpPair?.findMany === "function";
+    return typeof (client as unknown as { scorePpBatch?: { findMany?: unknown } } | undefined)?.scorePpBatch?.findMany === "function";
 }
 
 export const prisma =

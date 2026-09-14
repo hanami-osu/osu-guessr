@@ -1,7 +1,5 @@
 import type { GameRoundResult } from "@/actions/types";
 
-export type ScorePpSide = "left" | "right";
-
 export interface ScorePpPlayerSnapshot {
     userId: number;
     username: string;
@@ -45,10 +43,9 @@ export interface ScorePpScoreSnapshot {
 
 export interface ScorePpPairSnapshot {
     id: number;
-    source: string;
+    batchId: string;
     left: ScorePpScoreSnapshot;
     right: ScorePpScoreSnapshot;
-    higherSide: ScorePpSide;
     ppGap: number;
 }
 

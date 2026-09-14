@@ -17,7 +17,6 @@ import { AUTO_ADVANCE_DELAY_MS, MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES } from ".
 import ScorePpCard from "./ScorePpCard";
 
 interface Exclusions {
-    pairIds: number[];
     scoreIds: string[];
     userIds: number[];
     beatmapIds: number[];
@@ -25,12 +24,11 @@ interface Exclusions {
 
 type ScorePpError = "start" | "load" | "submit" | "end" | "unavailable";
 
-const EMPTY_EXCLUSIONS: Exclusions = { pairIds: [], scoreIds: [], userIds: [], beatmapIds: [] };
+const EMPTY_EXCLUSIONS: Exclusions = { scoreIds: [], userIds: [], beatmapIds: [] };
 
 function addPairToExclusions(exclusions: Exclusions, pair: ScorePpPublicPair): Exclusions {
-    if (exclusions.pairIds.includes(pair.id)) return exclusions;
+    if (exclusions.scoreIds.includes(pair.left.sourceScoreId) || exclusions.scoreIds.includes(pair.right.sourceScoreId)) return exclusions;
     return {
-        pairIds: [...exclusions.pairIds, pair.id],
         scoreIds: [...new Set([...exclusions.scoreIds, pair.left.sourceScoreId, pair.right.sourceScoreId])],
         userIds: [...new Set([...exclusions.userIds, pair.left.player.userId, pair.right.player.userId])],
         beatmapIds: [...new Set([...exclusions.beatmapIds, pair.left.beatmap.beatmapId, pair.right.beatmap.beatmapId])],
@@ -213,9 +211,8 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
 
     useEffect(() => {
         if (!pair || !resolution) return;
-        if (gameVariant === "survival" && !resolution.correct) return;
         exclusions.current = addPairToExclusions(exclusions.current, pair);
-    }, [gameVariant, pair, resolution]);
+    }, [pair, resolution]);
 
     useEffect(() => {
         if (!pair || resolution || isLoading) return;

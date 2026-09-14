@@ -1,0 +1,2 @@
+ALTER TABLE score_pp_batches
+    MODIFY COLUMN target_count INT UNSIGNED NOT NULL DEFAULT 10000;

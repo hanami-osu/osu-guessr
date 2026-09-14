@@ -1,8 +1,11 @@
-import { prisma } from "@/lib/database/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/database/prisma";
 import { getScorePpMaxRelativeGap, getScorePpRelativeGap } from "./difficulty";
 import type { ScorePpPairCandidate, ScorePpPairExclusions } from "./pairing";
-import type { ScorePpPairSnapshot, ScorePpScoreSnapshot, ScorePpSide } from "./types";
+import type { ScorePpPairSnapshot, ScorePpScoreSnapshot } from "./types";
+
+const RANDOM_WINDOW_SIZE = 120;
+const RANDOM_WINDOW_ATTEMPTS = 6;
 
 function toJson(value: ScorePpScoreSnapshot): Prisma.InputJsonValue {
     return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -13,75 +16,63 @@ function canonicalize(pair: ScorePpPairCandidate): ScorePpPairCandidate {
     return { left: pair.right, right: pair.left, relativePpGap: pair.relativePpGap };
 }
 
-export async function storeScorePpPair(source: string, candidate: ScorePpPairCandidate): Promise<number> {
+export async function storeScorePpPair(batchId: string, source: string, candidate: ScorePpPairCandidate): Promise<boolean> {
     const pair = canonicalize(candidate);
-    const higherSide: ScorePpSide = pair.left.pp > pair.right.pp ? "left" : "right";
-    const ppGap = Math.abs(pair.left.pp - pair.right.pp);
-    const relativePpGap = getScorePpRelativeGap(pair.left.pp, pair.right.pp);
-    const stored = await prisma.scorePpPair.upsert({
-        where: {
-            source_leftScoreId_rightScoreId: {
+    const result = await prisma.scorePpPair.createMany({
+        data: [
+            {
+                batchId,
                 source,
                 leftScoreId: pair.left.sourceScoreId,
                 rightScoreId: pair.right.sourceScoreId,
+                leftSnapshot: toJson(pair.left),
+                rightSnapshot: toJson(pair.right),
+                higherSide: pair.left.pp > pair.right.pp ? "left" : "right",
+                ppGap: Math.abs(pair.left.pp - pair.right.pp),
+                relativePpGap: getScorePpRelativeGap(pair.left.pp, pair.right.pp),
+                active: true,
             },
-        },
-        create: {
-            source,
-            leftScoreId: pair.left.sourceScoreId,
-            rightScoreId: pair.right.sourceScoreId,
-            leftSnapshot: toJson(pair.left),
-            rightSnapshot: toJson(pair.right),
-            higherSide,
-            ppGap,
-            relativePpGap,
-        },
-        update: {
-            leftSnapshot: toJson(pair.left),
-            rightSnapshot: toJson(pair.right),
-            higherSide,
-            ppGap,
-            relativePpGap,
-            active: true,
-        },
-        select: { id: true },
+        ],
+        skipDuplicates: true,
     });
-    return stored.id;
+    return result.count === 1;
 }
 
 type StoredPair = {
     id: number;
-    source: string;
+    batchId: string;
     leftSnapshot: unknown;
     rightSnapshot: unknown;
-    higherSide: ScorePpSide;
     ppGap: Prisma.Decimal;
-    relativePpGap: Prisma.Decimal;
 };
 
-const SCORE_PP_PAIR_PAGE_SIZE = 250;
 const scorePpPairSelect = {
     id: true,
-    source: true,
+    batchId: true,
     leftSnapshot: true,
     rightSnapshot: true,
-    higherSide: true,
     ppGap: true,
-    relativePpGap: true,
 } as const;
 
-function parseSnapshot(value: unknown): ScorePpScoreSnapshot {
-    return value as ScorePpScoreSnapshot;
+function mapStoredPair(row: StoredPair): ScorePpPairSnapshot {
+    return {
+        id: row.id,
+        batchId: row.batchId,
+        left: row.leftSnapshot as ScorePpScoreSnapshot,
+        right: row.rightSnapshot as ScorePpScoreSnapshot,
+        ppGap: Number(row.ppGap),
+    };
+}
+
+function flipPair(pair: ScorePpPairSnapshot): ScorePpPairSnapshot {
+    return { ...pair, left: pair.right, right: pair.left };
 }
 
 export interface ScorePpPairSelectionExclusions extends ScorePpPairExclusions {
     pairIds?: ReadonlySet<number>;
-    requeuePairIds?: ReadonlySet<number>;
 }
 
 function hasExcludedContent(pair: ScorePpPairSnapshot, exclusions: ScorePpPairSelectionExclusions): boolean {
-    if (exclusions.requeuePairIds?.has(pair.id)) return false;
-
     return Boolean(
         exclusions.pairIds?.has(pair.id) ||
             exclusions.scoreIds?.has(pair.left.sourceScoreId) ||
@@ -93,71 +84,66 @@ function hasExcludedContent(pair: ScorePpPairSnapshot, exclusions: ScorePpPairSe
     );
 }
 
-function mapStoredPair(row: StoredPair): ScorePpPairSnapshot {
-    return {
-        id: row.id,
-        source: row.source,
-        left: parseSnapshot(row.leftSnapshot),
-        right: parseSnapshot(row.rightSnapshot),
-        higherSide: row.higherSide,
-        ppGap: Number(row.ppGap),
-    };
+export async function getActiveScorePpBatchId(): Promise<string | null> {
+    const batch = await prisma.scorePpBatch.findFirst({
+        where: { status: "active" },
+        orderBy: { activatedAt: "desc" },
+        select: { id: true },
+    });
+    return batch?.id ?? null;
 }
 
-function flipPair(pair: ScorePpPairSnapshot): ScorePpPairSnapshot {
-    return {
-        ...pair,
-        left: pair.right,
-        right: pair.left,
-        higherSide: pair.higherSide === "left" ? "right" : "left",
-    };
+async function findCandidates(
+    batchId: string,
+    relativePpGap: { gte?: number; gt?: number; lte: number },
+    exclusions: ScorePpPairSelectionExclusions,
+    rng: () => number,
+): Promise<ScorePpPairSnapshot[]> {
+    const where = { batchId, active: true, relativePpGap } satisfies Prisma.ScorePpPairWhereInput;
+    const count = await prisma.scorePpPair.count({ where });
+    if (count === 0) return [];
+
+    for (let attempt = 0; attempt < RANDOM_WINDOW_ATTEMPTS; attempt += 1) {
+        const maxSkip = Math.max(0, count - RANDOM_WINDOW_SIZE);
+        const skip = Math.floor(rng() * (maxSkip + 1));
+        const rows = await prisma.scorePpPair.findMany({
+            where,
+            orderBy: { id: "asc" },
+            skip,
+            take: RANDOM_WINDOW_SIZE,
+            select: scorePpPairSelect,
+        });
+        const candidates = rows.map(mapStoredPair).filter((pair) => !hasExcludedContent(pair, exclusions));
+        if (candidates.length > 0) return candidates;
+    }
+
+    for (let skip = 0; skip < count; skip += RANDOM_WINDOW_SIZE) {
+        const rows = await prisma.scorePpPair.findMany({
+            where,
+            orderBy: { id: "asc" },
+            skip,
+            take: RANDOM_WINDOW_SIZE,
+            select: scorePpPairSelect,
+        });
+        const candidates = rows.map(mapStoredPair).filter((pair) => !hasExcludedContent(pair, exclusions));
+        if (candidates.length > 0) return candidates;
+    }
+
+    return [];
 }
 
 export async function selectStoredScorePpPair(
     round: number,
     exclusions: ScorePpPairSelectionExclusions = {},
+    requestedBatchId?: string | null,
     rng: () => number = Math.random,
 ): Promise<ScorePpPairSnapshot | null> {
+    const batchId = requestedBatchId ?? (await getActiveScorePpBatchId());
+    if (!batchId) return null;
+
     const maxGap = getScorePpMaxRelativeGap(round);
-    const preferredMinGap = maxGap * 0.35;
-
-    const findCandidates = async (where: { active: true; relativePpGap: { gte?: number; gt?: number; lte: number } }) => {
-        for (let skip = 0; ; skip += SCORE_PP_PAIR_PAGE_SIZE) {
-            const rows = await prisma.scorePpPair.findMany({
-                where,
-                skip,
-                take: SCORE_PP_PAIR_PAGE_SIZE,
-                orderBy: [{ relativePpGap: "desc" }, { id: "asc" }],
-                select: scorePpPairSelect,
-            });
-            const candidates = rows.map(mapStoredPair).filter((pair) => !hasExcludedContent(pair, exclusions));
-            if (candidates.length > 0) return candidates;
-            if (rows.length < SCORE_PP_PAIR_PAGE_SIZE) return [];
-        }
-    };
-
-    const preferredCandidates = await findCandidates({ active: true, relativePpGap: { gte: preferredMinGap, lte: maxGap } });
-    const candidates = preferredCandidates.length > 0 ? preferredCandidates : await findCandidates({ active: true, relativePpGap: { gt: 0, lte: maxGap } });
-    if (candidates.length === 0) return null;
-
+    const preferred = await findCandidates(batchId, { gte: maxGap * 0.35, lte: maxGap }, exclusions, rng);
+    const candidates = preferred.length > 0 ? preferred : await findCandidates(batchId, { gt: 0, lte: maxGap }, exclusions, rng);
     const selected = candidates[Math.floor(rng() * candidates.length)] ?? null;
-    if (!selected) return null;
-    return rng() < 0.5 ? selected : flipPair(selected);
-}
-
-export async function getStoredScorePpPair(pairId: number): Promise<ScorePpPairSnapshot | null> {
-    const row = await prisma.scorePpPair.findFirst({
-        where: { id: pairId, active: true },
-        select: {
-            id: true,
-            source: true,
-            leftSnapshot: true,
-            rightSnapshot: true,
-            higherSide: true,
-            ppGap: true,
-            relativePpGap: true,
-        },
-    });
-
-    return row ? mapStoredPair(row) : null;
+    return selected && rng() < 0.5 ? flipPair(selected) : selected;
 }

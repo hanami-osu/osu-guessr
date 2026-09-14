@@ -7,6 +7,7 @@ import type { ScorePpBeatmapSnapshot, ScorePpPlayerSnapshot, ScorePpScoreSnapsho
 const RANKING_PAGE_SIZE = 50;
 const MAX_RANKING_PAGE = 200;
 const USER_BEST_PAGE_SIZE = 100;
+const MAX_RANKING_CANDIDATES = 1_100;
 
 type UserBestParams = {
     type: "user_best";
@@ -146,6 +147,8 @@ export class OsuApiScoreSource implements ScorePpScoreSource, ScorePpMetadataSou
     private readonly players = new Map<number, ScorePpPlayerSnapshot | null>();
     private readonly beatmaps = new Map<number, ScorePpBeatmapSnapshot>();
     private readonly scoresByUser = new Map<number, ScorePpSourceScore[]>();
+    private readonly rankingCandidateIds = new Set<number>();
+    private readonly loadedRankingPages = new Set<number>();
 
     static async create(clientId: string, clientSecret: string): Promise<OsuApiScoreSource> {
         const result = await auth.login({
@@ -161,13 +164,15 @@ export class OsuApiScoreSource implements ScorePpScoreSource, ScorePpMetadataSou
     }
 
     async getRandomCandidateUserIds(limit: number): Promise<number[]> {
-        const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
-        const pageCount = Math.max(2, Math.ceil(safeLimit / 40));
-        const pages = new Set<number>();
-        while (pages.size < pageCount) pages.add(1 + Math.floor(Math.random() * MAX_RANKING_PAGE));
+        const safeLimit = Math.max(1, Math.min(MAX_RANKING_CANDIDATES, Math.trunc(limit)));
+        const targetPoolSize = safeLimit;
 
-        const candidates: number[] = [];
-        for (const page of pages) {
+        while (this.rankingCandidateIds.size < targetPoolSize && this.loadedRankingPages.size < MAX_RANKING_PAGE) {
+            let page = 1 + Math.floor(Math.random() * MAX_RANKING_PAGE);
+            while (this.loadedRankingPages.has(page) && this.loadedRankingPages.size < MAX_RANKING_PAGE) {
+                page = 1 + Math.floor(Math.random() * MAX_RANKING_PAGE);
+            }
+            this.loadedRankingPages.add(page);
             const response = await v2.ranking.list({ type: "performance", mode: "osu", page });
             const error = getApiError(response);
             if (error) throw new Error(`osu! performance ranking request failed: ${error.message}`);
@@ -180,11 +185,11 @@ export class OsuApiScoreSource implements ScorePpScoreSource, ScorePpMetadataSou
                     avatarUrl: entry.user.avatar_url,
                     globalRank: entry.global_rank,
                 });
-                candidates.push(entry.user.id);
+                this.rankingCandidateIds.add(entry.user.id);
             }
         }
 
-        return shuffle([...new Set(candidates)]).slice(0, safeLimit);
+        return shuffle([...this.rankingCandidateIds]).slice(0, safeLimit);
     }
 
     async getTopScores(userId: number, limit: number): Promise<ScorePpSourceScore[]> {

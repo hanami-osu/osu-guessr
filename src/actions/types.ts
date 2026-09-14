@@ -239,6 +239,8 @@ export interface DatabaseGameSession {
     image_filename: string;
     audio_filename: string;
     has_guessed_current_round: boolean;
+    score_pp_batch_id?: string | null;
+    current_score_pp_pair?: import("@/lib/score-pp/types").ScorePpPairSnapshot | null;
 }
 
 export interface PersistedGameRound {
