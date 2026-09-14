@@ -35,7 +35,7 @@
         "react-dom": "^19.0.0",
         "redis": "^5.8.1",
         "server-only": "^0.0.1",
-        "sharp": "^0.32.6",
+        "sharp": "^0.35.4",
         "tailwind-merge": "^2.6.0",
         "tailwindcss-animate": "^1.0.7",
         "unzipper": "^0.10.11",
