@@ -243,7 +243,7 @@ export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isR
                 <Button className="h-11 min-w-0 flex-1 lg:h-12 lg:text-base" onClick={onGuess} disabled={!guess.trim() || isBusy}>
                     {t.game.input.submit}
                 </Button>
-                <Button variant="ghost" onClick={onSkip} disabled={isBusy} className="h-11 min-w-0 flex-1 border border-border/60 transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive lg:h-12 lg:text-base">
+                <Button variant="ghost" onClick={onSkip} disabled={isBusy} className="h-11 min-w-0 flex-1 border border-warning/40 bg-warning/[0.04] text-warning transition-colors hover:border-warning/60 hover:bg-warning/10 hover:text-warning lg:h-12 lg:text-base">
                     {gameVariant === "survival" ? t.game.input.skipDeath : t.game.input.skip}
                 </Button>
             </div>

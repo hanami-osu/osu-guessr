@@ -394,7 +394,7 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
                     {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
                 </Button>
                 {resolution ? (
-                    <div className="text-xs text-muted-foreground sm:text-sm" role="status" aria-live="polite">
+                    <div className={`text-xs sm:text-sm ${resolution.resultType === "skip" ? "text-warning" : "text-muted-foreground"}`} role="status" aria-live="polite">
                         {resolution.resultType === "skip"
                             ? t.game.result.skipped
                             : resolution.resultType === "timeout"
@@ -412,7 +412,7 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
                     </Button>
                 )}
                 {!resolution && pair && (
-                    <Button className="justify-self-center sm:justify-self-end" variant="outline" size="sm" onClick={() => void resolveGuess(null, "skip")} disabled={isLoading || isSubmitting}>
+                    <Button className="justify-self-center border-warning/40 bg-warning/[0.04] text-warning hover:border-warning/60 hover:bg-warning/10 hover:text-warning sm:justify-self-end" variant="outline" size="sm" onClick={() => void resolveGuess(null, "skip")} disabled={isLoading || isSubmitting}>
                         {gameVariant === "survival" ? t.game.input.skipDeath : t.game.input.skip}
                     </Button>
                 )}
