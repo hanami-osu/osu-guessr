@@ -11,7 +11,7 @@ import { z } from "zod";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
 
 const gameModeSchema = z.nativeEnum(GameMode);
-const gameVariantSchema = z.enum(["classic", "survival", "death"]);
+const gameVariantSchema = z.enum(["classic", "survival"]);
 const currentGameVariants = ["classic", "survival"] as const;
 const searchSchema = z.object({
     term: z.string().min(2).max(250),
@@ -187,7 +187,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
     const achievements = achievementRows.map(mapAchievement);
     const badgesByUser = await getBadgesForUsers([banchoId]);
     const [classicGlobalRank, survivalGlobalRank] = await Promise.all([getGlobalRank(banchoId, "classic"), getGlobalRank(banchoId, "survival")]);
-    const modeRanks: { [key in GameMode]: { classic?: number; survival?: number; death?: number } } = {
+    const modeRanks: { [key in GameMode]: { classic?: number; survival?: number } } = {
         [GameMode.Background]: {},
         [GameMode.Audio]: {},
         [GameMode.Skin]: {},

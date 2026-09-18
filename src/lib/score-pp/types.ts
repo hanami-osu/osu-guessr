@@ -49,6 +49,18 @@ export interface ScorePpPairSnapshot {
     ppGap: number;
 }
 
+export interface ScorePpPairCandidate {
+    left: ScorePpScoreSnapshot;
+    right: ScorePpScoreSnapshot;
+    relativePpGap: number;
+}
+
+export interface ScorePpPairExclusions {
+    scoreIds?: ReadonlySet<string>;
+    userIds?: ReadonlySet<number>;
+    beatmapIds?: ReadonlySet<number>;
+}
+
 export type ScorePpPublicScore = Omit<ScorePpScoreSnapshot, "pp">;
 
 export interface ScorePpPublicPair {

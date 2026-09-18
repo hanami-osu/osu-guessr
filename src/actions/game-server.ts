@@ -15,16 +15,16 @@ import { canPersistGameResult } from "@/lib/game/completion";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp, type ContentPerformanceStats } from "@/lib/game/performance-points";
 import { Prisma } from "@/generated/prisma/client";
+import {
+    acquireGameSessionLock,
+    deleteGameSession,
+    readOwnedGameSession,
+    releaseGameSessionLock,
+    writeGameSession,
+} from "@/lib/game/session-storage";
 
 const GRACE_PERIOD = 1;
-const SESSION_LOCK_TTL_MS = 30_000;
 const ROUND_TIME_MS = ROUND_TIME * 1000;
-const RELEASE_SESSION_LOCK_SCRIPT = `
-if redis.call("get", KEYS[1]) == ARGV[1] then
-    return redis.call("del", KEYS[1])
-end
-return 0
-`;
 
 const gameSchema = z.object({
     sessionId: z.string().uuid(),
@@ -38,11 +38,6 @@ const gameSchema = z.object({
 const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin]);
 const gameVariantSchema = z.enum(["classic", "survival"]);
 
-type SessionLock = {
-    key: string;
-    token: string;
-};
-
 type ContentStatRow = ContentPerformanceStats & {
     item_id: number;
 };
@@ -51,42 +46,16 @@ function toPrismaJson(value: Record<string, unknown> | null): Prisma.InputJsonVa
     return value ? (JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue) : undefined;
 }
 
-async function acquireSessionLock(sessionId: string, timeoutMs: number = SESSION_LOCK_TTL_MS): Promise<SessionLock | null> {
-    const key = `game_session_lock:${sessionId}`;
-    const token = crypto.randomUUID();
-    const result = await redisClient.set(key, token, {
-        condition: "NX",
-        expiration: {
-            type: "PX",
-            value: timeoutMs,
-        },
-    });
-
-    return result === "OK" ? { key, token } : null;
-}
-
-async function releaseSessionLock(lock: SessionLock): Promise<void> {
+async function releaseSessionLock(lock: Parameters<typeof releaseGameSessionLock>[0]): Promise<void> {
     try {
-        await redisClient.eval(RELEASE_SESSION_LOCK_SCRIPT, {
-            keys: [lock.key],
-            arguments: [lock.token],
-        });
+        await releaseGameSessionLock(lock);
     } catch (error) {
         console.error("Failed to release game session lock:", error);
     }
 }
 
 async function getGameSession(sessionId: string, userId: number): Promise<DatabaseGameSession> {
-    const cacheKey = `game_session:${sessionId}`;
-    const cached = await redisClient.get(cacheKey);
-    if (!cached) {
-        throw new Error("Game session not found or expired");
-    }
-    const session = JSON.parse(cached) as DatabaseGameSession;
-    if (session.user_id !== userId) {
-        throw new Error("Game session not found or expired");
-    }
-    return session;
+    return readOwnedGameSession(sessionId, userId, "Game session not found or expired");
 }
 
 async function validateGameSession(sessionId: string, userId: number): Promise<DatabaseGameSession> {
@@ -141,13 +110,12 @@ async function resolveRoundDifficulties(gameState: DatabaseGameSession, rounds: 
 }
 
 export async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<number | null> {
-    const cacheKey = `game_session:${sessionId}`;
     const gameState = await getGameSession(sessionId, userId);
     if (!gameState.is_active && !gameState.end_pending) return gameState.pp ?? null;
 
     const endReason = resolveEndReason(gameState, requestedReason);
     const pendingState = { ...gameState, is_active: false, end_pending: true, end_reason: endReason };
-    await redisClient.set(cacheKey, JSON.stringify(pendingState), { EX: 3600 });
+    await writeGameSession(pendingState);
 
     if (
         !canPersistGameResult(
@@ -155,12 +123,11 @@ export async function finishGameSession(sessionId: string, userId: number, reque
                 variant: gameState.variant,
                 currentRound: gameState.current_round,
                 hasGuessedCurrentRound: gameState.has_guessed_current_round,
-                highestStreak: gameState.highest_streak,
             },
             MAX_ROUNDS,
         )
     ) {
-        await redisClient.set(cacheKey, JSON.stringify({ ...pendingState, end_pending: false }), { EX: 120 });
+        await writeGameSession({ ...pendingState, end_pending: false }, 120);
         return null;
     }
 
@@ -175,7 +142,7 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     const ranked = gameState.ranked ?? true;
     const runPp = calculateRunPp(roundHistory, gameState.variant);
     const finalizingState = { ...pendingState, round_history: roundHistory, pp: runPp };
-    await redisClient.set(cacheKey, JSON.stringify(finalizingState), { EX: 3600 });
+    await writeGameSession(finalizingState);
 
     const persistedPp = await prisma.$transaction(
         async (tx) => {
@@ -356,7 +323,7 @@ export async function finishGameSession(sessionId: string, userId: number, reque
         { isolationLevel: "Serializable" },
     );
 
-    await redisClient.set(cacheKey, JSON.stringify({ ...finalizingState, pp: persistedPp, end_pending: false }), { EX: 120 });
+    await writeGameSession({ ...finalizingState, pp: persistedPp, end_pending: false }, 120);
     return persistedPp;
 }
 
@@ -371,53 +338,48 @@ export async function startGameAction(gameMode: GameMode, variant: GameVariant =
     const itemId = gameMode === GameMode.Skin ? (item.data as SkinData).id : (item.data as MapsetDataWithTags).mapset_id;
     const itemType = gameMode === GameMode.Skin ? "skin" : "mapset";
 
-    const sessKey = `game_session:${sessionId}`;
-    await Promise.all([redisClient.del(sessKey), redisClient.del(`session_items:${sessionId}:mapset`), redisClient.del(`session_items:${sessionId}:skin`)]);
+    await Promise.all([deleteGameSession(sessionId), redisClient.del(`session_items:${sessionId}:mapset`), redisClient.del(`session_items:${sessionId}:skin`)]);
 
     const sessionItemsKey = `session_items:${sessionId}:${itemType}`;
     await redisClient.sAdd(sessionItemsKey, itemId.toString());
     await redisClient.expire(sessionItemsKey, 3600);
 
     const startedAt = new Date().toISOString();
-    await redisClient.set(
-        sessKey,
-        JSON.stringify({
-            id: sessionId,
-            user_id: authSession.user.banchoId,
-            game_mode: gameMode,
-            total_points: 0,
-            current_streak: 0,
-            highest_streak: 0,
-            current_round: 1,
-            current_item_id: itemId,
-            time_left: ROUND_TIME,
-            last_guess: null,
-            last_guess_correct: null,
-            last_points: null,
-            correct_guesses: 0,
-            total_time_used: 0,
-            total_response_time_ms: 0,
-            is_active: true,
-            variant: variant,
-            run_type: "standard",
-            challenge_id: null,
-            seed: null,
-            config_snapshot: null,
-            ranked: true,
-            ruleset_version: CURRENT_RULESET_VERSION,
-            pp_version: CURRENT_PP_VERSION,
-            started_at: startedAt,
-            round_history: [],
-            title: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).title : (item.data as SkinData).name,
-            artist: (item.data as MapsetDataWithTags).artist,
-            mapper: (item.data as MapsetDataWithTags).mapper,
-            image_filename: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).image_filename : (item.data as SkinData).image_filename,
-            audio_filename: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).audio_filename : null,
-            has_guessed_current_round: false,
-            last_action_at: startedAt,
-        }),
-        { EX: 3600 },
-    );
+    await writeGameSession({
+        id: sessionId,
+        user_id: authSession.user.banchoId,
+        game_mode: gameMode,
+        total_points: 0,
+        current_streak: 0,
+        highest_streak: 0,
+        current_round: 1,
+        current_item_id: itemId,
+        time_left: ROUND_TIME,
+        last_guess: null,
+        last_guess_correct: null,
+        last_points: null,
+        correct_guesses: 0,
+        total_time_used: 0,
+        total_response_time_ms: 0,
+        is_active: true,
+        variant: variant,
+        run_type: "standard",
+        challenge_id: null,
+        seed: null,
+        config_snapshot: null,
+        ranked: true,
+        ruleset_version: CURRENT_RULESET_VERSION,
+        pp_version: CURRENT_PP_VERSION,
+        started_at: startedAt,
+        round_history: [],
+        title: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).title : (item.data as SkinData).name,
+        artist: (item.data as MapsetDataWithTags).artist,
+        mapper: (item.data as MapsetDataWithTags).mapper,
+        image_filename: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).image_filename : (item.data as SkinData).image_filename,
+        audio_filename: "mapset_id" in item.data ? (item.data as MapsetDataWithTags).audio_filename : null,
+        has_guessed_current_round: false,
+        last_action_at: startedAt,
+    });
 
     const currentBeatmap =
         gameMode === GameMode.Audio
@@ -451,7 +413,7 @@ export async function startGameAction(gameMode: GameMode, variant: GameVariant =
 export async function submitGuessAction(sessionId: string, guess?: string | null): Promise<GameState> {
     const authSession = await getAuthSession();
     const validated = gameSchema.parse({ sessionId, guess });
-    const lock = await acquireSessionLock(validated.sessionId);
+    const lock = await acquireGameSessionLock(validated.sessionId);
 
     if (!lock) {
         throw new Error("Action in progress, please wait");
@@ -470,9 +432,8 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             throw new Error("You must make a guess, skip, or let the timer run out before advancing to the next round");
         }
 
-        const isLegacyDeathMode = gameState.variant === "death";
         const isSurvivalMode = gameState.variant === "survival";
-        const isContinuousMode = isLegacyDeathMode || isSurvivalMode;
+        const isContinuousMode = isSurvivalMode;
 
         if (!isContinuousMode && gameState.current_round > MAX_ROUNDS) {
             throw new Error("Game is complete");
@@ -539,9 +500,8 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
         const madeMistake = !isNextRound && (isSkipped || isTimeout || (!isCorrect && isGuess));
         const existingMistakes = (gameState.round_history ?? []).filter((round) => !round.correct).length;
         const mistakes = existingMistakes + (madeMistake ? 1 : 0);
-        const legacyDeathFailed = isLegacyDeathMode && madeMistake;
         const survivalFailed = isSurvivalMode && mistakes >= SURVIVAL_LIVES;
-        const runFailed = legacyDeathFailed || survivalFailed;
+        const runFailed = survivalFailed;
 
         let nextBeatmap: { data: MapsetDataWithTags | SkinData; backgroundData?: string; audioData?: string; skinData?: string } | null = null;
 
@@ -652,8 +612,7 @@ export async function submitGuessAction(sessionId: string, guess?: string | null
             }),
         };
 
-        const sessKey = `game_session:${sessionId}`;
-        await redisClient.set(sessKey, JSON.stringify(updatedGameState), { EX: 3600 });
+        await writeGameSession(updatedGameState);
 
         if (isSurvivalMode && madeMistake && !survivalFailed) {
             const itemType = gameState.game_mode === GameMode.Skin ? "skin" : "mapset";
@@ -722,7 +681,7 @@ export async function getGameStateAction(sessionId: string): Promise<GameState> 
 
     let gameState = await getGameSession(sessionId, authSession.user.banchoId);
     if (gameState.end_pending) {
-        const lock = await acquireSessionLock(sessionId);
+        const lock = await acquireGameSessionLock(sessionId);
         if (!lock) throw new Error("Action in progress, please wait");
 
         try {
@@ -786,7 +745,7 @@ export async function getGameStateAction(sessionId: string): Promise<GameState> 
 export async function endGameAction(sessionId: string): Promise<number | null> {
     sessionId = z.string().uuid().parse(sessionId);
     const authSession = await getAuthSession();
-    const lock = await acquireSessionLock(sessionId);
+    const lock = await acquireGameSessionLock(sessionId);
     if (!lock) throw new Error("Action in progress, please wait");
 
     try {

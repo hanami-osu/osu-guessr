@@ -104,6 +104,7 @@ mock.module("./mapsets-server", () => ({
 mock.module("./media", () => ({ getMediaData: getMediaDataMock }));
 mock.module("@/lib/database/prisma", () => ({ prisma: prismaMock }));
 mock.module("@/lib/redis", () => ({ default: redisClientMock }));
+mock.module("server-only", () => ({}));
 
 const { endGameAction, getGameStateAction, startGameAction, submitGuessAction } = await import("./game-server");
 
@@ -248,7 +249,7 @@ describe("game server lifecycle", () => {
 
     test("counts only the first difficulty sample from a user for an item", async () => {
         contentStatContributionCreateManyMock.mockResolvedValueOnce({ count: 0 });
-        putSession(makeSession({ variant: "death" }));
+        putSession(makeSession({ variant: "survival" }));
 
         await submitGuessAction(sessionId, answer);
         await endGameAction(sessionId);
@@ -272,18 +273,19 @@ describe("game server lifecycle", () => {
         expect(contentStatUpsertMock).not.toHaveBeenCalled();
     });
 
-    test("keeps arcade score separate from pp in death mode", async () => {
-        putSession(makeSession({ variant: "death", total_points: 0 }));
+    test("keeps arcade score separate from pp in survival mode", async () => {
+        putSession(makeSession({ variant: "survival", total_points: 0 }));
 
         const correct = await submitGuessAction(sessionId, answer);
         expect(correct.score.total).toBe(160);
         expect(correct.pp).toBeUndefined();
 
         await submitGuessAction(sessionId);
-        const finished = await submitGuessAction(sessionId, "wrong answer");
+        const afterMistake = await submitGuessAction(sessionId, "wrong answer");
+        const pp = await endGameAction(sessionId);
 
-        expect(finished.score.total).toBe(110);
-        expect(finished.pp).toBeGreaterThan(0);
+        expect(afterMistake.score.total).toBe(110);
+        expect(pp).toBeGreaterThan(0);
         expect(gameCreateMock.mock.calls[0]?.[0].data.points).toBe(110);
     });
 
@@ -343,22 +345,8 @@ describe("game server lifecycle", () => {
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
     });
 
-    test("persists a death run that fails on the first map", async () => {
-        putSession(makeSession({ variant: "death" }));
-
-        const finished = await submitGuessAction(sessionId, "wrong answer");
-
-        expect(finished.gameStatus).toBe("finished");
-        expect(finished.score.highestStreak).toBe(0);
-        expect(transactionMock).toHaveBeenCalledTimes(1);
-        expect(gameCreateMock).toHaveBeenCalledTimes(1);
-        expect(userAchievementUpsertMock).toHaveBeenCalledTimes(1);
-        expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
-        expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
-    });
-
     test("keeps a failed finalization pending and retries it safely", async () => {
-        putSession(makeSession({ variant: "death", highest_streak: 1 }));
+        putSession(makeSession({ variant: "survival", current_round: 2, highest_streak: 1 }));
         transactionMock.mockRejectedValueOnce(new Error("database unavailable"));
 
         await expect(endGameAction(sessionId)).rejects.toThrow("database unavailable");
@@ -374,7 +362,7 @@ describe("game server lifecycle", () => {
     });
 
     test("recovers an ambiguously committed finalization without counting it twice", async () => {
-        putSession(makeSession({ variant: "death", is_active: false, end_pending: true, highest_streak: 1 }));
+        putSession(makeSession({ variant: "survival", current_round: 2, is_active: false, end_pending: true, highest_streak: 1 }));
         gameFindUniqueMock.mockResolvedValueOnce({ id: 1n });
 
         const recovered = await getGameStateAction(sessionId);
@@ -390,7 +378,7 @@ describe("game server lifecycle", () => {
     test("keeps a frozen difficulty snapshot while retrying finalization", async () => {
         putSession(
             makeSession({
-                variant: "death",
+                variant: "survival",
                 is_active: false,
                 end_pending: true,
                 has_guessed_current_round: true,
@@ -425,7 +413,7 @@ describe("game server lifecycle", () => {
     });
 
     test("persists an ended session only once", async () => {
-        putSession(makeSession({ variant: "death", highest_streak: 1 }));
+        putSession(makeSession({ variant: "survival", current_round: 2, highest_streak: 1 }));
 
         await Promise.allSettled([endGameAction(sessionId), endGameAction(sessionId)]);
 

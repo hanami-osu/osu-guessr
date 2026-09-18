@@ -1,11 +1,12 @@
-import redisClient from "@/lib/redis";
 import { prisma } from "@/lib/database/prisma";
 import { env } from "@/lib/env";
+import type { RedisLock } from "@/lib/redis-lock";
 import { getScorePpMaxRelativeGap, getScorePpRelativeGap } from "./difficulty";
 import { OsuApiScoreSource } from "./osu-api-source";
 import { storeScorePpPair } from "./store";
-import type { ScorePpPairCandidate } from "./pairing";
-import type { ScorePpScoreSnapshot } from "./types";
+import type { ScorePpPairCandidate, ScorePpScoreSnapshot } from "./types";
+import { acquireRedisLock, releaseRedisLock } from "@/lib/redis-lock";
+import { shuffle } from "./random";
 
 export const SCORE_PP_PAIR_TARGET = 10_000;
 export const SCORE_PP_ROTATION_MS = 24 * 60 * 60 * 1000;
@@ -21,26 +22,11 @@ const SCORE_PP_BUILD_STALE_MS = 12 * 60 * 60 * 1000;
 const SCORE_PP_SCORE_FETCH_CONCURRENCY = 10;
 const SCORE_PP_POOL_LOCK_KEY = "score_pp_pair_pool_build_lock";
 const GENERATION_ROUNDS = [1, 4, 7, 10, 13, 16, 21, 26, 31, 41] as const;
-const RELEASE_LOCK_SCRIPT = `
-if redis.call("get", KEYS[1]) == ARGV[1] then
-    return redis.call("del", KEYS[1])
-end
-return 0
-`;
 
 export interface ScorePpPoolRefreshResult {
     refreshed: boolean;
     batchId: string | null;
     pairCount: number;
-}
-
-function shuffle<T>(values: readonly T[]): T[] {
-    const result = [...values];
-    for (let index = result.length - 1; index > 0; index -= 1) {
-        const swapIndex = Math.floor(Math.random() * (index + 1));
-        [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
-    }
-    return result;
 }
 
 async function mapConcurrent<T, R>(values: readonly T[], concurrency: number, mapper: (value: T, index: number) => Promise<R>): Promise<R[]> {
@@ -150,17 +136,12 @@ function pickPairFromSample(
     return null;
 }
 
-async function acquireBuildLock(): Promise<string | null> {
-    const token = crypto.randomUUID();
-    const result = await redisClient.set(SCORE_PP_POOL_LOCK_KEY, token, {
-        condition: "NX",
-        expiration: { type: "PX", value: SCORE_PP_BUILD_LOCK_MS },
-    });
-    return result === "OK" ? token : null;
+async function acquireBuildLock(): Promise<RedisLock | null> {
+    return acquireRedisLock(SCORE_PP_POOL_LOCK_KEY, SCORE_PP_BUILD_LOCK_MS);
 }
 
-async function releaseBuildLock(token: string): Promise<void> {
-    await redisClient.eval(RELEASE_LOCK_SCRIPT, { keys: [SCORE_PP_POOL_LOCK_KEY], arguments: [token] });
+async function releaseBuildLock(lock: RedisLock): Promise<void> {
+    await releaseRedisLock(lock);
 }
 
 async function getActiveBatch() {
@@ -246,8 +227,8 @@ export async function refreshScorePpPairPool(options: { force?: boolean; targetC
         return { refreshed: false, batchId: activeBeforeLock?.id ?? null, pairCount: activeBeforeLock?.pairCount ?? 0 };
     }
 
-    const lockToken = await acquireBuildLock();
-    if (!lockToken) return { refreshed: false, batchId: activeBeforeLock?.id ?? null, pairCount: activeBeforeLock?.pairCount ?? 0 };
+    const lock = await acquireBuildLock();
+    if (!lock) return { refreshed: false, batchId: activeBeforeLock?.id ?? null, pairCount: activeBeforeLock?.pairCount ?? 0 };
 
     let source: OsuApiScoreSource | null = null;
     try {
@@ -324,7 +305,7 @@ export async function refreshScorePpPairPool(options: { force?: boolean; targetC
         return { refreshed: false, batchId: latestActive.id, pairCount: latestActive.pairCount };
     } finally {
         await source?.close();
-        await releaseBuildLock(lockToken);
+        await releaseBuildLock(lock);
     }
 }
 

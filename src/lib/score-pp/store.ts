@@ -1,8 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/database/prisma";
 import { getScorePpMaxRelativeGap, getScorePpRelativeGap } from "./difficulty";
-import type { ScorePpPairCandidate, ScorePpPairExclusions } from "./pairing";
-import type { ScorePpPairSnapshot, ScorePpScoreSnapshot } from "./types";
+import type { ScorePpPairCandidate, ScorePpPairExclusions, ScorePpPairSnapshot, ScorePpScoreSnapshot } from "./types";
 
 const RANDOM_WINDOW_SIZE = 120;
 const RANDOM_WINDOW_ATTEMPTS = 6;
@@ -84,7 +83,7 @@ function hasExcludedContent(pair: ScorePpPairSnapshot, exclusions: ScorePpPairSe
     );
 }
 
-export async function getActiveScorePpBatchId(): Promise<string | null> {
+async function getActiveScorePpBatchId(): Promise<string | null> {
     const batch = await prisma.scorePpBatch.findFirst({
         where: { status: "active" },
         orderBy: { activatedAt: "desc" },
@@ -103,9 +102,7 @@ async function findCandidates(
     const count = await prisma.scorePpPair.count({ where });
     if (count === 0) return [];
 
-    for (let attempt = 0; attempt < RANDOM_WINDOW_ATTEMPTS; attempt += 1) {
-        const maxSkip = Math.max(0, count - RANDOM_WINDOW_SIZE);
-        const skip = Math.floor(rng() * (maxSkip + 1));
+    const loadCandidates = async (skip: number): Promise<ScorePpPairSnapshot[]> => {
         const rows = await prisma.scorePpPair.findMany({
             where,
             orderBy: { id: "asc" },
@@ -113,19 +110,18 @@ async function findCandidates(
             take: RANDOM_WINDOW_SIZE,
             select: scorePpPairSelect,
         });
-        const candidates = rows.map(mapStoredPair).filter((pair) => !hasExcludedContent(pair, exclusions));
+        return rows.map(mapStoredPair).filter((pair) => !hasExcludedContent(pair, exclusions));
+    };
+
+    for (let attempt = 0; attempt < RANDOM_WINDOW_ATTEMPTS; attempt += 1) {
+        const maxSkip = Math.max(0, count - RANDOM_WINDOW_SIZE);
+        const skip = Math.floor(rng() * (maxSkip + 1));
+        const candidates = await loadCandidates(skip);
         if (candidates.length > 0) return candidates;
     }
 
     for (let skip = 0; skip < count; skip += RANDOM_WINDOW_SIZE) {
-        const rows = await prisma.scorePpPair.findMany({
-            where,
-            orderBy: { id: "asc" },
-            skip,
-            take: RANDOM_WINDOW_SIZE,
-            select: scorePpPairSelect,
-        });
-        const candidates = rows.map(mapStoredPair).filter((pair) => !hasExcludedContent(pair, exclusions));
+        const candidates = await loadCandidates(skip);
         if (candidates.length > 0) return candidates;
     }
 

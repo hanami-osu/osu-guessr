@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import redisClient from "@/lib/redis";
 import { authenticatedAction } from "./server";
 import { finishGameSession } from "./game-server";
 import { GameMode, type DatabaseGameSession, type GameRoundResult, type GameVariant, type PersistedGameRound } from "./types";
@@ -11,18 +10,9 @@ import { selectStoredScorePpPair } from "@/lib/score-pp/store";
 import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES } from "@/app/games/config";
+import { acquireGameSessionLock, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 
 const ROUND_TIME_MS = ROUND_TIME * 1000;
-const SESSION_TTL_SECONDS = 3600;
-const LOCK_TTL_MS = 30_000;
-const SESSION_KEY_PREFIX = "game_session:";
-const LOCK_KEY_PREFIX = "game_session_lock:";
-const RELEASE_LOCK_SCRIPT = `
-if redis.call("get", KEYS[1]) == ARGV[1] then
-    return redis.call("del", KEYS[1])
-end
-return 0
-`;
 
 const exclusionsSchema = z.object({
     scoreIds: z.array(z.string().min(1).max(64)).max(20_000).default([]),
@@ -88,14 +78,7 @@ function scoreLabel(score: ScorePpScoreSnapshot): string {
 }
 
 async function readOwnedRun(sessionId: string, userId: number): Promise<DatabaseGameSession> {
-    const cached = await redisClient.get(`${SESSION_KEY_PREFIX}${sessionId}`);
-    if (!cached) throw new Error("Score PP session not found or expired");
-
-    const run = JSON.parse(cached) as DatabaseGameSession;
-    if (run.user_id !== userId || run.game_mode !== GameMode.ScorePp) {
-        throw new Error("Score PP session not found or expired");
-    }
-    return run;
+    return readOwnedGameSession(sessionId, userId, "Score PP session not found or expired", (run) => run.game_mode === GameMode.ScorePp);
 }
 
 async function readRun(sessionId: string, userId: number): Promise<DatabaseGameSession> {
@@ -167,26 +150,10 @@ async function toRunState(run: DatabaseGameSession): Promise<ScorePpRunState> {
     };
 }
 
-async function writeRun(run: DatabaseGameSession): Promise<void> {
-    await redisClient.set(`${SESSION_KEY_PREFIX}${run.id}`, JSON.stringify(run), { EX: SESSION_TTL_SECONDS });
-}
-
 async function acquireRunLock(sessionId: string): Promise<{ key: string; token: string }> {
-    const key = `${LOCK_KEY_PREFIX}${sessionId}`;
-    const token = crypto.randomUUID();
-    const result = await redisClient.set(key, token, {
-        condition: "NX",
-        expiration: { type: "PX", value: LOCK_TTL_MS },
-    });
-    if (result !== "OK") throw new Error("Action in progress, please wait");
-    return { key, token };
-}
-
-async function releaseRunLock(lock: { key: string; token: string }): Promise<void> {
-    await redisClient.eval(RELEASE_LOCK_SCRIPT, {
-        keys: [lock.key],
-        arguments: [lock.token],
-    });
+    const lock = await acquireGameSessionLock(sessionId);
+    if (!lock) throw new Error("Action in progress, please wait");
+    return lock;
 }
 
 export async function startScorePpRunAction(variant: GameVariant): Promise<string> {
@@ -232,7 +199,7 @@ export async function startScorePpRunAction(variant: GameVariant): Promise<strin
             score_pp_batch_id: null,
             current_score_pp_pair: null,
         };
-        await writeRun(run);
+        await writeGameSession(run);
         return sessionId;
     });
 }
@@ -302,7 +269,7 @@ export async function getScorePpRoundAction(
                 score_pp_batch_id: run.score_pp_batch_id ?? pair.batchId,
                 current_score_pp_pair: pair,
             };
-            await writeRun(nextRun);
+            await writeGameSession(nextRun);
             return {
                 pair: await toPublicPair(pair),
                 deadlineAt: startedAt + ROUND_TIME_MS,
@@ -310,7 +277,7 @@ export async function getScorePpRoundAction(
                 saved: false,
             };
         } finally {
-            await releaseRunLock(lock);
+            await releaseGameSessionLock(lock);
         }
     });
 }
@@ -328,7 +295,7 @@ export async function getScorePpRunStateAction(sessionId: string): Promise<Score
             }
             return await toRunState(run);
         } finally {
-            await releaseRunLock(lock);
+            await releaseGameSessionLock(lock);
         }
     });
 }
@@ -343,7 +310,7 @@ export async function endScorePpRunAction(sessionId: string): Promise<number | n
             if (!run.is_active && !run.end_pending) return run.pp ?? null;
             return await finishGameSession(parsedSessionId, session.user.banchoId, run.end_reason ?? "quit");
         } finally {
-            await releaseRunLock(lock);
+            await releaseGameSessionLock(lock);
         }
     });
 }
@@ -429,7 +396,7 @@ export async function submitScorePpGuessAction(
                 round_history: [...run.round_history, roundRecord],
                 has_guessed_current_round: true,
             };
-            await writeRun(nextRun);
+            await writeGameSession(nextRun);
 
             const terminal = (run.variant === "classic" && run.current_round >= MAX_ROUNDS) || (run.variant === "survival" && mistakes >= SURVIVAL_LIVES);
             const runPp = terminal ? await finishGameSession(parsedSessionId, session.user.banchoId, run.variant === "survival" ? "failed" : undefined) : null;
@@ -455,7 +422,7 @@ export async function submitScorePpGuessAction(
                 runPp: runPp ?? undefined,
             };
         } finally {
-            await releaseRunLock(lock);
+            await releaseGameSessionLock(lock);
         }
     });
 }

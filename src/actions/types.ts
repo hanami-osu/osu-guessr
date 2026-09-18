@@ -5,7 +5,8 @@ export enum GameMode {
     ScorePp = "score_pp"
 }
 export type GuessGameMode = Exclude<GameMode, GameMode.ScorePp>;
-export type GameVariant = "classic" | "survival" | "death";
+export type GameVariant = "classic" | "survival";
+export type StoredGameVariant = GameVariant | "death";
 export type GameRunType = "standard" | "daily" | "challenge" | "practice";
 export type GameEndReason = "completed" | "failed" | "quit" | "content_exhausted";
 export type GameRoundResult = "guess" | "skip" | "timeout";
@@ -102,7 +103,7 @@ export interface User {
 export interface UserAchievement {
     user_id: number;
     game_mode: GameMode;
-    variant: GameVariant;
+    variant: StoredGameVariant;
     ruleset_version: number;
     pp_version: number;
     total_score: bigint;
@@ -123,13 +124,11 @@ export interface UserRanks {
     globalRank?: {
         classic?: number;
         survival?: number;
-        death?: number;
     };
     modeRanks: {
         [key in GameMode]: {
             classic?: number;
             survival?: number;
-            death?: number;
         };
     };
 }
@@ -145,7 +144,7 @@ export interface Game {
     game_mode: GameMode;
     points: number;
     streak: number;
-    variant: GameVariant;
+    variant: StoredGameVariant;
     ruleset_version: number;
     pp_version: number;
     pp: string | number;

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { auth, v2 } from "osu-api-extended";
 import type { ScorePpMetadataSource, ScorePpScoreSource, ScorePpSourceScore } from "./source";
 import type { ScorePpBeatmapSnapshot, ScorePpPlayerSnapshot, ScorePpScoreSnapshot } from "./types";
+import { shuffle } from "./random";
 
 const RANKING_PAGE_SIZE = 50;
 const MAX_RANKING_PAGE = 200;
@@ -25,15 +26,6 @@ function getApiError(value: unknown): Error | null {
     const error = (value as { error?: unknown }).error;
     if (!error) return null;
     return error instanceof Error ? error : new Error(String(error));
-}
-
-function shuffle<T>(values: readonly T[]): T[] {
-    const result = [...values];
-    for (let index = result.length - 1; index > 0; index -= 1) {
-        const swapIndex = Math.floor(Math.random() * (index + 1));
-        [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
-    }
-    return result;
 }
 
 function mapMods(value: unknown): string[] {
