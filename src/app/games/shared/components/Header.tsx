@@ -27,7 +27,7 @@ export default function GameHeader({ streak, points, timeLeft, currentRound, tot
             <div className="flex items-center justify-between gap-4">
                 <div>
                     <div className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {gameVariant === "classic" ? t.game.preGame.modes.classic.title : gameVariant === "survival" ? t.game.preGame.modes.death.title : "Death Mode"}
+                        {gameVariant === "classic" ? t.game.preGame.modes.classic.title : t.game.preGame.modes.death.title}
                     </div>
                     <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">{t.game.preGame.title[mode as keyof typeof t.game.preGame.title]}</h1>
                 </div>

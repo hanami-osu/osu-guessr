@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 
 import { GameClient } from "@/lib/game/client";
 import { GameState, GameMode } from "@/actions/types";
@@ -18,7 +17,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import type { GameMediaProps } from "@/lib/game/types";
 import { canPersistGameResult, isClassicGameIncomplete } from "@/lib/game/completion";
-import { SHORTCUTS_STORAGE_KEY } from "@/lib/game/preferences";
+import GameActionButton from "../components/GameActionButton";
+import GameShortcuts from "../components/GameShortcuts";
+import GameStartError from "../components/GameStartError";
+import { useGameKeyboardShortcuts } from "../hooks/useGameKeyboardShortcuts";
+import { usePreventUnload } from "../hooks/usePreventUnload";
 
 interface GameScreenProps {
     onExit(): void;
@@ -36,7 +39,6 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     const [isLoading, setIsLoading] = useState(true);
     const [countdown, setCountdown] = useState<number>(AUTO_ADVANCE_DELAY_MS / 1000);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-    const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [startupError, setStartupError] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
 
@@ -85,14 +87,6 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
             gameClient.current?.dispose();
         };
     }, [handleStartGame]);
-
-    useEffect(() => {
-        try {
-            setShortcutsOpen(window.localStorage.getItem(SHORTCUTS_STORAGE_KEY) === "true");
-        } catch {
-            setShortcutsOpen(false);
-        }
-    }, []);
 
     const handleAction = useCallback(
         async (action: () => Promise<void>) => {
@@ -159,7 +153,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         if (!gameClient.current || !gameState) return false;
 
         const confirmation =
-            gameVariant === "survival" || gameVariant === "death"
+            gameVariant === "survival"
                 ? t.confirmations.exitGame.death
                 : isClassicGameIncomplete(gameState)
                   ? t.confirmations.exitGame.classic
@@ -178,7 +172,6 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                     variant: gameVariant,
                     currentRound: gameState.rounds.current,
                     hasGuessedCurrentRound: gameState.currentBeatmap.revealed,
-                    highestStreak: gameState.score.highestStreak,
                 },
                 MAX_ROUNDS,
             );
@@ -197,45 +190,15 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         }
     }, [gameState, onExit, gameVariant, router, t.confirmations.exitGame, t.errors.game.unknown]);
 
-    useEffect(() => {
-        if (!gameClient.current || !gameState) return;
+    usePreventUnload(Boolean(gameClient.current && gameState && gameVariant === "classic" && isClassicGameIncomplete(gameState)));
 
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (gameVariant === "classic" && isClassicGameIncomplete(gameState)) {
-                e.preventDefault();
-                e.returnValue = "";
-            }
-        };
-
-        window.addEventListener("beforeunload", handleBeforeUnload);
-
-        return () => {
-            window.removeEventListener("beforeunload", handleBeforeUnload);
-        };
-    }, [gameState, gameVariant]);
+    useGameKeyboardShortcuts({
+        disabled: isReportDialogOpen,
+        onNextRound: gameState?.currentBeatmap.revealed ? handleNextRound : undefined,
+    });
 
     useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key !== "Enter" || event.repeat || event.defaultPrevented || event.isComposing || !gameState?.currentBeatmap.revealed || isReportDialogOpen) return;
-            if (document.querySelector('[role="dialog"][data-state="open"]')) return;
-
-            const target = event.target;
-            if (
-                target instanceof HTMLElement &&
-                target.closest("button, a[href], input, textarea, select, summary, [contenteditable='true'], [role='button'], [role='link'], [role='menuitem'], [role='option']")
-            ) {
-                return;
-            }
-
-            void handleNextRound();
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [gameState?.currentBeatmap.revealed, handleNextRound, isReportDialogOpen]);
-
-    useEffect(() => {
-        if (gameState?.currentBeatmap.revealed && !isReportDialogOpen) {
+        if (gameState?.currentBeatmap.revealed && !isReportDialogOpen && !isLoading && !actionError) {
             setCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
 
             const countdownInterval = setInterval(() => {
@@ -251,26 +214,13 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 clearTimeout(advanceTimer);
             };
         }
-    }, [gameState?.currentBeatmap.revealed, handleNextRound, isReportDialogOpen]);
+    }, [actionError, gameState?.currentBeatmap.revealed, handleNextRound, isLoading, isReportDialogOpen]);
 
     if (!gameState && startupError) {
-        return (
-            <div className="page-container flex min-h-[420px] items-center justify-center py-10">
-                <Alert variant="destructive" className="max-w-lg">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>{t.game.errors.startFailed}</AlertTitle>
-                    <AlertDescription className="mt-2 space-y-4">
-                        <p>{startupError}</p>
-                        <Button type="button" variant="outline" onClick={handleStartGame}>
-                            {t.game.actions.retry}
-                        </Button>
-                    </AlertDescription>
-                </Alert>
-            </div>
-        );
+        return <GameStartError message={startupError} onRetry={handleStartGame} />;
     }
 
-    if (!gameState) return <LoadingScreen />;
+    if (!gameState) return <div className="page-container relative min-h-[420px]"><LoadingScreen /></div>;
 
     return (
         <div className="page-container py-4 md:py-6">
@@ -296,7 +246,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                         result={gameState.lastGuess}
                         songInfo={gameState.currentBeatmap}
                     />
-                    {isLoading && <LoadingScreen />}
+                    {isLoading && !gameState.currentBeatmap.revealed && <LoadingScreen />}
                 </div>
                 <div className="flex min-w-0 flex-col gap-4">
                     {actionError && (
@@ -317,34 +267,17 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                         onGuess={handleGuess}
                         onSkip={handleSkip}
                         onNextRound={handleNextRound}
+                        loadingLabel={isLoading ? (gameState.gameStatus === "finished" || gameState.rounds.current >= gameState.rounds.total ? t.common.loading : t.game.status.loading) : undefined}
                         nextRoundLabel={gameState.gameStatus === "finished" || gameState.rounds.current >= gameState.rounds.total
                             ? t.game.actions.viewResults
-                            : t.game.actions.nextRound}
+                            : t.game.actions.nextRoundTime.replace("{seconds}", String(countdown))}
                         gameClient={gameClient.current!}
                     />
-                    <details
-                        open={shortcutsOpen}
-                        onToggle={(event) => {
-                            const open = event.currentTarget.open;
-                            setShortcutsOpen(open);
-                            try {
-                                window.localStorage.setItem(SHORTCUTS_STORAGE_KEY, String(open));
-                            } catch {}
-                        }}
-                        className="border-border/60 pt-3 text-xs text-muted-foreground"
-                    >
-                        <summary className="w-fit cursor-pointer py-1 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">{t.game.shortcuts.title}</summary>
-                        <div className="mt-2 space-y-2 leading-relaxed">
-                            <p>{t.game.shortcuts.items.enter}</p>
-                            <p>{t.game.shortcuts.items.ctrlS}</p>
-                            <p>{t.game.shortcuts.items.arrows}</p>
-                            <p>{t.game.shortcuts.items.esc}</p>
-                        </div>
-                    </details>
-                    <div className="flex flex-wrap items-center gap-2 border-border/60 pt-3">
-                        <Button variant="ghost" size="sm" onClick={handleExit} disabled={isLoading}>
-                            {gameVariant === "survival" || gameVariant === "death" ? t.game.actions.endRun : t.game.actions.exitGame}
-                        </Button>
+                    <GameShortcuts hasSuggestions />
+                    <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
+                        <GameActionButton intent="exit" onClick={handleExit} disabled={isLoading}>
+                            {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
+                        </GameActionButton>
                         {gameMode !== GameMode.Skin && gameState.currentBeatmap.revealed && gameState.currentBeatmap.mapsetId && (
                             <ReportDialog mapsetId={gameState.currentBeatmap.mapsetId} mapsetTitle={gameState.currentBeatmap.title || t.game.media.unknown} onOpenChange={setIsReportDialogOpen} />
                         )}

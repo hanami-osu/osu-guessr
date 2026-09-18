@@ -33,7 +33,7 @@ function ResultStat({ label, value }: ResultStatProps) {
 export default function GameStats({ runPp, totalPoints, correctGuesses, maxStreak, totalRounds, averageTime, mistakes, onPlayAgain, gameVariant, gameEndReason }: GameStatsProps) {
     const { t, locale } = useTranslationsContext();
     const isSurvival = gameVariant === "survival";
-    const isContinuous = isSurvival || gameVariant === "death";
+    const isContinuous = isSurvival;
     const died = isContinuous && gameEndReason === "died";
     const livesRemaining = Math.max(0, SURVIVAL_LIVES - mistakes);
     const title = isContinuous

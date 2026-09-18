@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import GameActionButton from "./GameActionButton";
 import { useState, useEffect, useId, useRef } from "react";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { GameClient } from "@/lib/game/client";
@@ -17,10 +17,11 @@ interface GuessInputProps {
     onSkip: () => void;
     onNextRound: () => void;
     nextRoundLabel: string;
+    loadingLabel?: string;
     gameClient: GameClient;
 }
 
-export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isRevealed, revealedGuess, isBusy, onGuess, onSkip, onNextRound, nextRoundLabel, gameClient }: GuessInputProps) {
+export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isRevealed, revealedGuess, isBusy, onGuess, onSkip, onNextRound, nextRoundLabel, loadingLabel, gameClient }: GuessInputProps) {
     const { t } = useTranslationsContext();
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -172,9 +173,9 @@ export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isR
                     className="w-full rounded-md border border-border bg-muted/30 px-3 py-3 text-base text-foreground outline-none lg:py-3.5 lg:text-lg"
                 />
                 <div className="mt-3">
-                    <Button className="h-11 w-full lg:h-12 lg:text-base" onClick={onNextRound} disabled={isBusy}>
+                    <GameActionButton loadingLabel={loadingLabel} className="w-full" onClick={onNextRound} disabled={isBusy}>
                         {nextRoundLabel}
-                    </Button>
+                    </GameActionButton>
                 </div>
             </div>
         );
@@ -240,12 +241,12 @@ export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isR
                 {announcement}
             </span>
             <div className="mt-3 flex gap-2">
-                <Button className="h-11 min-w-0 flex-1 lg:h-12 lg:text-base" onClick={onGuess} disabled={!guess.trim() || isBusy}>
+                <GameActionButton className="flex-1" onClick={onGuess} disabled={!guess.trim() || isBusy}>
                     {t.game.input.submit}
-                </Button>
-                <Button variant="ghost" onClick={onSkip} disabled={isBusy} className="h-11 min-w-0 flex-1 border border-warning/40 bg-warning/[0.04] text-warning transition-colors hover:border-warning/60 hover:bg-warning/10 hover:text-warning lg:h-12 lg:text-base">
+                </GameActionButton>
+                <GameActionButton intent="skip" onClick={onSkip} disabled={isBusy} className="flex-1">
                     {gameVariant === "survival" ? t.game.input.skipDeath : t.game.input.skip}
-                </Button>
+                </GameActionButton>
             </div>
         </div>
     );

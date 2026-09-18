@@ -11,7 +11,11 @@ import { endScorePpRunAction, getScorePpRoundAction, getScorePpRunStateAction, s
 import type { ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRunState } from "@/lib/score-pp/types";
 import { AdSlider } from "@/components/Ads";
 import { ReportDialog } from "@/components/ReportDialog";
-import { SHORTCUTS_STORAGE_KEY } from "@/lib/game/preferences";
+import GameActionButton from "../../shared/components/GameActionButton";
+import GameShortcuts from "../../shared/components/GameShortcuts";
+import GameStartError from "../../shared/components/GameStartError";
+import { useGameKeyboardShortcuts } from "../../shared/hooks/useGameKeyboardShortcuts";
+import { usePreventUnload } from "../../shared/hooks/usePreventUnload";
 import GameHeader from "../../shared/components/Header";
 import { AUTO_ADVANCE_DELAY_MS, MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES } from "../../config";
 import ScorePpCard from "./ScorePpCard";
@@ -57,13 +61,13 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-    const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [terminalRound, setTerminalRound] = useState(false);
     const [error, setError] = useState<ScorePpError | null>(null);
     const exclusions = useRef<Exclusions>(EMPTY_EXCLUSIONS);
     const deadline = useRef(0);
     const resolving = useRef(false);
     const starting = useRef(false);
+    const loadingRound = useRef(false);
 
     const applyResolution = useCallback((result: ScorePpResolution) => {
         setSelectedScoreId(result.selectedScoreId);
@@ -116,13 +120,11 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
     }, [applyRunState]);
 
     const loadRound = useCallback(async (runSessionId: string, roundNumber: number) => {
+        if (loadingRound.current) return;
+        loadingRound.current = true;
         setRequestedRound(roundNumber);
         setIsLoading(true);
         setError(null);
-        setResolution(null);
-        setSelectedScoreId(null);
-        setPair(null);
-        setRevealCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
 
         try {
             const loaded = await getScorePpRoundAction(runSessionId, roundNumber, exclusions.current);
@@ -135,6 +137,9 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
                 setError("unavailable");
                 return;
             }
+            setResolution(null);
+            setSelectedScoreId(null);
+            setRevealCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
             setPair(loaded.pair);
             setRound(roundNumber);
             deadline.current = loaded.deadlineAt;
@@ -144,6 +149,7 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
             setRequestedRound(roundNumber);
             if (!recovered?.terminal && !(recovered?.round === roundNumber && recovered.pair && !recovered.resolution)) setError("load");
         } finally {
+            loadingRound.current = false;
             setIsLoading(false);
         }
     }, [recoverRun, router]);
@@ -178,14 +184,6 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
     useEffect(() => {
         void startRun();
     }, [startRun]);
-
-    useEffect(() => {
-        try {
-            setShortcutsOpen(window.localStorage.getItem(SHORTCUTS_STORAGE_KEY) === "true");
-        } catch {
-            setShortcutsOpen(false);
-        }
-    }, []);
 
     const resolveGuess = useCallback(async (scoreId: string | null, submissionType: "guess" | "skip" | "timeout") => {
         if (!sessionId || !pair || resolution || resolving.current) return;
@@ -229,62 +227,35 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
     }, [isLoading, pair, resolution, resolveGuess]);
 
     const nextRound = useCallback(async () => {
-        if (!resolution || !sessionId) return;
+        if (!resolution || !sessionId || isLoading || isSubmitting) return;
         if (terminalRound) {
             router.replace(`/scores/${sessionId}`);
             return;
         }
         await loadRound(sessionId, round + 1);
-    }, [loadRound, resolution, round, router, sessionId, terminalRound]);
+    }, [isLoading, isSubmitting, loadRound, resolution, round, router, sessionId, terminalRound]);
 
     useEffect(() => {
-        if (!resolution || isReportDialogOpen || error) return;
+        if (!resolution || isLoading || isReportDialogOpen || error) return;
         const tick = window.setInterval(() => setRevealCountdown((value) => Math.max(0, value - 1)), 1000);
         const advance = window.setTimeout(() => void nextRound(), AUTO_ADVANCE_DELAY_MS);
         return () => {
             window.clearInterval(tick);
             window.clearTimeout(advance);
         };
-    }, [error, isReportDialogOpen, nextRound, resolution]);
+    }, [error, isLoading, isReportDialogOpen, nextRound, resolution]);
 
-    useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.repeat || event.defaultPrevented || event.isComposing || isReportDialogOpen) return;
-            if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+    const skipRound = useCallback(() => {
+        void resolveGuess(null, "skip");
+    }, [resolveGuess]);
 
-            const target = event.target;
-            if (
-                target instanceof HTMLElement &&
-                target.closest("button, a[href], input, textarea, select, summary, [contenteditable='true'], [role='button'], [role='link'], [role='menuitem'], [role='option']")
-            ) {
-                return;
-            }
+    useGameKeyboardShortcuts({
+        disabled: isReportDialogOpen,
+        onNextRound: resolution ? nextRound : undefined,
+        onSkip: pair && !resolution && !isLoading && !isSubmitting ? skipRound : undefined,
+    });
 
-            if (event.ctrlKey && event.key.toLowerCase() === "s" && pair && !resolution && !isLoading && !isSubmitting) {
-                event.preventDefault();
-                void resolveGuess(null, "skip");
-                return;
-            }
-
-            if (event.key === "Enter" && resolution) void nextRound();
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isLoading, isReportDialogOpen, isSubmitting, nextRound, pair, resolution, resolveGuess]);
-
-    useEffect(() => {
-        if (gameVariant !== "classic" || !sessionId || terminalRound) return;
-
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            if (round >= MAX_ROUNDS && resolution) return;
-            event.preventDefault();
-            event.returnValue = "";
-        };
-
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, [gameVariant, resolution, round, sessionId, terminalRound]);
+    usePreventUnload(gameVariant === "classic" && Boolean(sessionId) && !terminalRound && !(round >= MAX_ROUNDS && resolution));
 
     const handleExit = useCallback(async () => {
         if (!sessionId || isLoading || isSubmitting) return;
@@ -310,18 +281,7 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
     }, [gameVariant, isLoading, isSubmitting, recoverRun, router, sessionId, t.confirmations.exitGame.classic, t.confirmations.exitGame.death, terminalRound]);
 
     if (!sessionId && error === "start" && !isLoading) {
-        return (
-            <div className="page-container flex min-h-[420px] items-center justify-center py-10">
-                <Alert variant="destructive" className="max-w-lg">
-                    <AlertCircle className="size-4" />
-                    <AlertTitle>{t.game.errors.startFailed}</AlertTitle>
-                    <AlertDescription className="mt-2 space-y-4">
-                        <p>{t.game.scorePp.errors.start}</p>
-                        <Button type="button" variant="outline" onClick={() => void startRun()}>{t.game.actions.retry}</Button>
-                    </AlertDescription>
-                </Alert>
-            </div>
-        );
+        return <GameStartError message={t.game.scorePp.errors.start} onRetry={startRun} />;
     }
 
     return (
@@ -389,12 +349,12 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
                 <div className="flex min-h-80 items-center justify-center border border-border/50 bg-muted/20 text-sm text-muted-foreground">{t.game.scorePp.loading}</div>
             ) : null}
 
-            <div className="mt-2 grid items-center gap-2 text-center sm:grid-cols-[1fr_auto_1fr]">
-                <Button className="justify-self-center sm:justify-self-start" variant="ghost" size="sm" onClick={() => void handleExit()} disabled={isLoading || isSubmitting}>
+            <div className="mt-4 grid grid-cols-2 items-center gap-3 border-t border-border/60 pt-4 sm:grid-cols-[1fr_auto_1fr]">
+                <GameActionButton className="w-full sm:w-auto sm:justify-self-start" intent="exit" onClick={() => void handleExit()} disabled={isLoading || isSubmitting}>
                     {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
-                </Button>
+                </GameActionButton>
                 {resolution ? (
-                    <div className={`text-xs sm:text-sm ${resolution.resultType === "skip" ? "text-warning" : "text-muted-foreground"}`} role="status" aria-live="polite">
+                    <div className={`col-span-2 row-start-1 text-center text-sm sm:col-span-1 sm:col-start-2 ${resolution.resultType === "skip" ? "text-warning" : "text-muted-foreground"}`} role="status" aria-live="polite">
                         {resolution.resultType === "skip"
                             ? t.game.result.skipped
                             : resolution.resultType === "timeout"
@@ -407,49 +367,35 @@ export default function ScorePpGame({ gameVariant }: { gameVariant: GameVariant 
                     <span className="hidden sm:block" aria-hidden="true" />
                 )}
                 {resolution && (
-                    <Button className="justify-self-center sm:justify-self-end" size="sm" onClick={() => void nextRound()} disabled={isLoading || isSubmitting}>
-                        {terminalRound ? t.game.actions.viewResults : t.game.actions.nextRound} ({revealCountdown}s)
-                    </Button>
+                    <GameActionButton loadingLabel={isLoading ? t.game.status.loading : undefined} className="w-full sm:col-start-3 sm:row-start-1 sm:w-auto sm:min-w-44 sm:justify-self-end" onClick={() => void nextRound()} disabled={isLoading || isSubmitting}>
+                        {terminalRound ? t.game.actions.viewResults : t.game.actions.nextRoundTime.replace("{seconds}", String(revealCountdown))}
+                    </GameActionButton>
                 )}
                 {!resolution && pair && (
-                    <Button className="justify-self-center border-warning/40 bg-warning/[0.04] text-warning hover:border-warning/60 hover:bg-warning/10 hover:text-warning sm:justify-self-end" variant="outline" size="sm" onClick={() => void resolveGuess(null, "skip")} disabled={isLoading || isSubmitting}>
+                    <GameActionButton intent="skip" className="w-full sm:w-auto sm:min-w-44 sm:justify-self-end" onClick={() => void resolveGuess(null, "skip")} disabled={isLoading || isSubmitting}>
                         {gameVariant === "survival" ? t.game.input.skipDeath : t.game.input.skip}
-                    </Button>
+                    </GameActionButton>
                 )}
             </div>
 
-            <details
-                open={shortcutsOpen}
-                onToggle={(event) => {
-                    const open = event.currentTarget.open;
-                    setShortcutsOpen(open);
-                    try {
-                        window.localStorage.setItem(SHORTCUTS_STORAGE_KEY, String(open));
-                    } catch {}
-                }}
-                className="mt-2 border-border/60 pt-2 text-xs text-muted-foreground"
-            >
-                <summary className="w-fit cursor-pointer py-1 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">{t.game.shortcuts.title}</summary>
-                <div className="mt-2 space-y-2 leading-relaxed">
-                    <p>{t.game.shortcuts.items.enter}</p>
-                    <p>{t.game.shortcuts.items.ctrlS}</p>
-                </div>
-            </details>
-
-            {resolution && pair && (
-                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <div className="flex items-start justify-between gap-3">
+                <GameShortcuts />
+                {resolution && pair && (
+                    <div className="pt-3">
                     <ReportDialog
                         mapsetId={pair.left.beatmap.beatmapsetId}
                         mapsetTitle={`${pair.left.beatmap.artist} - ${pair.left.beatmap.title}`}
+                        alternatives={[
+                            {
+                                mapsetId: pair.right.beatmap.beatmapsetId,
+                                mapsetTitle: `${pair.right.beatmap.artist} - ${pair.right.beatmap.title}`,
+                            },
+                        ]}
                         onOpenChange={setIsReportDialogOpen}
                     />
-                    <ReportDialog
-                        mapsetId={pair.right.beatmap.beatmapsetId}
-                        mapsetTitle={`${pair.right.beatmap.artist} - ${pair.right.beatmap.title}`}
-                        onOpenChange={setIsReportDialogOpen}
-                    />
-                </div>
-            )}
+                    </div>
+                )}
+            </div>
 
             <AdSlider compact />
         </div>

@@ -14,6 +14,7 @@ import { useTranslationsContext } from "@/context/translations-provider";
 interface ReportDialogProps {
     mapsetId: number;
     mapsetTitle: string;
+    alternatives?: { mapsetId: number; mapsetTitle: string }[];
     onOpenChange?: (open: boolean) => void;
 }
 
@@ -25,13 +26,16 @@ const REPORT_TYPES = [
     { value: "other", labelKey: "other" },
 ] as const;
 
-export function ReportDialog({ mapsetId, mapsetTitle, onOpenChange }: ReportDialogProps) {
+export function ReportDialog({ mapsetId, mapsetTitle, alternatives = [], onOpenChange }: ReportDialogProps) {
     const { t } = useTranslationsContext();
     const [isOpen, setIsOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedMapsetId, setSelectedMapsetId] = useState(mapsetId);
     const [reportType, setReportType] = useState<ReportType>("incorrect_title");
     const [description, setDescription] = useState("");
     const { toast } = useToast();
+    const targets = [{ mapsetId, mapsetTitle }, ...alternatives];
+    const selectedTarget = targets.find((target) => target.mapsetId === selectedMapsetId) ?? targets[0];
 
     const handleOpenChange = (open: boolean) => {
         setIsOpen(open);
@@ -47,7 +51,7 @@ export function ReportDialog({ mapsetId, mapsetTitle, onOpenChange }: ReportDial
 
         setIsSubmitting(true);
         try {
-            await createReportAction(mapsetId, reportType, normalizedDescription);
+            await createReportAction(selectedTarget.mapsetId, reportType, normalizedDescription);
             toast({ description: t.components.report.dialog.messages.success });
             handleOpenChange(false);
             setDescription("");
@@ -72,8 +76,18 @@ export function ReportDialog({ mapsetId, mapsetTitle, onOpenChange }: ReportDial
                 </DialogHeader>
 
                 <div className="space-y-4">
+                    {targets.length > 1 && (
+                        <RadioGroup value={String(selectedTarget.mapsetId)} onValueChange={(value) => setSelectedMapsetId(Number(value))}>
+                            {targets.map((target) => (
+                                <div key={target.mapsetId} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={String(target.mapsetId)} id={`report-mapset-${target.mapsetId}`} />
+                                    <Label htmlFor={`report-mapset-${target.mapsetId}`}>{target.mapsetTitle}</Label>
+                                </div>
+                            ))}
+                        </RadioGroup>
+                    )}
                     <div>
-                        <p className="text-sm text-muted-foreground mb-2">{t.components.report.dialog.reportingFor.replace("{title}", mapsetTitle)}</p>
+                        <p className="text-sm text-muted-foreground mb-2">{t.components.report.dialog.reportingFor.replace("{title}", selectedTarget.mapsetTitle)}</p>
                     </div>
 
                     <div className="space-y-2">

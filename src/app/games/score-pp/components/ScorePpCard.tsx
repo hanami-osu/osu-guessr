@@ -21,7 +21,7 @@ export default function ScorePpCard({ score, side, pp, isHigher, selected, revea
     const rankLabel = score.player.globalRank ? `#${score.player.globalRank.toLocaleString()}` : t.game.scorePp.unranked;
     const resultClass = revealed
         ? isHigher
-            ? "border-success/80 bg-success/[0.055] shadow-[inset_0_3px_0_hsl(var(--success))]"
+            ? "border-success/80 bg-success/[0.055]"
             : selected
               ? "border-destructive/75 bg-destructive/[0.025] opacity-65"
               : "border-border/40 opacity-50"
