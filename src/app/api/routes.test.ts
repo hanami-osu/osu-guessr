@@ -86,9 +86,9 @@ describe("API route parameter defaults", () => {
     });
 
     test("passes the requested stats variant through", async () => {
-        const response = await userStatsGet(request("/api/users/123/stats?variant=death"), { params: Promise.resolve({ userId: "123" }) });
+        const response = await userStatsGet(request("/api/users/123/stats?variant=survival"), { params: Promise.resolve({ userId: "123" }) });
         expect(response.status).toBe(200);
-        expect(getUserStatsMock).toHaveBeenCalledWith(123, "death");
+        expect(getUserStatsMock).toHaveBeenCalledWith(123, "survival");
     });
 });
 

@@ -1,24 +1,19 @@
 import { NextResponse } from "next/server";
-import { validateApiKey } from "@/lib/api/validate-key";
 import { getUserStatsAction } from "@/actions/user-server";
 import { z } from "zod";
-import { apiErrorResponse } from "@/lib/api/errors";
 import { normalizeDatabaseValue } from "@/lib/database/normalize";
+import { withApiKey } from "@/app/api/_lib/handler";
+import { apiUserIdSchema, apiVariantSchema } from "@/app/api/_lib/schemas";
 
 const querySchema = z.object({
     mode: z.enum(["background", "audio", "skin"]).optional(),
-    variant: z.enum(["classic", "survival", "death"]).optional(),
+    variant: apiVariantSchema.optional(),
 });
-const userIdSchema = z.coerce.number().int().positive();
 
 export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
-    const headers = new Headers(request.headers);
-    const apiKey = headers.get("X-API-Key");
-
-    try {
-        await validateApiKey(apiKey);
+    return withApiKey(request, async () => {
         const { userId } = await params;
-        const banchoId = userIdSchema.parse(userId);
+        const banchoId = apiUserIdSchema.parse(userId);
         const { searchParams } = new URL(request.url);
         const query = querySchema.parse({
             mode: searchParams.get("mode") ?? undefined,
@@ -32,7 +27,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
             success: true,
             data: normalizeDatabaseValue(filteredStats),
         });
-    } catch (error) {
-        return apiErrorResponse(error, "Failed to fetch user stats", "Stats error");
-    }
+    }, { fallbackMessage: "Failed to fetch user stats", logLabel: "Stats error" });
 }

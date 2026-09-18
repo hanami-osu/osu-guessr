@@ -1,23 +1,19 @@
 import { NextResponse } from "next/server";
-import { validateApiKey } from "@/lib/api/validate-key";
 import { getTopPlayersAction } from "@/actions/user-server";
 import { GameMode } from "@/actions/types";
 import { z } from "zod";
-import { apiErrorResponse } from "@/lib/api/errors";
 import { normalizeDatabaseValue } from "@/lib/database/normalize";
+import { withApiKey } from "@/app/api/_lib/handler";
+import { apiGameModeSchema, apiVariantSchema } from "@/app/api/_lib/schemas";
 
 const querySchema = z.object({
-    mode: z.nativeEnum(GameMode).default(GameMode.Background),
-    variant: z.enum(["classic", "survival", "death"]).default("classic"),
+    mode: apiGameModeSchema.default(GameMode.Background),
+    variant: apiVariantSchema.default("classic"),
     limit: z.coerce.number().int().min(1).max(100).default(100),
 });
 
 export async function GET(request: Request) {
-    const headers = new Headers(request.headers);
-    const apiKey = headers.get("X-API-Key");
-
-    try {
-        await validateApiKey(apiKey);
+    return withApiKey(request, async () => {
         const { searchParams } = new URL(request.url);
         const query = querySchema.parse({
             mode: searchParams.get("mode") ?? undefined,
@@ -31,7 +27,5 @@ export async function GET(request: Request) {
             success: true,
             data: normalizeDatabaseValue(leaderboard),
         });
-    } catch (error) {
-        return apiErrorResponse(error, "Failed to fetch leaderboard", "Leaderboard error");
-    }
+    }, { fallbackMessage: "Failed to fetch leaderboard", logLabel: "Leaderboard error" });
 }

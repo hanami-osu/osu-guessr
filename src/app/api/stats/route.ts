@@ -1,19 +1,15 @@
 import { NextResponse } from "next/server";
-import { validateApiKey } from "@/lib/api/validate-key";
 import { getHighestStatsAction } from "@/actions/user-server";
 import { z } from "zod";
-import { apiErrorResponse } from "@/lib/api/errors";
+import { withApiKey } from "@/app/api/_lib/handler";
+import { apiVariantSchema } from "@/app/api/_lib/schemas";
 
 const querySchema = z.object({
-    variant: z.enum(["classic", "survival", "death"]).default("classic"),
+    variant: apiVariantSchema.default("classic"),
 });
 
 export async function GET(request: Request) {
-    const headers = new Headers(request.headers);
-    const apiKey = headers.get("X-API-Key");
-
-    try {
-        await validateApiKey(apiKey);
+    return withApiKey(request, async () => {
         const { searchParams } = new URL(request.url);
         const query = querySchema.parse({
             variant: searchParams.get("variant") ?? undefined,
@@ -25,7 +21,5 @@ export async function GET(request: Request) {
             success: true,
             data: stats,
         });
-    } catch (error) {
-        return apiErrorResponse(error, "Failed to fetch stats", "Stats error");
-    }
+    }, { fallbackMessage: "Failed to fetch stats", logLabel: "Stats error" });
 }

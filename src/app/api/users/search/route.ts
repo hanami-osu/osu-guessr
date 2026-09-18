@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { searchUsersAction } from "@/actions/user-server";
 import { z } from "zod";
-import { validateApiKey } from "@/lib/api/validate-key";
-import { apiErrorResponse } from "@/lib/api/errors";
+import { withApiKey } from "@/app/api/_lib/handler";
 
 const querySchema = z.object({
     query: z.string().min(2).max(250),
@@ -10,11 +9,7 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-    const headers = new Headers(request.headers);
-    const apiKey = headers.get("X-API-Key");
-
-    try {
-        await validateApiKey(apiKey);
+    return withApiKey(request, async () => {
         const { searchParams } = new URL(request.url);
         const validated = querySchema.parse({
             query: searchParams.get("query") || "",
@@ -27,7 +22,5 @@ export async function GET(request: Request) {
             success: true,
             data: users,
         });
-    } catch (error) {
-        return apiErrorResponse(error, "Failed to search users", "User search error");
-    }
+    }, { fallbackMessage: "Failed to search users", logLabel: "User search error" });
 }

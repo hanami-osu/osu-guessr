@@ -1,20 +1,13 @@
 import { NextResponse } from "next/server";
-import { validateApiKey } from "@/lib/api/validate-key";
 import { getUserByIdAction } from "@/actions/user-server";
-import { z } from "zod";
-import { apiErrorResponse } from "@/lib/api/errors";
 import { normalizeDatabaseValue } from "@/lib/database/normalize";
-
-const userIdSchema = z.coerce.number().int().positive();
+import { withApiKey } from "@/app/api/_lib/handler";
+import { apiUserIdSchema } from "@/app/api/_lib/schemas";
 
 export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
-    const headers = new Headers(request.headers);
-    const apiKey = headers.get("X-API-Key");
-
-    try {
-        await validateApiKey(apiKey);
+    return withApiKey(request, async () => {
         const { userId } = await params;
-        const user = await getUserByIdAction(userIdSchema.parse(userId));
+        const user = await getUserByIdAction(apiUserIdSchema.parse(userId));
 
         if (!user) {
             return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
@@ -24,7 +17,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
             success: true,
             data: normalizeDatabaseValue(user),
         });
-    } catch (error) {
-        return apiErrorResponse(error, "Failed to fetch user", "User fetch error");
-    }
+    }, { fallbackMessage: "Failed to fetch user", logLabel: "User fetch error" });
 }
