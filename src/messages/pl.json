@@ -496,7 +496,6 @@
             },
             "variant": {
                 "classic": "Tryb Klasyczny",
-                "death": "Tryb Śmierci",
                 "survival": "Tryb Przetrwania"
             }
         },

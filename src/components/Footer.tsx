@@ -6,11 +6,6 @@ import React from "react";
 
 export default function Footer() {
     const { t } = useTranslationsContext();
-    const AuthorLink = () => (
-        <a className="text-primary hover:text-primary/80 transition-colors duration-200" href="https://osu.ppy.sh/u/yorunoken" target="_blank" rel="noopener noreferrer">
-            yorunoken
-        </a>
-    );
 
     return (
         <footer className="border-t border-border/60 bg-muted/30 py-4 sm:py-6">
@@ -19,7 +14,11 @@ export default function Footer() {
                     {t.components.footer.madeWith.split("{author}").map((part, index, array) => (
                         <React.Fragment key={index}>
                             {part}
-                            {index < array.length - 1 && <AuthorLink />}
+                            {index < array.length - 1 && (
+                                <a className="text-primary hover:text-primary/80 transition-colors duration-200" href="https://osu.ppy.sh/u/yorunoken" target="_blank" rel="noopener noreferrer">
+                                    yorunoken
+                                </a>
+                            )}
                         </React.Fragment>
                     ))}
                 </p>

@@ -5,16 +5,12 @@ import { useSession } from "next-auth/react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { useMemo } from "react";
 
 export default function Hero() {
     const { data: session } = useSession();
     const { t } = useTranslationsContext();
 
-    const titleParts = useMemo(() => {
-        const parts = t.home.hero.title.split("osu!guessr");
-        return parts;
-    }, [t.home.hero.title]);
+    const titleParts = t.home.hero.title.split("osu!guessr");
 
     const scrollToGamemodes = () => {
         const gamemodesElement = document.getElementById("gamemodes");

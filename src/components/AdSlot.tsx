@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 
 type AdSlotProps = {
     adSlot?: string;
@@ -9,8 +9,6 @@ type AdSlotProps = {
 };
 
 export default function AdSlot({ adSlot, adClient, compact = false }: AdSlotProps) {
-    const ref = useRef<HTMLDivElement | null>(null);
-
     const client = adClient ?? process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-3511683752810096";
     const slot = adSlot ?? process.env.NEXT_PUBLIC_ADSENSE_SLOT;
 
@@ -51,7 +49,7 @@ export default function AdSlot({ adSlot, adClient, compact = false }: AdSlotProp
     }
 
     return (
-        <div className={compact ? "flex min-h-12 justify-center py-3" : "my-4 flex justify-center"} ref={ref} role="complementary" aria-label="Advertisement">
+        <div className={compact ? "flex min-h-12 justify-center py-3" : "my-4 flex justify-center"} role="complementary" aria-label="Advertisement">
             <ins className="adsbygoogle w-full" style={{ display: "block" }} data-ad-client={client} data-ad-slot={slot} data-ad-format={compact ? "horizontal" : "auto"} data-full-width-responsive="true" />
         </div>
     );

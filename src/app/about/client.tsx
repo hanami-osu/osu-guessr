@@ -5,24 +5,6 @@ import { BASE_POINTS, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIV
 import React from "react";
 import Link from "next/link";
 
-const DevelopmentLink = () => (
-    <a href="https://osu.ppy.sh/u/yorunoken" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-        yorunoken
-    </a>
-);
-
-const ScoreGuesserLink = () => (
-    <a href="https://guesser.lapaii.dev" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-        Lapaii{"'"}s Score Guesser
-    </a>
-);
-
-const RedditThreadLink = () => (
-    <a href="https://old.reddit.com/r/osugame/comments/14w0cs7/osuguesser_guess_osu_stuff/" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-        reddit thread
-    </a>
-);
-
 const SectionHeading = ({ children }: { children: React.ReactNode }) => (
     <div className="mb-3 flex items-center gap-2">
         <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
@@ -185,7 +167,11 @@ export default function AboutClient() {
                                     {t.about.credits.development.description.split("{author}").map((part, index, array) => (
                                         <React.Fragment key={index}>
                                             {part}
-                                            {index < array.length - 1 && <DevelopmentLink />}
+                                            {index < array.length - 1 && (
+                                                <a href="https://osu.ppy.sh/u/yorunoken" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                                    yorunoken
+                                                </a>
+                                            )}
                                         </React.Fragment>
                                     ))}
                                 </p>
@@ -205,7 +191,11 @@ export default function AboutClient() {
                                         {t.about.credits.inspiration.items.scoreGuesser.split("{link}").map((part, index, array) => (
                                             <React.Fragment key={index}>
                                                 {part}
-                                                {index < array.length - 1 && <ScoreGuesserLink />}
+                                                {index < array.length - 1 && (
+                                                    <a href="https://guesser.lapaii.dev" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                                        Lapaii{"'"}s Score Guesser
+                                                    </a>
+                                                )}
                                             </React.Fragment>
                                         ))}
                                     </p>
@@ -213,7 +203,11 @@ export default function AboutClient() {
                                         {t.about.credits.inspiration.items.redditThread.split("{link}").map((part, index, array) => (
                                             <React.Fragment key={index}>
                                                 {part}
-                                                {index < array.length - 1 && <RedditThreadLink />}
+                                                {index < array.length - 1 && (
+                                                    <a href="https://old.reddit.com/r/osugame/comments/14w0cs7/osuguesser_guess_osu_stuff/" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                                        reddit thread
+                                                    </a>
+                                                )}
                                             </React.Fragment>
                                         ))}
                                     </p>

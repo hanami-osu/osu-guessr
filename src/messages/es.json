@@ -430,7 +430,6 @@
             },
             "variant": {
                 "classic": "Modo clásico",
-                "death": "Modo muerte",
                 "survival": "Modo supervivencia"
             }
         },

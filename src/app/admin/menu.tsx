@@ -21,6 +21,13 @@ import { adminSetLock, adminUnlock, adminGetLock } from "./actions/lockdown";
 import { AdminGroup, CollapsibleSection } from "./ui";
 import Link from "next/link";
 
+type ActionOptions = {
+    startMessage?: string;
+    errorMessage?: string | ((error: unknown) => string);
+    onFinally?: () => void;
+    setLoading?: boolean;
+};
+
 export default function AdminMenu() {
     const consoleDivRef = useRef<HTMLDivElement>(null);
 
@@ -52,9 +59,26 @@ export default function AdminMenu() {
     const [skinSingleId, setSkinSingleId] = useState("");
     const [skinListFile, setSkinListFile] = useState<File | null>(null);
 
-    const appendOutput = (text: string) => {
+    const appendOutput = useCallback((text: string) => {
         setOutput((prev) => prev + "\n" + text);
-    };
+    }, []);
+
+    const runAction = useCallback(
+        async (action: () => Promise<void>, { startMessage, errorMessage, onFinally, setLoading = true }: ActionOptions = {}) => {
+            if (setLoading) setIsLoading(true);
+            if (startMessage) appendOutput(startMessage);
+
+            try {
+                await action();
+            } catch (error) {
+                appendOutput(typeof errorMessage === "function" ? errorMessage(error) : (errorMessage ?? `Error: ${error}`));
+            } finally {
+                if (setLoading) setIsLoading(false);
+                onFinally?.();
+            }
+        },
+        [appendOutput],
+    );
 
     useEffect(() => {
         const consoleElement = consoleDivRef.current;
@@ -62,17 +86,15 @@ export default function AdminMenu() {
     }, [output]);
 
     const loadAvailableBadges = useCallback(async () => {
-        try {
+        await runAction(async () => {
             const badges = (await getBadges()) as Array<{ name: string; color: string }>;
             const badgeMap: Record<string, string> = {};
             badges.forEach((badge: { name: string; color: string }) => {
                 badgeMap[badge.name] = badge.color;
             });
             setAvailableBadges(badgeMap);
-        } catch (error) {
-            appendOutput(`Error loading badges: ${error}`);
-        }
-    }, []);
+        }, { errorMessage: (error) => `Error loading badges: ${error}`, setLoading: false });
+    }, [runAction]);
 
     const loadAvailableLanguages = useCallback(async () => {
         const languages = await getAllLanguages();
@@ -81,63 +103,44 @@ export default function AdminMenu() {
 
     const handleAddBadgeType = async () => {
         if (!newBadgeName || !newBadgeColor) return;
-        setIsLoading(true);
-        appendOutput(`Adding new badge type "${newBadgeName}"...`);
-        try {
+
+        await runAction(async () => {
             const result = await addBadge(newBadgeName, newBadgeColor);
             appendOutput(result);
             await loadAvailableBadges();
             setNewBadgeName("");
             setNewBadgeColor("#000000");
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Adding new badge type "${newBadgeName}"...` });
     };
 
     const handleRemoveBadgeType = async (badgeName: string) => {
-        setIsLoading(true);
-        appendOutput(`Removing badge type "${badgeName}"...`);
-        try {
+        await runAction(async () => {
             const result = await removeBadge(badgeName);
             appendOutput(result);
             await loadAvailableBadges();
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Removing badge type "${badgeName}"...` });
     };
 
     const handleAddBadge = async () => {
         if (!badgeUserId || !badgeTitle) return;
-        setIsLoading(true);
-        appendOutput(`Adding badge to user ${badgeUserId}...`);
-        try {
+
+        await runAction(async () => {
             const result = await assignBadgeToUser(parseInt(badgeUserId), badgeTitle);
             appendOutput(result);
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Adding badge to user ${badgeUserId}...` });
     };
 
     const handleRemoveBadge = async () => {
         if (!badgeUserId || !badgeTitle) return;
-        setIsLoading(true);
-        appendOutput(`Removing badge from user ${badgeUserId}...`);
-        try {
+
+        await runAction(async () => {
             const result = await removeBadgeFromUser(parseInt(badgeUserId), badgeTitle);
             appendOutput(result);
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Removing badge from user ${badgeUserId}...` });
     };
 
     const handleListBadges = async () => {
-        setIsLoading(true);
-        appendOutput("Listing badges...");
-        try {
+        await runAction(async () => {
             const badges = await listBadges();
             if (badges.length > 0) {
                 appendOutput("Badges:");
@@ -147,17 +150,13 @@ export default function AdminMenu() {
             } else {
                 appendOutput("No badges found");
             }
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: "Listing badges..." });
     };
 
     const handleAddMapset = async () => {
         if (!mapsetId) return;
-        setIsLoading(true);
-        appendOutput(`Adding mapset ${mapsetId}...`);
-        try {
+
+        await runAction(async () => {
             const res = await addMapset(parseInt(mapsetId));
             if (res?.success && res?.note === "already_exists") {
                 appendOutput(`Mapset ${mapsetId}: already exists; skipped`);
@@ -166,29 +165,20 @@ export default function AdminMenu() {
             } else {
                 appendOutput(`Error: ${res?.error ?? "Mapset import failed"}`);
             }
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Adding mapset ${mapsetId}...` });
     };
 
     const handleRemoveMapset = async () => {
         if (!mapsetId) return;
-        setIsLoading(true);
-        appendOutput(`Removing mapset ${mapsetId}...`);
-        try {
+
+        await runAction(async () => {
             await removeMapset(parseInt(mapsetId));
             appendOutput("Mapset removed");
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Removing mapset ${mapsetId}...` });
     };
 
     const handleListMapsets = async () => {
-        setIsLoading(true);
-        appendOutput("Listing mapsets...");
-        try {
+        await runAction(async () => {
             const mapsets = await listMapsets();
             if (mapsets.length > 0) {
                 appendOutput("Mapsets:");
@@ -198,20 +188,15 @@ export default function AdminMenu() {
             } else {
                 appendOutput("No mapsets found");
             }
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: "Listing mapsets..." });
     };
 
     const handleBulkUpload = async () => {
         if (!bulkFile) return;
 
-        setIsLoading(true);
-        appendOutput("Importing mapsets...");
-
-        try {
-            const content = await bulkFile.text();
+        const file = bulkFile;
+        await runAction(async () => {
+            const content = await file.text();
             const result = await addMapsetFromList(content);
 
             appendOutput(`Bulk upload completed: Total ${result.total}, Successful ${result.successful}, Failed ${result.failed}`);
@@ -228,144 +213,92 @@ export default function AdminMenu() {
                     }
                 });
             }
-        } catch (error) {
-            appendOutput(`Error during bulk upload: ${error}`);
-        } finally {
-            setIsLoading(false);
-            setBulkFile(null);
-        }
+        }, { startMessage: "Importing mapsets...", errorMessage: (error) => `Error during bulk upload: ${error}`, onFinally: () => setBulkFile(null) });
     };
 
     const handleSyncUsers = async () => {
-        setIsLoading(true);
-        appendOutput("Syncing user stats...");
-        try {
+        await runAction(async () => {
             await syncUserAchievements();
             appendOutput("User stats synced");
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
+        }, { startMessage: "Syncing user stats..." });
+    };
+
+    const checkLanguage = async (language: string) => {
+        const result = await checkTranslation(language);
+        if (!result.success || !result.missingKeys || !result.extraKeys) {
+            appendOutput(`Error: ${result.error}`);
+            return;
         }
-        setIsLoading(false);
+
+        appendOutput(`
+    Translation check completed for ${result.languageCode}:
+    Total keys: ${result.totalKeys}
+    Completed: ${result.completedKeys}
+    Missing: ${result.missingKeys.length}
+    Extra: ${result.extraKeys.length}
+
+    Missing keys:
+    ${result.missingKeys.map((key) => `- ${key}`).join("\n")}
+
+    Extra keys:
+    ${result.extraKeys.map((key) => `- ${key}`).join("\n")}`);
+
+        if (autoFill && result.missingKeys.length > 0) {
+            const fillResult = await fillMissingTranslations(language);
+            if (fillResult.success) {
+                appendOutput(`\nAuto-filled ${fillResult.filledCount} missing translations with English values`);
+            } else {
+                appendOutput(`\nError auto-filling translations: ${fillResult.error}`);
+            }
+        }
+
+        if (removeExtra && result.extraKeys.length > 0) {
+            const removeResult = await removeExtraTranslations(language);
+            if (removeResult.success) {
+                appendOutput(`\nRemoved ${removeResult.removedCount} extra translations`);
+            } else {
+                appendOutput(`\nError removing extra translations: ${removeResult.error}`);
+            }
+        }
     };
 
     const handleCheckTranslation = async () => {
         if (!languageCode) return;
-        setIsLoading(true);
-        appendOutput(`Checking translations for language: ${languageCode}`);
-        try {
-            const result = await checkTranslation(languageCode);
-            if (result.success && result.extraKeys) {
-                appendOutput(`
-    Translation check completed for ${result.languageCode}:
-    Total keys: ${result.totalKeys}
-    Completed: ${result.completedKeys}
-    Missing: ${result.missingKeys.length}
-    Extra: ${result.extraKeys.length}
 
-    Missing keys:
-    ${result.missingKeys.map((key) => `- ${key}`).join("\n")}
-
-    Extra keys:
-    ${result.extraKeys.map((key) => `- ${key}`).join("\n")}`);
-
-                if (autoFill && result.missingKeys?.length > 0) {
-                    const fillResult = await fillMissingTranslations(languageCode);
-                    if (fillResult.success) {
-                        appendOutput(`\nAuto-filled ${fillResult.filledCount} missing translations with English values`);
-                    } else {
-                        appendOutput(`\nError auto-filling translations: ${fillResult.error}`);
-                    }
-                }
-
-                if (removeExtra && result.extraKeys?.length > 0) {
-                    const removeResult = await removeExtraTranslations(languageCode);
-                    if (removeResult.success) {
-                        appendOutput(`\nRemoved ${removeResult.removedCount} extra translations`);
-                    } else {
-                        appendOutput(`\nError removing extra translations: ${removeResult.error}`);
-                    }
-                }
-            } else {
-                appendOutput(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        const language = languageCode;
+        await runAction(() => checkLanguage(language), { startMessage: `Checking translations for language: ${language}` });
     };
 
     const handleCheckAllLanguages = async () => {
-        setIsLoading(true);
-        appendOutput("Checking all translations...");
-
-        for (const lang of availableLanguages) {
-            appendOutput(`\nChecking ${lang}...`);
-            setLanguageCode(lang);
-            const result = await checkTranslation(lang);
-
-            if (result.success && result.missingKeys) {
-                appendOutput(`
-    Translation check completed for ${result.languageCode}:
-    Total keys: ${result.totalKeys}
-    Completed: ${result.completedKeys}
-    Missing: ${result.missingKeys.length}
-    Extra: ${result.extraKeys.length}
-
-    Missing keys:
-    ${result.missingKeys.map((key) => `- ${key}`).join("\n")}
-
-    Extra keys:
-    ${result.extraKeys.map((key) => `- ${key}`).join("\n")}`);
-
-                if (autoFill && result.missingKeys.length > 0) {
-                    const fillResult = await fillMissingTranslations(lang);
-                    if (fillResult.success) {
-                        appendOutput(`\nAuto-filled ${fillResult.filledCount} missing translations with English values`);
-                    } else {
-                        appendOutput(`\nError auto-filling translations: ${fillResult.error}`);
-                    }
-                }
-
-                if (removeExtra && result.extraKeys.length > 0) {
-                    const removeResult = await removeExtraTranslations(lang);
-                    if (removeResult.success) {
-                        appendOutput(`\nRemoved ${removeResult.removedCount} extra translations`);
-                    } else {
-                        appendOutput(`\nError removing extra translations: ${removeResult.error}`);
-                    }
-                }
-            } else {
-                appendOutput(`Error: ${result.error}`);
+        await runAction(async () => {
+            for (const language of availableLanguages) {
+                appendOutput(`\nChecking ${language}...`);
+                setLanguageCode(language);
+                await checkLanguage(language);
             }
-        }
-
-        setLanguageCode("");
-        setIsLoading(false);
+        }, { startMessage: "Checking all translations...", onFinally: () => setLanguageCode("") });
     };
 
     const handleAddSkinById = async () => {
         if (!skinSingleId) return appendOutput("Provide skin id");
-        setIsLoading(true);
-        appendOutput(`Adding skin ${skinSingleId}...`);
-        try {
+
+        await runAction(async () => {
             const res = (await addSkinById(parseInt(skinSingleId))) as { success: boolean; skinId?: number; image?: string; error?: string };
             if (res && res.success) {
                 appendOutput(`Added skin ${res.skinId} -> ${res.image}`);
             } else {
                 appendOutput(`Add skin failed: ${res?.error || JSON.stringify(res)}`);
             }
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Adding skin ${skinSingleId}...` });
     };
 
     const handleAddSkinsFromFile = async () => {
         if (!skinListFile) return appendOutput("Provide a .txt file with skin IDs (one per line)");
-        setIsLoading(true);
-        appendOutput(`Adding skins from file...`);
-        try {
-            const content = await skinListFile.text();
+
+        const file = skinListFile;
+        let shouldClearFile = true;
+        await runAction(async () => {
+            const content = await file.text();
             const ids = content
                 .split(/\r?\n/)
                 .map((l) => l.trim())
@@ -375,63 +308,47 @@ export default function AdminMenu() {
 
             if (ids.length === 0) {
                 appendOutput("No valid IDs found in file");
-                setIsLoading(false);
+                shouldClearFile = false;
                 return;
             }
 
             const results = await addSkinsFromList(ids);
             appendOutput(`Processed ${results.length} skins:`);
             results.forEach((r) => appendOutput(`${r.id} -> ${r.success ? `OK (${r.image})` : `FAILED (${r.error})`}`));
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
-        setSkinListFile(null);
+        }, {
+            startMessage: "Adding skins from file...",
+            onFinally: () => {
+                if (shouldClearFile) setSkinListFile(null);
+            },
+        });
     };
 
     const handleListSkins = async () => {
-        setIsLoading(true);
-        appendOutput("Listing skins...");
-        try {
+        await runAction(async () => {
             const skins = await listSkins();
             appendOutput(`Found ${skins.length} skins`);
             skins.forEach((s) => appendOutput(`${s.id} | ${s.name} | ${s.image_filename}`));
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: "Listing skins..." });
     };
 
     const handleSetLock = async () => {
-        setIsLoading(true);
-        appendOutput(`Setting lockdown for ${lockMinutes} minute(s)...`);
-        try {
+        await runAction(async () => {
             const info = await adminSetLock(Number(lockMinutes));
             appendOutput(`Lock set until ${new Date(info.until).toLocaleString()}`);
             setLockInfo(`Locked until ${new Date(info.until).toLocaleString()}`);
-        } catch (error) {
-            appendOutput(`Error setting lock: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Setting lockdown for ${lockMinutes} minute(s)...`, errorMessage: (error) => `Error setting lock: ${error}` });
     };
 
     const handleUnlock = async () => {
-        setIsLoading(true);
-        appendOutput(`Unlocking server...`);
-        try {
+        await runAction(async () => {
             await adminUnlock();
             appendOutput(`Unlocked`);
             setLockInfo(null);
-        } catch (error) {
-            appendOutput(`Error unlocking: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: "Unlocking server...", errorMessage: (error) => `Error unlocking: ${error}` });
     };
 
     const handleGetLock = async () => {
-        setIsLoading(true);
-        appendOutput(`Querying lock state...`);
-        try {
+        await runAction(async () => {
             const info = await adminGetLock();
             if (info) {
                 appendOutput(`Locked until ${new Date(info.until).toLocaleString()} by ${info.ownerId}`);
@@ -440,38 +357,26 @@ export default function AdminMenu() {
                 appendOutput(`Not locked`);
                 setLockInfo(null);
             }
-        } catch (error) {
-            appendOutput(`Error querying lock: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: "Querying lock state...", errorMessage: (error) => `Error querying lock: ${error}` });
     };
 
     const handleRemoveSkin = async () => {
         if (!skinRemoveId) return;
-        setIsLoading(true);
-        appendOutput(`Removing skin ${skinRemoveId}...`);
-        try {
+
+        await runAction(async () => {
             const res = await removeSkin(parseInt(skinRemoveId));
             appendOutput(JSON.stringify(res));
             await handleListSkins();
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Removing skin ${skinRemoveId}...` });
     };
 
     const loadAnnouncements = useCallback(async () => {
-        setIsLoading(true);
-        appendOutput("Loading announcements...");
-        try {
+        await runAction(async () => {
             const res = (await listAnnouncements()) as Array<{ id: number; title: string; created_at: string }>;
             setAnnouncementsList(res);
             appendOutput(`Found ${res.length} announcements`);
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
-    }, []);
+        }, { startMessage: "Loading announcements..." });
+    }, [appendOutput, runAction]);
 
     useEffect(() => {
         loadAvailableBadges();
@@ -481,37 +386,26 @@ export default function AdminMenu() {
 
     const handleAddAnnouncement = async () => {
         if (!announcementTitle || !announcementContent) return;
-        setIsLoading(true);
-        appendOutput(`Adding announcement \"${announcementTitle}\"...`);
-        try {
+
+        await runAction(async () => {
             await addAnnouncement(announcementTitle, announcementContent);
             appendOutput("Announcement added");
             setAnnouncementTitle("");
             setAnnouncementContent("");
             await loadAnnouncements();
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Adding announcement \"${announcementTitle}\"...` });
     };
 
     const handleRemoveAnnouncement = async (id: number) => {
-        setIsLoading(true);
-        appendOutput(`Removing announcement ${id}...`);
-        try {
+        await runAction(async () => {
             await removeAnnouncement(id);
             appendOutput("Announcement removed");
             await loadAnnouncements();
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Removing announcement ${id}...` });
     };
 
     const handleListReports = async () => {
-        setIsLoading(true);
-        appendOutput("Listing reports...");
-        try {
+        await runAction(async () => {
             const reports = await listReports();
             if (reports.length > 0) {
                 appendOutput("Reports:");
@@ -521,23 +415,16 @@ export default function AdminMenu() {
             } else {
                 appendOutput("No reports found");
             }
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: "Listing reports..." });
     };
 
     const handleUpdateReportStatus = async () => {
         if (!reportId) return;
-        setIsLoading(true);
-        appendOutput(`Updating report ${reportId} to ${reportStatus}...`);
-        try {
+
+        await runAction(async () => {
             await updateReportStatus(parseInt(reportId), reportStatus);
             appendOutput(`Report ${reportId} updated`);
-        } catch (error) {
-            appendOutput(`Error: ${error}`);
-        }
-        setIsLoading(false);
+        }, { startMessage: `Updating report ${reportId} to ${reportStatus}...` });
     };
 
     return (

@@ -573,7 +573,6 @@
             },
             "variant": {
                 "classic": "Classic Mode",
-                "death": "Death Mode",
                 "survival": "Survival Mode"
             }
         },

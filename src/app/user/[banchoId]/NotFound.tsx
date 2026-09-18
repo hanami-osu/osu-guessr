@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useTranslationsContext } from "@/context/translations-provider";
 import React from "react";
 
-const StyledGameName = () => <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">osu!guessr</span>;
-
 export default function UserNotFound() {
     const { t } = useTranslationsContext();
 
@@ -21,7 +19,7 @@ export default function UserNotFound() {
                             {t.user.notFound.subDescription.split("{osu_guessr}").map((part: string, index: number, array: string[]) => (
                                 <React.Fragment key={index}>
                                     {part}
-                                    {index < array.length - 1 && <StyledGameName />}
+                                    {index < array.length - 1 && <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">osu!guessr</span>}
                                 </React.Fragment>
                             ))}
                         </p>
