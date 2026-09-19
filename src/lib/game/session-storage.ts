@@ -1,19 +1,17 @@
-import "server-only";
-
 import redisClient from "@/lib/redis";
-import { acquireRedisLock, releaseRedisLock, type RedisLock } from "@/lib/redis-lock";
+import { acquireRedisLock, releaseRedisLock, type RedisLock } from "@/lib/redis-lock-core";
 
 const SESSION_KEY_PREFIX = "game_session:";
 const SESSION_LOCK_KEY_PREFIX = "game_session_lock:";
 
-export const GAME_SESSION_TTL_SECONDS = 3600;
-export const GAME_SESSION_LOCK_TTL_MS = 30_000;
+const GAME_SESSION_TTL_SECONDS = 3600;
+const GAME_SESSION_LOCK_TTL_MS = 30_000;
 
 function sessionKey(sessionId: string): string {
     return `${SESSION_KEY_PREFIX}${sessionId}`;
 }
 
-export async function readGameSession<T>(sessionId: string): Promise<T | null> {
+async function readGameSession<T>(sessionId: string): Promise<T | null> {
     const cached = await redisClient.get(sessionKey(sessionId));
     return cached ? (JSON.parse(cached) as T) : null;
 }

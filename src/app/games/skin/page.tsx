@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     robots: { index: false, follow: false },
 };
 
-export default async function SkinGuessr({ searchParams }: { searchParams: Promise<{ variant?: string | string[] }> }) {
-    const { variant } = await searchParams;
-    return <GamePage gameMode={GameMode.Skin} gameVariant={variant} />;
+export default async function SkinGuessr({ searchParams }: { searchParams: Promise<{ variant?: string | string[]; lobby?: string | string[] }> }) {
+    const { variant, lobby } = await searchParams;
+    return <GamePage gameMode={GameMode.Skin} gameVariant={variant} multiplayerLobbyCode={lobby} />;
 }

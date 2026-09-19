@@ -79,6 +79,35 @@ const getRandomActionMock = mock(async () => ({
 }));
 const getMediaDataMock = mock(async () => "current-media");
 const authSessionMock = mock(async () => ({ user: { banchoId: userId } }));
+const multiplayerLobby = {
+    matchId: "match-1",
+    startAt: Date.parse("2026-01-01T00:00:05.000Z"),
+};
+const requireActiveMultiplayerLobbyMock = mock(async () => multiplayerLobby);
+const readMultiplayerLobbyMock = mock(async () => multiplayerLobby);
+const getMultiplayerRoundStateMock = mock(async () => ({
+    submitted: false,
+    allSubmitted: true,
+    ready: true,
+    allReady: true,
+    submittedCount: 1,
+    readyCount: 1,
+    participantCount: 1,
+}));
+const getOrCreateMultiplayerRoundMock = mock(async (_code: string, _round: number, create: () => Promise<unknown>) => create());
+const updateMultiplayerProgressMock = mock(
+    async (
+        _code: string,
+        _userId: number,
+        _progress: { points: number; round: number; submittedRound?: number; readyRound?: number; finished?: boolean },
+        _matchId?: string,
+    ) => {
+        void _code;
+        void _userId;
+        void _progress;
+        void _matchId;
+    },
+);
 
 const redisValues = new Map<string, string>();
 const redisSetMock = mock(async (key: string, value: string, options?: { condition?: string }) => {
@@ -90,6 +119,7 @@ const redisClientMock = {
     get: mock(async (key: string) => redisValues.get(key) ?? null),
     set: redisSetMock,
     eval: mock(async (_script: string, options: { keys: string[] }) => (redisValues.delete(options.keys[0]) ? 1 : 0)),
+    del: mock(async (...keys: string[]) => keys.filter((key) => redisValues.delete(key)).length),
     sAdd: mock(async () => 1),
     sRem: mock(async () => 1),
     expire: mock(async () => 1),
@@ -101,9 +131,22 @@ mock.module("./mapsets-server", () => ({
     getRandomBackgroundAction: getRandomActionMock,
     getRandomSkinAction: getRandomActionMock,
 }));
+mock.module("@/lib/game/mapsets", () => ({
+    getRandomAudio: getRandomActionMock,
+    getRandomBackground: getRandomActionMock,
+    getRandomSkin: getRandomActionMock,
+}));
 mock.module("./media", () => ({ getMediaData: getMediaDataMock }));
 mock.module("@/lib/database/prisma", () => ({ prisma: prismaMock }));
 mock.module("@/lib/redis", () => ({ default: redisClientMock }));
+mock.module("@/lib/multiplayer", () => ({
+    getMultiplayerRoundState: getMultiplayerRoundStateMock,
+    getOrCreateMultiplayerRound: getOrCreateMultiplayerRoundMock,
+    normalizeLobbyCode: (code: string) => code.trim().toUpperCase(),
+    readMultiplayerLobby: readMultiplayerLobbyMock,
+    requireActiveMultiplayerLobby: requireActiveMultiplayerLobbyMock,
+    updateMultiplayerProgress: updateMultiplayerProgressMock,
+}));
 mock.module("server-only", () => ({}));
 
 const { endGameAction, getGameStateAction, startGameAction, submitGuessAction } = await import("./game-server");
@@ -189,6 +232,13 @@ beforeEach(() => {
     });
     getMediaDataMock.mockReset().mockResolvedValue("current-media");
     authSessionMock.mockReset().mockResolvedValue({ user: { banchoId: userId } });
+    multiplayerLobby.matchId = "match-1";
+    multiplayerLobby.startAt = Date.parse("2026-01-01T00:00:05.000Z");
+    requireActiveMultiplayerLobbyMock.mockClear();
+    readMultiplayerLobbyMock.mockClear();
+    getMultiplayerRoundStateMock.mockClear();
+    getOrCreateMultiplayerRoundMock.mockClear();
+    updateMultiplayerProgressMock.mockClear();
     redisSetMock.mockClear();
     redisClientMock.sRem.mockClear();
     setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
@@ -200,6 +250,37 @@ describe("game server lifecycle", () => {
     test("rejects invalid game settings before creating a session", async () => {
         await expect(startGameAction("invalid" as GameMode, "classic")).rejects.toThrow();
         expect(getRandomActionMock).not.toHaveBeenCalled();
+    });
+
+    test("shares multiplayer first-round start time while returning the current countdown", async () => {
+        setSystemTime(new Date("2026-01-01T00:00:10.000Z"));
+
+        const first = await startGameAction(GameMode.Background, "classic", "room123");
+        setSystemTime(new Date("2026-01-01T00:00:15.000Z"));
+        const second = await startGameAction(GameMode.Background, "classic", "room123");
+
+        const firstSession = JSON.parse(redisValues.get(`game_session:${first.sessionId}`)!);
+        const secondSession = JSON.parse(redisValues.get(`game_session:${second.sessionId}`)!);
+        const sharedStartedAt = new Date("2026-01-01T00:00:05.000Z").toISOString();
+
+        expect(first.timeLeft).toBe(25);
+        expect(second.timeLeft).toBe(20);
+        expect(firstSession.started_at).toBe(sharedStartedAt);
+        expect(firstSession.last_action_at).toBe(sharedStartedAt);
+        expect(secondSession.started_at).toBe(sharedStartedAt);
+        expect(secondSession.last_action_at).toBe(sharedStartedAt);
+        expect(firstSession.ranked).toBe(true);
+        expect(secondSession.ranked).toBe(true);
+        expect(firstSession.multiplayer_match_id).toBe("match-1");
+        expect(getOrCreateMultiplayerRoundMock.mock.calls.map(([code]) => code)).toEqual(["ROOM123:match-1", "ROOM123:match-1"]);
+        expect(updateMultiplayerProgressMock.mock.calls.map(([, , , matchId]) => matchId)).toEqual(["match-1", "match-1"]);
+    });
+
+    test("rejects a game session from a previous multiplayer match", async () => {
+        putSession(makeSession({ multiplayer_lobby_id: "ROOM123", multiplayer_match_id: "old-match" }));
+
+        await expect(getGameStateAction(sessionId)).rejects.toThrow("Game session belongs to a previous match");
+        await expect(submitGuessAction(sessionId, answer)).rejects.toThrow("Game session belongs to a previous match");
     });
 
     test("persists a survival-mode correct guess before next-round content exhaustion", async () => {
@@ -358,6 +439,17 @@ describe("game server lifecycle", () => {
         expect(transactionMock).toHaveBeenCalledTimes(2);
         expect(gameCreateMock).toHaveBeenCalledTimes(1);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"is_active":false');
+        expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
+    });
+
+    test("retries a serializable transaction write conflict during finalization", async () => {
+        putSession(makeSession({ variant: "survival", current_round: 2, highest_streak: 1 }));
+        transactionMock.mockRejectedValueOnce(Object.assign(new Error("write conflict"), { code: "P2034" }));
+
+        await endGameAction(sessionId);
+
+        expect(transactionMock).toHaveBeenCalledTimes(2);
+        expect(gameCreateMock).toHaveBeenCalledTimes(1);
         expect(redisValues.get(`game_session:${sessionId}`)).toContain('"end_pending":false');
     });
 

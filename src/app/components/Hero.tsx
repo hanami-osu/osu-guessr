@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useTranslationsContext } from "@/context/translations-provider";
+import { Users } from "lucide-react";
 
 export default function Hero() {
     const { data: session } = useSession();
@@ -42,6 +43,9 @@ export default function Hero() {
                                 {t.home.hero.signIn}
                             </Button>
                         )}
+                        <Button asChild variant="outline" size="lg" className="text-sm px-6 w-full sm:w-auto bg-background/60">
+                            <Link href="/multiplayer"><Users className="size-4" />Multiplayer</Link>
+                        </Button>
                         <Button asChild variant="outline" size="lg" className="text-sm px-6 w-full sm:w-auto bg-background/60">
                             <Link href="/about">{t.home.hero.learnMore}</Link>
                         </Button>

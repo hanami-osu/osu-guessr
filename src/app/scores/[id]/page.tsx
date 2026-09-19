@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 interface Props {
     params: Promise<{ id: string }>;
+    searchParams: Promise<{ lobby?: string | string[] }>;
 }
 
 function asSnapshot(value: unknown): Record<string, unknown> {
@@ -205,11 +206,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 }
 
-export default async function ScorePage({ params }: Props) {
-    const { id } = await params;
+export default async function ScorePage({ params, searchParams }: Props) {
+    const [{ id }, query] = await Promise.all([params, searchParams]);
+    const rawLobby = Array.isArray(query.lobby) ? query.lobby[0] : query.lobby;
+    const lobbyCode = rawLobby && /^[A-Z0-9]{6,8}$/i.test(rawLobby) ? rawLobby.toUpperCase() : null;
 
     const game = await findGameByRouteId(id);
-    if (game && !/^\d+$/.test(id)) redirect(`/scores/${game.id.toString()}`);
+    if (game && !/^\d+$/.test(id)) redirect(`/scores/${game.id.toString()}${lobbyCode ? `?lobby=${encodeURIComponent(lobbyCode)}` : ""}`);
 
     if (!game) notFound();
 
@@ -235,12 +238,22 @@ export default async function ScorePage({ params }: Props) {
     return (
         <main className="page-container py-6 md:py-10">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <Button asChild variant="ghost" size="sm">
-                    <Link href={`/user/${game.userId}?mode=${game.gameMode}&variant=${game.variant}`}>
-                        <ArrowLeft className="mr-2 size-4" />
-                        Back to profile
-                    </Link>
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    {lobbyCode && (
+                        <Button asChild size="sm">
+                            <Link href={`/multiplayer/${lobbyCode}?fromResults=1`}>
+                                <ArrowLeft className="mr-2 size-4" />
+                                Back to lobby
+                            </Link>
+                        </Button>
+                    )}
+                    <Button asChild variant="ghost" size="sm">
+                        <Link href={`/user/${game.userId}?mode=${game.gameMode}&variant=${game.variant}`}>
+                            <ArrowLeft className="mr-2 size-4" />
+                            Back to profile
+                        </Link>
+                    </Button>
+                </div>
                 <div className="text-xs text-muted-foreground">Score #{game.id.toString()}</div>
             </div>
 

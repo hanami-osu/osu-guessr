@@ -20,17 +20,21 @@ import { canPersistGameResult, isClassicGameIncomplete } from "@/lib/game/comple
 import GameActionButton from "../components/GameActionButton";
 import GameShortcuts from "../components/GameShortcuts";
 import GameStartError from "../components/GameStartError";
+import MultiplayerStandings from "../components/MultiplayerStandings";
+import MultiplayerChat from "../components/MultiplayerChat";
 import { useGameKeyboardShortcuts } from "../hooks/useGameKeyboardShortcuts";
 import { usePreventUnload } from "../hooks/usePreventUnload";
+import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
 
 interface GameScreenProps {
     onExit(): void;
     gameVariant: GameVariant;
     gameMode: GameMode;
     GameMedia: React.ComponentType<GameMediaProps>;
+    multiplayerLobbyCode?: string;
 }
 
-export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }: GameScreenProps) {
+export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, multiplayerLobbyCode }: GameScreenProps) {
     const { t } = useTranslationsContext();
     const router = useRouter();
 
@@ -43,6 +47,35 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     const [actionError, setActionError] = useState<string | null>(null);
 
     const gameClient = useRef<GameClient | null>(null);
+    const navigatingToResults = useRef(false);
+    const multiplayerAdvanceDeadline = useRef<{ key: string; at: number } | null>(null);
+    const publicStatsRef = useRef<{ points: number; streak: number; highestStreak: number; mistakes: number } | null>(null);
+    const scoreUrl = useCallback(
+        (sessionId: string) => multiplayerLobbyCode ? `/scores/${sessionId}?lobby=${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${sessionId}`,
+        [multiplayerLobbyCode],
+    );
+    const currentRound = gameState?.rounds.current;
+    const roundRevealed = gameState?.currentBeatmap.revealed;
+    const {
+        lobby: multiplayerLobby,
+        userId: multiplayerUserId,
+        presenceUserIds,
+        roundState: multiplayerRoundState,
+        error: multiplayerError,
+        request: multiplayerRequest,
+        sendReady,
+        sendChat,
+    } = useMultiplayerSocket(multiplayerLobbyCode, currentRound);
+
+    useEffect(() => {
+        if (!gameState || gameState.currentBeatmap.revealed) return;
+        publicStatsRef.current = {
+            points: gameState.score.total,
+            streak: gameState.score.streak,
+            highestStreak: gameState.score.highestStreak,
+            mistakes: gameState.rounds.mistakes,
+        };
+    }, [gameState]);
 
     const handleStartGame = useCallback(async () => {
         try {
@@ -63,6 +96,9 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 },
                 gameMode,
                 gameVariant,
+                {},
+                multiplayerLobbyCode,
+                multiplayerRequest,
             );
 
             const resumed = await gameClient.current.resumeStoredGame();
@@ -78,7 +114,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         } finally {
             setIsLoading(false);
         }
-    }, [gameMode, gameVariant, t.errors.game.unknown]);
+    }, [gameMode, gameVariant, multiplayerLobbyCode, multiplayerRequest, t.errors.game.unknown]);
 
     useEffect(() => {
         handleStartGame();
@@ -106,14 +142,22 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         [isLoading, t.errors.game.unknown],
     );
 
-    const handleGameComplete = useCallback(() => {
-        if (!gameState || !gameClient.current) return;
+    const handleGameComplete = useCallback(async () => {
+        if (!gameState || !gameClient.current || navigatingToResults.current) return;
 
-        return handleAction(async () => {
+        navigatingToResults.current = true;
+        setIsLoading(true);
+        setActionError(null);
+        try {
             await gameClient.current!.endGame();
-            router.replace(`/scores/${gameState.sessionId}`);
-        });
-    }, [gameState, handleAction, router]);
+            router.replace(scoreUrl(gameState.sessionId));
+        } catch (error) {
+            navigatingToResults.current = false;
+            setIsLoading(false);
+            console.error("Failed to end game:", error);
+            setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
+        }
+    }, [gameState, router, scoreUrl, t.errors.game.unknown]);
 
     const handleGuess = useCallback(() => {
         if (!gameClient.current || !guess.trim() || gameState?.currentBeatmap.revealed) return;
@@ -130,7 +174,16 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     }, [gameState?.currentBeatmap.revealed, handleAction]);
 
     const handleNextRound = useCallback(async () => {
-        if (!gameState?.currentBeatmap.revealed) return;
+        if (!gameState?.currentBeatmap.revealed || navigatingToResults.current) return;
+
+        if (multiplayerLobbyCode) {
+            if (!multiplayerRoundState?.allSubmitted) return;
+            if (!multiplayerRoundState.ready) {
+                sendReady(gameState.rounds.current);
+                return;
+            }
+            if (!multiplayerRoundState.allReady) return;
+        }
 
         if (gameState.gameStatus === "finished") {
             await handleGameComplete();
@@ -147,7 +200,37 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
             setGuess("");
             setCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
         });
-    }, [gameState, handleAction, handleGameComplete]);
+    }, [gameState, handleAction, handleGameComplete, multiplayerLobbyCode, multiplayerRoundState, sendReady]);
+
+    const waitingForGuesses = Boolean(multiplayerLobbyCode && roundRevealed && !multiplayerRoundState?.allSubmitted);
+    const waitingForReady = Boolean(multiplayerRoundState?.ready && !multiplayerRoundState.allReady);
+    const revealed = Boolean(roundRevealed);
+    const resultVisible = !multiplayerLobbyCode || Boolean(multiplayerRoundState?.allSubmitted);
+    const publicStats = waitingForGuesses ? publicStatsRef.current : null;
+    const canAdvanceRound = !multiplayerLobbyCode || Boolean(multiplayerRoundState?.allSubmitted);
+    const showAdvanceCountdown = revealed && canAdvanceRound;
+    const participantCount = multiplayerRoundState?.participantCount ?? multiplayerLobby?.players.length ?? 0;
+    const waitingLabel = t.game.status.waitingForPlayers
+        .replace("{submitted}", String(multiplayerRoundState?.submittedCount ?? 0))
+        .replace("{total}", String(participantCount));
+    const readyLabel = t.game.status.readyPlayers
+        .replace("{ready}", String(multiplayerRoundState?.readyCount ?? 0))
+        .replace("{total}", String(participantCount));
+    const isFinalRound = Boolean(gameState && (gameState.gameStatus === "finished" || gameState.rounds.current >= gameState.rounds.total));
+    const baseNextRoundLabel = isFinalRound
+        ? t.game.actions.viewResults
+        : t.game.actions.nextRoundTime.replace("{seconds}", String(countdown));
+    const multiplayerNextRoundLabel = isFinalRound ? t.game.actions.viewResults : t.game.actions.nextRound;
+    const nextRoundLabel = waitingForGuesses
+        ? waitingLabel
+        : multiplayerLobbyCode && revealed
+          ? `${multiplayerNextRoundLabel} · ${readyLabel}`
+          : baseNextRoundLabel;
+
+    useEffect(() => {
+        if (!revealed || !multiplayerRoundState?.ready || !multiplayerRoundState.allReady || isLoading) return;
+        void handleNextRound();
+    }, [handleNextRound, isLoading, multiplayerRoundState?.allReady, multiplayerRoundState?.ready, revealed]);
 
     const handleExit = useCallback(async (): Promise<boolean> => {
         if (!gameClient.current || !gameState) return false;
@@ -176,7 +259,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 MAX_ROUNDS,
             );
             if (hasSavedScore) {
-                router.replace(`/scores/${gameState.sessionId}`);
+                router.replace(scoreUrl(gameState.sessionId));
             } else {
                 onExit();
             }
@@ -188,17 +271,40 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
         } finally {
             setIsLoading(false);
         }
-    }, [gameState, onExit, gameVariant, router, t.confirmations.exitGame, t.errors.game.unknown]);
+    }, [gameState, onExit, gameVariant, router, scoreUrl, t.confirmations.exitGame, t.errors.game.unknown]);
 
     usePreventUnload(Boolean(gameClient.current && gameState && gameVariant === "classic" && isClassicGameIncomplete(gameState)));
 
     useGameKeyboardShortcuts({
         disabled: isReportDialogOpen,
-        onNextRound: gameState?.currentBeatmap.revealed ? handleNextRound : undefined,
+        onNextRound: revealed && canAdvanceRound && !waitingForReady ? handleNextRound : undefined,
     });
 
     useEffect(() => {
-        if (gameState?.currentBeatmap.revealed && !isReportDialogOpen && !isLoading && !actionError) {
+        if (showAdvanceCountdown && !isReportDialogOpen && !isLoading && !actionError) {
+            if (multiplayerLobbyCode && gameState) {
+                const key = `${gameState.sessionId}:${gameState.rounds.current}`;
+                if (multiplayerAdvanceDeadline.current?.key !== key) {
+                    multiplayerAdvanceDeadline.current = { key, at: Date.now() + AUTO_ADVANCE_DELAY_MS };
+                }
+
+                const updateCountdown = () => {
+                    const deadline = multiplayerAdvanceDeadline.current?.at ?? Date.now();
+                    setCountdown(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+                };
+                updateCountdown();
+
+                const countdownInterval = window.setInterval(updateCountdown, 250);
+                const advanceTimer = window.setTimeout(() => {
+                    void handleNextRound();
+                }, Math.max(0, multiplayerAdvanceDeadline.current.at - Date.now()));
+
+                return () => {
+                    window.clearInterval(countdownInterval);
+                    window.clearTimeout(advanceTimer);
+                };
+            }
+
             setCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
 
             const countdownInterval = setInterval(() => {
@@ -214,7 +320,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                 clearTimeout(advanceTimer);
             };
         }
-    }, [actionError, gameState?.currentBeatmap.revealed, handleNextRound, isLoading, isReportDialogOpen]);
+    }, [actionError, gameState, handleNextRound, isLoading, isReportDialogOpen, multiplayerLobbyCode, showAdvanceCountdown]);
 
     if (!gameState && startupError) {
         return <GameStartError message={startupError} onRetry={handleStartGame} />;
@@ -223,30 +329,39 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
     if (!gameState) return <div className="page-container relative min-h-[420px]"><LoadingScreen /></div>;
 
     return (
-        <div className="page-container py-4 md:py-6">
+        <div className={`page-container py-4 md:py-6 ${multiplayerLobby ? "max-w-[88rem]" : ""}`}>
             <GameHeader
-                streak={gameState.score.streak}
-                points={gameState.score.total}
-                timeLeft={gameState.currentBeatmap.revealed ? countdown : gameState.timeLeft}
+                streak={publicStats?.streak ?? gameState.score.streak}
+                points={publicStats?.points ?? gameState.score.total}
+                timeLeft={showAdvanceCountdown ? countdown : gameState.timeLeft}
                 currentRound={gameState.rounds.current}
                 totalRounds={gameState.rounds.total}
                 mode={gameMode}
                 gameVariant={gameVariant}
-                maxStreak={gameState.score.highestStreak}
-                mistakes={gameState.rounds.mistakes}
+                maxStreak={publicStats?.highestStreak ?? gameState.score.highestStreak}
+                mistakes={publicStats?.mistakes ?? gameState.rounds.mistakes}
                 lifeCount={SURVIVAL_LIVES}
-                timerDuration={gameState.currentBeatmap.revealed ? AUTO_ADVANCE_DELAY_MS / 1000 : undefined}
+                timerDuration={showAdvanceCountdown ? AUTO_ADVANCE_DELAY_MS / 1000 : undefined}
             />
-
-            <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:gap-8">
+            <div className={`grid items-start gap-5 md:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:gap-8 ${multiplayerLobby ? "lg:grid-cols-[13rem_minmax(0,1.6fr)_minmax(320px,1fr)]" : ""}`}>
+                {multiplayerLobby && (
+                    <div className="md:col-span-2 lg:col-span-1 lg:sticky lg:top-6">
+                        <MultiplayerStandings
+                            lobby={multiplayerLobby}
+                            presenceUserIds={presenceUserIds}
+                            currentUserId={multiplayerUserId}
+                            currentRound={currentRound}
+                        />
+                    </div>
+                )}
                 <div className="relative min-w-0 bg-muted/30">
                     <GameMedia
                         mediaUrl={gameMode === "audio" ? gameState.currentBeatmap.audioUrl! : gameState.currentBeatmap.imageUrl!}
-                        isRevealed={gameState.currentBeatmap.revealed}
-                        result={gameState.lastGuess}
+                        isRevealed={revealed}
+                        result={resultVisible ? gameState.lastGuess : undefined}
                         songInfo={gameState.currentBeatmap}
                     />
-                    {isLoading && !gameState.currentBeatmap.revealed && <LoadingScreen />}
+                    {isLoading && !revealed && <LoadingScreen />}
                 </div>
                 <div className="flex min-w-0 flex-col gap-4">
                     {actionError && (
@@ -256,29 +371,35 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia }:
                             <AlertDescription>{actionError}</AlertDescription>
                         </Alert>
                     )}
+                    {multiplayerError && !actionError && (
+                        <Alert variant="destructive" role="alert">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>{t.game.errors.actionFailed}</AlertTitle>
+                            <AlertDescription>{multiplayerError}</AlertDescription>
+                        </Alert>
+                    )}
                     <GuessInput
                         gameMode={gameMode}
                         gameVariant={gameVariant}
                         guess={guess}
                         setGuess={setGuess}
-                        isRevealed={gameState.currentBeatmap.revealed}
+                        isRevealed={revealed}
                         revealedGuess={gameState.lastGuess?.type === "guess" ? guess : ""}
-                        isBusy={isLoading}
+                        isBusy={isLoading || waitingForGuesses || waitingForReady}
                         onGuess={handleGuess}
                         onSkip={handleSkip}
                         onNextRound={handleNextRound}
                         loadingLabel={isLoading ? (gameState.gameStatus === "finished" || gameState.rounds.current >= gameState.rounds.total ? t.common.loading : t.game.status.loading) : undefined}
-                        nextRoundLabel={gameState.gameStatus === "finished" || gameState.rounds.current >= gameState.rounds.total
-                            ? t.game.actions.viewResults
-                            : t.game.actions.nextRoundTime.replace("{seconds}", String(countdown))}
+                        nextRoundLabel={nextRoundLabel}
                         gameClient={gameClient.current!}
                     />
+                    <MultiplayerChat lobby={multiplayerLobby} sendMessage={sendChat} />
                     <GameShortcuts hasSuggestions />
                     <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
                         <GameActionButton intent="exit" onClick={handleExit} disabled={isLoading}>
                             {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
                         </GameActionButton>
-                        {gameMode !== GameMode.Skin && gameState.currentBeatmap.revealed && gameState.currentBeatmap.mapsetId && (
+                        {gameMode !== GameMode.Skin && revealed && resultVisible && gameState.currentBeatmap.mapsetId && (
                             <ReportDialog mapsetId={gameState.currentBeatmap.mapsetId} mapsetTitle={gameState.currentBeatmap.title || t.game.media.unknown} onOpenChange={setIsReportDialogOpen} />
                         )}
                     </div>

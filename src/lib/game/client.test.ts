@@ -93,6 +93,31 @@ describe("GameClient", () => {
         client.dispose();
     });
 
+    test("routes multiplayer game mutations through the socket transport", async () => {
+        const submittedState: GameState = {
+            ...initialGameState,
+            score: { total: 100, current: 100, streak: 1, highestStreak: 1 },
+            lastGuess: { correct: true, answer: "correct answer", type: "guess" },
+        };
+        const multiplayerRequest = mock(async (action: string) => {
+            if (action === "game.start") return initialGameState;
+            if (action === "game.submit") return submittedState;
+            if (action === "game.end") return 50;
+            throw new Error(`Unexpected multiplayer action: ${action}`);
+        });
+        const client = new GameClient(events, GameMode.Audio, "classic", {}, "ABC123", multiplayerRequest as never);
+
+        await client.startGame();
+        await client.submitGuess("correct answer");
+        await client.endGame();
+
+        expect(multiplayerRequest).toHaveBeenCalledTimes(3);
+        expect(startGameActionMock).not.toHaveBeenCalled();
+        expect(submitGuessActionMock).not.toHaveBeenCalled();
+        expect(endGameActionMock).not.toHaveBeenCalled();
+        client.dispose();
+    });
+
     test("preserves a stored game when resume fails transiently", async () => {
         const client = new GameClient(events, GameMode.Audio, "classic", { maxRetries: 1 });
         storageValues.set("osu-guessr:game-session:audio:classic", "stored-session");

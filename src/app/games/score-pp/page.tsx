@@ -21,13 +21,14 @@ function isGameVariant(value: string | undefined): value is GameVariant {
     return value === "classic" || value === "survival";
 }
 
-export default async function ScorePpPage({ searchParams }: { searchParams: Promise<{ variant?: string | string[] }> }) {
-    const { variant } = await searchParams;
+export default async function ScorePpPage({ searchParams }: { searchParams: Promise<{ variant?: string | string[]; lobby?: string | string[] }> }) {
+    const { variant, lobby } = await searchParams;
     const selectedVariant = Array.isArray(variant) ? variant[0] : variant;
+    const selectedLobby = Array.isArray(lobby) ? lobby[0] : lobby;
     if (!isGameVariant(selectedVariant)) redirect("/?game=score_pp");
 
     const session = await auth();
     if (!session?.user?.banchoId) return <SignInPrompt />;
 
-    return <ScorePpGame gameVariant={selectedVariant} />;
+    return <ScorePpGame gameVariant={selectedVariant} multiplayerLobbyCode={selectedLobby} />;
 }

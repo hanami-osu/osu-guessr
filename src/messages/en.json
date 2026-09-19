@@ -404,7 +404,9 @@
             }
         },
         "status": {
-            "loading": "Loading next round..."
+            "loading": "Loading next round...",
+            "waitingForPlayers": "Waiting for players ({submitted}/{total})",
+            "readyPlayers": "{ready}/{total} ready"
         },
         "input": {
             "placeholder": "Song title...",
