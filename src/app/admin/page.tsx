@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 
-import { OWNER_ID } from "@/lib";
 import NotFound from "../not-found";
 import AdminMenu from "./menu";
 
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
 export default async function AdminPage() {
     const session = await auth();
 
-    if (session?.user?.banchoId !== OWNER_ID) {
+    if (!session?.user?.isAdmin) {
         return <NotFound />;
     }
 

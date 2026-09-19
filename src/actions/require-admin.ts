@@ -1,12 +1,11 @@
 import "server-only";
 
 import { getAuthSession } from "@/actions/server";
-import { OWNER_ID } from "@/lib";
 
-export async function requireOwner() {
+export async function requireAdmin() {
     const session = await getAuthSession();
 
-    if (session.user.banchoId !== OWNER_ID) {
+    if (!session.user.isAdmin) {
         throw new Error("Forbidden");
     }
 

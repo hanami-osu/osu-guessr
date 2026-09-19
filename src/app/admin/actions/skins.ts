@@ -5,7 +5,7 @@ import fs from "fs/promises";
 import path from "path";
 import { z } from "zod";
 import { env } from "@/lib/env";
-import { requireOwner } from "@/actions/require-owner";
+import { requireAdmin } from "@/actions/require-admin";
 import { parseSkinApiResponse, type SkinImportData } from "@/lib/skin-import";
 import sharp from "sharp";
 
@@ -118,7 +118,7 @@ async function importSkin(id: number): Promise<{ skinId: number; image: string }
 }
 
 export async function addSkinById(rawSkinId: number): Promise<SkinProcessResult> {
-    await requireOwner();
+    await requireAdmin();
     const skinId = z.coerce.number().min(1).parse(rawSkinId);
     console.log(`Processing skin ID: ${skinId}`);
 
@@ -142,7 +142,7 @@ export async function addSkinById(rawSkinId: number): Promise<SkinProcessResult>
 }
 
 export async function addSkinsFromList(rawIds: number[]): Promise<Array<{ id: number; success: boolean; error?: string; image?: string }>> {
-    await requireOwner();
+    await requireAdmin();
     const ids = [...new Set(z.array(z.coerce.number().min(1)).max(MAX_BULK_SKINS).parse(rawIds))];
     const results: Array<{ id: number; success: boolean; error?: string; image?: string }> = [];
     await ensureDirectories();
@@ -171,7 +171,7 @@ export async function addSkinsFromList(rawIds: number[]): Promise<Array<{ id: nu
 
 export async function listSkins(): Promise<DatabaseSkin[]> {
     try {
-        await requireOwner();
+        await requireAdmin();
         const skins = await query(`
       SELECT * FROM skins 
       ORDER BY created_at DESC
@@ -186,7 +186,7 @@ export async function listSkins(): Promise<DatabaseSkin[]> {
 
 export async function removeSkin(rawId: number): Promise<{ success: boolean; error?: string }> {
     try {
-        await requireOwner();
+        await requireAdmin();
         const id = z.coerce.number().min(1).parse(rawId);
         const rows = (await query("SELECT image_filename FROM skins WHERE id = ?", [id])) as Array<{ image_filename?: string }>;
         const imageFilename = rows[0]?.image_filename;

@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { HanamiProvider, parseHanamiProfile } from "@/lib/hanami-auth";
+import { isAdminUserId } from "@/lib/admin";
 import { upsertUser } from "@/lib/user-service";
 import NextAuth, { DefaultSession } from "next-auth";
 
@@ -7,6 +8,7 @@ declare module "next-auth" {
     interface Session {
         user: {
             banchoId: number;
+            isAdmin: boolean;
         } & DefaultSession["user"];
     }
 }
@@ -32,14 +34,18 @@ export const { auth, handlers } = NextAuth({
             if (typeof token.picture === "string") sanitizedToken.picture = token.picture;
             return sanitizedToken;
         },
-        session: ({ session, token }) => ({
-            ...session,
-            user: {
-                banchoId: token.banchoId as number,
-                name: typeof token.name === "string" ? token.name : null,
-                image: typeof token.picture === "string" ? token.picture : null,
-            },
-        }),
+        session: async ({ session, token }) => {
+            const banchoId = token.banchoId as number;
+            return {
+                ...session,
+                user: {
+                    banchoId,
+                    isAdmin: await isAdminUserId(banchoId),
+                    name: typeof token.name === "string" ? token.name : null,
+                    image: typeof token.picture === "string" ? token.picture : null,
+                },
+            };
+        },
     },
     providers: [
         HanamiProvider({ issuer: env.HANAMI_ISSUER, clientId: env.HANAMI_CLIENT_ID }),

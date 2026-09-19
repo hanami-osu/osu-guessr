@@ -3,7 +3,7 @@
 
 import { readFileSync, writeFileSync, readdirSync } from "fs";
 import path from "path";
-import { requireOwner } from "@/actions/require-owner";
+import { requireAdmin } from "@/actions/require-admin";
 
 const LANGUAGE_CODE_PATTERN = /^[a-z]{2}(-[A-Z]{2})?$/;
 
@@ -67,7 +67,7 @@ function setValueByPath(obj: any, path: string, value: any) {
 }
 
 export async function getAllLanguages() {
-    await requireOwner();
+    await requireAdmin();
     const messagesDir = path.join(process.cwd(), "src/messages");
     try {
         const files = readdirSync(messagesDir)
@@ -107,7 +107,7 @@ function readTranslationPair(languageCode: string) {
 
 export async function checkTranslation(languageCode: string) {
     try {
-        await requireOwner();
+        await requireAdmin();
         const { enJson, targetJson } = readTranslationPair(languageCode);
 
         const enKeys = getAllKeys(enJson);
@@ -135,7 +135,7 @@ export async function checkTranslation(languageCode: string) {
 
 export async function fillMissingTranslations(languageCode: string) {
     try {
-        await requireOwner();
+        await requireAdmin();
         const { enJson, targetJson, targetPath } = readTranslationPair(languageCode);
 
         const enKeys = getAllKeys(enJson);
@@ -167,7 +167,7 @@ export async function fillMissingTranslations(languageCode: string) {
 
 export async function removeExtraTranslations(languageCode: string) {
     try {
-        await requireOwner();
+        await requireAdmin();
         const enPath = path.join(process.cwd(), "src/messages/en.json");
         const targetPath = getMessagesPath(languageCode);
 

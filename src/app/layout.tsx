@@ -76,7 +76,7 @@ export default async function RootLayout({
     const initialLocale = hasValidLocaleCookie ? localeCookie : "en";
     const t = getTranslations(initialLocale);
 
-    if (lock && session?.user?.banchoId !== OWNER_ID) {
+    if (lock && session?.user?.banchoId !== OWNER_ID && session?.user?.banchoId !== lock.ownerId) {
         return (
             <html lang={initialLocale} suppressHydrationWarning>
                 <body className={`${publicSans.variable} antialiased`}>

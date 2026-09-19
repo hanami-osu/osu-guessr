@@ -1,9 +1,9 @@
 "use server";
 
-import { requireOwner } from "@/actions/require-owner";
+import { requireAdmin } from "@/actions/require-admin";
 import { rebuildUserAchievementCache } from "@/lib/game/achievement-cache";
 
 export async function syncUserAchievements(): Promise<void> {
-    await requireOwner();
+    await requireAdmin();
     await rebuildUserAchievementCache();
 }

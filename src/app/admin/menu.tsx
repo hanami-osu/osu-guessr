@@ -17,6 +17,7 @@ import { listReports, updateReportStatus } from "./actions/reports";
 import { listAnnouncements, addAnnouncement, removeAnnouncement } from "@/actions/announcements";
 import { listSkins, removeSkin, addSkinById, addSkinsFromList } from "./actions/skins";
 import { adminSetLock, adminUnlock, adminGetLock } from "./actions/lockdown";
+import { listAdmins, setAdmin, type AdminUser } from "./actions/admins";
 
 import { AdminGroup, CollapsibleSection } from "./ui";
 import Link from "next/link";
@@ -35,6 +36,8 @@ export default function AdminMenu() {
     const [bulkFile, setBulkFile] = useState<File | null>(null);
 
     const [badgeUserId, setBadgeUserId] = useState("");
+    const [adminUserId, setAdminUserId] = useState("");
+    const [admins, setAdmins] = useState<AdminUser[]>([]);
     const [badgeTitle, setBadgeTitle] = useState("");
     const [newBadgeName, setNewBadgeName] = useState("");
     const [newBadgeColor, setNewBadgeColor] = useState("#000000");
@@ -223,6 +226,30 @@ export default function AdminMenu() {
         }, { startMessage: "Syncing user stats..." });
     };
 
+    const loadAdmins = useCallback(async () => {
+        await runAction(async () => {
+            setAdmins(await listAdmins());
+        }, { errorMessage: (error) => `Error loading admins: ${error}`, setLoading: false });
+    }, [runAction]);
+
+    const handleGrantAdmin = async () => {
+        if (!adminUserId) return;
+
+        const userId = parseInt(adminUserId);
+        await runAction(async () => {
+            appendOutput(await setAdmin(userId, true));
+            setAdminUserId("");
+            await loadAdmins();
+        }, { startMessage: `Granting admin to user ${adminUserId}...` });
+    };
+
+    const handleRemoveAdmin = async (user: AdminUser) => {
+        await runAction(async () => {
+            appendOutput(await setAdmin(user.banchoId, false));
+            await loadAdmins();
+        }, { startMessage: `Removing admin from ${user.username}...` });
+    };
+
     const checkLanguage = async (language: string) => {
         const result = await checkTranslation(language);
         if (!result.success || !result.missingKeys || !result.extraKeys) {
@@ -382,7 +409,8 @@ export default function AdminMenu() {
         loadAvailableBadges();
         loadAvailableLanguages();
         loadAnnouncements();
-    }, [loadAvailableBadges, loadAvailableLanguages, loadAnnouncements]);
+        loadAdmins();
+    }, [loadAvailableBadges, loadAvailableLanguages, loadAnnouncements, loadAdmins]);
 
     const handleAddAnnouncement = async () => {
         if (!announcementTitle || !announcementContent) return;
@@ -746,12 +774,46 @@ export default function AdminMenu() {
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection id="maintenance" title="User maintenance" description="Rebuild player stats from saved games." icon={<UserRoundCog />}>
-                        <AdminGroup title="Player stats">
-                            <Button onClick={handleSyncUsers} disabled={isLoading}>
-                                Sync user stats
-                            </Button>
-                        </AdminGroup>
+                    <CollapsibleSection id="maintenance" title="User maintenance" description="Manage admin access and rebuild player stats." icon={<UserRoundCog />}>
+                        <div className="space-y-7">
+                            <AdminGroup title="Admin access" description="Admins can grant or revoke admin access for other users.">
+                                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="admin-user-id">User ID</Label>
+                                        <Input id="admin-user-id" type="number" min={1} placeholder="123456" value={adminUserId} onChange={(e) => setAdminUserId(e.target.value)} />
+                                    </div>
+                                    <Button onClick={handleGrantAdmin} disabled={isLoading || !adminUserId}>
+                                        Grant admin
+                                    </Button>
+                                </div>
+
+                                <div className="mt-5 divide-y divide-border/60 border-y border-border/60">
+                                    {admins.map((admin) => (
+                                        <div key={admin.banchoId} className="flex items-center justify-between gap-4 py-3">
+                                            <div className="min-w-0">
+                                                <div className="truncate text-sm font-medium">{admin.username}{admin.isOwner ? " · Owner" : ""}</div>
+                                                <div className="mt-1 text-xs text-muted-foreground">{admin.banchoId}</div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleRemoveAdmin(admin)}
+                                                disabled={isLoading || admin.isOwner}
+                                                className="text-destructive hover:text-destructive"
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </AdminGroup>
+
+                            <AdminGroup title="Player stats">
+                                <Button onClick={handleSyncUsers} disabled={isLoading}>
+                                    Sync user stats
+                                </Button>
+                            </AdminGroup>
+                        </div>
                     </CollapsibleSection>
 
                     <CollapsibleSection id="lockdown" title="Server lockdown" description="Only the owner can access the site while it is locked." icon={<ShieldAlert />}>

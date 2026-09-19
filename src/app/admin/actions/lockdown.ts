@@ -1,21 +1,21 @@
 "use server";
 
-import { requireOwner } from "@/actions/require-owner";
+import { requireAdmin } from "@/actions/require-admin";
 import { setLock, unlock, getLockInfo } from "@/lib/lockdown";
 
 export async function adminSetLock(minutes: number) {
-    const session = await requireOwner();
+    const session = await requireAdmin();
     const info = await setLock(minutes, session.user.banchoId);
     return info;
 }
 
 export async function adminUnlock() {
-    await requireOwner();
+    await requireAdmin();
     await unlock();
     return { success: true };
 }
 
 export async function adminGetLock() {
-    await requireOwner();
+    await requireAdmin();
     return getLockInfo();
 }

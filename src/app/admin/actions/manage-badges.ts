@@ -1,7 +1,7 @@
 "use server";
 
 import { query } from "@/lib/database";
-import { requireOwner } from "@/actions/require-owner";
+import { requireAdmin } from "@/actions/require-admin";
 import { z } from "zod";
 
 export interface UserBadge {
@@ -25,13 +25,13 @@ function capitalizeWords(str: string): string {
 }
 
 export async function getBadges() {
-    await requireOwner();
+    await requireAdmin();
     return query("SELECT * FROM badges ORDER BY name");
 }
 
 export async function addBadge(name: string, color: string) {
     try {
-        await requireOwner();
+        await requireAdmin();
         const validated = badgeSchema.parse({ name, color });
         const formattedName = capitalizeWords(validated.name);
 
@@ -48,7 +48,7 @@ export async function addBadge(name: string, color: string) {
 
 export async function removeBadge(name: string) {
     try {
-        await requireOwner();
+        await requireAdmin();
         const formattedName = capitalizeWords(name);
         await query("DELETE FROM badges WHERE name = ?", [formattedName]);
         return `Removed badge "${formattedName}"`;
@@ -59,7 +59,7 @@ export async function removeBadge(name: string) {
 
 export async function assignBadgeToUser(userId: number, badgeName: string) {
     try {
-        await requireOwner();
+        await requireAdmin();
         const formattedName = capitalizeWords(badgeName);
         await query("INSERT INTO user_badges (user_id, badge_name) VALUES (?, ?)", [userId, formattedName]);
         return `Assigned badge "${formattedName}" to user ${userId}`;
@@ -70,7 +70,7 @@ export async function assignBadgeToUser(userId: number, badgeName: string) {
 
 export async function removeBadgeFromUser(userId: number, badgeName: string) {
     try {
-        await requireOwner();
+        await requireAdmin();
         const formattedName = capitalizeWords(badgeName);
         await query("DELETE FROM user_badges WHERE user_id = ? AND badge_name = ?", [userId, formattedName]);
         return `Removed badge "${formattedName}" from user ${userId}`;
@@ -81,7 +81,7 @@ export async function removeBadgeFromUser(userId: number, badgeName: string) {
 
 export async function listBadges(): Promise<UserBadge[]> {
     try {
-        await requireOwner();
+        await requireAdmin();
         const results = await query(`
             SELECT ub.user_id, u.username, b.name as badge_name, b.color, ub.assigned_at
             FROM user_badges ub

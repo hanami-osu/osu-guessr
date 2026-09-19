@@ -11,7 +11,7 @@ import unzipper from "unzipper";
 import sharp from "sharp";
 import { z } from "zod";
 import { env } from "@/lib/env";
-import { requireOwner } from "@/actions/require-owner";
+import { requireAdmin } from "@/actions/require-admin";
 import { isMp3File, selectAudioImportFile, type AudioImportCandidate } from "@/lib/importer-validation";
 
 const DIRECTORIES = {
@@ -353,7 +353,7 @@ async function removeMapsetFromDatabase(mapsetId: number): Promise<void> {
 }
 
 export async function addMapset(rawMapsetId: number): Promise<AddMapsetResult> {
-    await requireOwner();
+    await requireAdmin();
     const mapsetId = z.coerce.number().min(1).parse(rawMapsetId);
     return addMapsetById(mapsetId);
 }
@@ -412,7 +412,7 @@ async function addMapsetById(mapsetId: number): Promise<AddMapsetResult> {
 }
 
 export async function addMapsetFromList(fileContent: string) {
-    await requireOwner();
+    await requireAdmin();
     const mapsetIds = [...new Set(fileContent
         .split("\n")
         .map((line) => line.trim())
@@ -455,7 +455,7 @@ export async function addMapsetFromList(fileContent: string) {
 }
 
 export async function removeMapset(rawMapsetId: number): Promise<void> {
-    await requireOwner();
+    await requireAdmin();
     const mapsetId = z.coerce.number().min(1).parse(rawMapsetId);
     try {
         const files = (await query("SELECT image_filename, audio_filename FROM mapset_tags WHERE mapset_id = ?", [mapsetId])) as Array<{ image_filename?: string; audio_filename?: string }>;
@@ -479,7 +479,7 @@ export async function removeMapset(rawMapsetId: number): Promise<void> {
 
 export async function listMapsets(page = 1, limit = 50, q?: string): Promise<Mapset[]> {
     try {
-        await requireOwner();
+        await requireAdmin();
         const args = z
             .object({
                 page: z.coerce.number().min(1).default(1),
@@ -523,7 +523,7 @@ export async function listMapsets(page = 1, limit = 50, q?: string): Promise<Map
 }
 
 export async function fetchBackgroundImage(filename?: string | null): Promise<string | null> {
-    await requireOwner();
+    await requireAdmin();
     if (!filename) return null;
 
     try {

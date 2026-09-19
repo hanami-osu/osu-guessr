@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, mock, test } from "bun:test";
 import type { Profile } from "next-auth";
 
 const upsertUserMock = mock(async () => {});
+const isAdminUserIdMock = mock(async (userId?: number) => userId === 123);
 type TestProvider = {
     id: string;
     name: string;
@@ -18,10 +19,10 @@ type TestAuthConfig = {
     providers: TestProvider[];
     callbacks: {
         jwt: (args: { token: Record<string, unknown>; profile?: Profile }) => Promise<Record<string, unknown>>;
-        session: (args: { session: { expires: string; user?: Record<string, unknown> }; token: Record<string, unknown> }) => {
+        session: (args: { session: { expires: string; user?: Record<string, unknown> }; token: Record<string, unknown> }) => Promise<{
             expires: string;
             user: Record<string, unknown>;
-        };
+        }>;
     };
 };
 let authConfig: TestAuthConfig;
@@ -33,6 +34,7 @@ mock.module("@/lib/env", () => ({
     },
 }));
 mock.module("@/lib/user-service", () => ({ upsertUser: upsertUserMock }));
+mock.module("@/lib/admin", () => ({ isAdminUserId: isAdminUserIdMock }));
 mock.module("next-auth", () => ({
     default: (config: TestAuthConfig) => {
         authConfig = config;
@@ -84,8 +86,8 @@ describe("Hanami authentication configuration", () => {
         expect(upsertUserMock).toHaveBeenCalledWith(123, "player", "https://osu.ppy.sh/avatar/123");
     });
 
-    test("exposes only the local user identity in the application session", () => {
-        const session = authConfig.callbacks.session({
+    test("exposes only the local user identity and admin status in the application session", async () => {
+        const session = await authConfig.callbacks.session({
             session: { expires: "2099-01-01T00:00:00.000Z", user: { email: "user@example.com" } },
             token: {
                 sub: "hanami-sub",
@@ -101,10 +103,12 @@ describe("Hanami authentication configuration", () => {
             expires: "2099-01-01T00:00:00.000Z",
             user: {
                 banchoId: 123,
+                isAdmin: true,
                 name: "player",
                 image: "https://osu.ppy.sh/avatar/123",
             },
         });
+        expect(isAdminUserIdMock).toHaveBeenCalledWith(123);
     });
 
     test("maps Hanami claims to the existing user profile contract", async () => {

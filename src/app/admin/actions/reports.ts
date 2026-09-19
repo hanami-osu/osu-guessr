@@ -2,12 +2,12 @@
 
 import { query } from "@/lib/database";
 import { Report } from "@/actions/types";
-import { requireOwner } from "@/actions/require-owner";
+import { requireAdmin } from "@/actions/require-admin";
 import { reportStatusUpdateSchema } from "@/lib/report-validation";
 
 export async function listReports(): Promise<Report[]> {
     try {
-        await requireOwner();
+        await requireAdmin();
         const results = await query(`
             SELECT
                 id,
@@ -31,7 +31,7 @@ export async function listReports(): Promise<Report[]> {
 
 export async function updateReportStatus(reportId: number, status: string): Promise<void> {
     try {
-        await requireOwner();
+        await requireAdmin();
         const validated = reportStatusUpdateSchema.parse({ reportId, status });
         await query(`UPDATE reports SET status = ? WHERE id = ?`, [validated.status, validated.reportId]);
         console.log(`Report ${validated.reportId} status updated to ${validated.status}`);
