@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const deploymentId = process.env.NEXT_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA;
 
 const nextConfig: NextConfig = {
-    output: "standalone",
     deploymentId,
     images: { remotePatterns: [{ hostname: "a.ppy.sh" }, { hostname: "assets.ppy.sh" }, { hostname: "osu.ppy.sh" }] },
     reactStrictMode: false,

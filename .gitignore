@@ -10,6 +10,7 @@
 
 # production
 /build
+/.server/
 .env*
 !.env.template
 changelog.json

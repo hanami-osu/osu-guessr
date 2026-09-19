@@ -1,5 +1,3 @@
-import "server-only";
-
 import { normalizeDatabaseValue } from "./normalize";
 import { prisma } from "./prisma";
 

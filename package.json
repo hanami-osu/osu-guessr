@@ -4,9 +4,9 @@
     "private": true,
     "license": "AGPL-3.0-only",
     "scripts": {
-        "dev": "dotenv -e .env -- next dev",
-        "build": "prisma generate && IS_DOCKER_BUILD=true next build",
-        "start": "dotenv -e .env -- next start",
+        "dev": "dotenv -e .env -- bun server.ts",
+        "build": "prisma generate && IS_DOCKER_BUILD=true next build && NODE_ENV=production bun build server.ts --target=node --format=cjs --outfile=.server/server.js --packages external",
+        "start": "dotenv -e .env -- env NODE_ENV=production node .server/server.js",
         "check": "prisma generate && eslint src && tsc --noEmit",
         "test": "bun test --isolate",
         "sync": "bun scripts/sync-translations",
@@ -42,6 +42,7 @@
         "tailwind-merge": "^2.6.0",
         "tailwindcss-animate": "^1.0.7",
         "unzipper": "^0.10.11",
+        "ws": "^8.21.3",
         "zod": "^3.24.2"
     },
     "devDependencies": {
@@ -51,8 +52,9 @@
         "@types/react": "^19.0.12",
         "@types/react-dom": "^19.0.4",
         "@types/unzipper": "^0.10.11",
-        "dotenv-cli": "^10.0.0",
+        "@types/ws": "^8.18.1",
         "dotenv": "^17.4.2",
+        "dotenv-cli": "^10.0.0",
         "eslint": "^9.23.0",
         "eslint-config-next": "15.1.6",
         "postcss": "^8.5.3",
