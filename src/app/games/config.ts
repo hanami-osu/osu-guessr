@@ -12,8 +12,8 @@ export const AUTO_ADVANCE_DELAY_MS = 8000;
 export const SURVIVAL_LIVES = 3;
 
 export const GAME_MODES = [
-    { id: GameMode.Background, image: "/ghostrule.webp", url: "/games/background" },
-    { id: GameMode.Audio, image: "/audio-mode.webp", url: "/games/audio" },
-    { id: GameMode.Skin, image: "/skin-mode.webp", url: "/games/skin" },
-    { id: GameMode.ScorePp, image: "/main_bg.webp", url: "/games/score-pp" },
+    { id: GameMode.Background, label: "Background Guessr", image: "/ghostrule.webp", url: "/games/background" },
+    { id: GameMode.Audio, label: "Audio Guessr", image: "/audio-mode.webp", url: "/games/audio" },
+    { id: GameMode.Skin, label: "Skin Guessr", image: "/skin-mode.webp", url: "/games/skin" },
+    { id: GameMode.ScorePp, label: "Score pp", image: "/main_bg.webp", url: "/games/score-pp" },
 ] as const;

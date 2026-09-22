@@ -22,16 +22,6 @@ export default function Header() {
     const { t } = useTranslationsContext();
     const pathname = usePathname();
 
-    const getNavLabel = (key: string) => {
-        try {
-            const val = (t.components.header.nav as Record<string, string>)[key];
-            if (val) return val;
-        } catch {
-            /* noop */
-        }
-        return key.charAt(0).toUpperCase() + key.slice(1);
-    };
-
     return (
         <header className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-50 shadow-sm">
             <div className="mx-auto flex w-full max-w-[72rem] items-center justify-between gap-2 px-2 py-3 sm:px-4">
@@ -48,7 +38,7 @@ export default function Header() {
                                         aria-current={pathname === `/${item}` ? "page" : undefined}
                                         className={`subtle-link font-medium transition-colors duration-200 ${pathname === `/${item}` ? "text-primary" : "text-foreground/80 hover:text-primary"}`}
                                     >
-                                        {getNavLabel(item)}
+                                        {t.components.header.nav[item]}
                                     </Link>
                                 </li>
                             ))}
@@ -131,7 +121,7 @@ export default function Header() {
                                         className={`w-full rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-muted/60 hover:text-primary ${pathname === `/${item}` ? "bg-muted/45 text-primary" : "text-foreground/80"}`}
                                         onClick={() => setIsMenuOpen(false)}
                                     >
-                                        {getNavLabel(item)}
+                                        {t.components.header.nav[item]}
                                     </Link>
                                 </li>
                             ))}

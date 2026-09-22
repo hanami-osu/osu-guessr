@@ -6,22 +6,12 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { createMultiplayerLobbyAction, listMultiplayerLobbiesAction } from "@/actions/multiplayer-server";
 import { GameMode, type GameVariant } from "@/actions/types";
+import { GAME_MODES } from "@/app/games/config";
 import type { MultiplayerLobbySummary } from "@/lib/multiplayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-
-const GAME_MODE_OPTIONS = [
-    { value: GameMode.Background, label: "Background Guessr" },
-    { value: GameMode.Audio, label: "Audio Guessr" },
-    { value: GameMode.Skin, label: "Skin Guessr" },
-    { value: GameMode.ScorePp, label: "Score pp" },
-];
-
-function gameModeLabel(mode: GameMode): string {
-    return GAME_MODE_OPTIONS.find((option) => option.value === mode)?.label ?? mode;
-}
 
 export default function MultiplayerBrowser() {
     const { data: session } = useSession();
@@ -140,7 +130,7 @@ export default function MultiplayerBrowser() {
                                 <Select value={gameMode} onValueChange={(value) => setGameMode(value as GameMode)}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                        {GAME_MODE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                                        {GAME_MODES.map((mode) => <SelectItem key={mode.id} value={mode.id}>{mode.label}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </label>
@@ -190,7 +180,7 @@ export default function MultiplayerBrowser() {
                                                     {lobby.status === "waiting" ? "Waiting" : lobby.status === "starting" ? "Starting" : "In progress"}
                                                 </span>
                                             </div>
-                                            <div className="mt-1 text-xs text-muted-foreground">{gameModeLabel(lobby.gameMode)} · {lobby.variant} · hosted by {lobby.hostUsername}</div>
+                                            <div className="mt-1 text-xs text-muted-foreground">{GAME_MODES.find((mode) => mode.id === lobby.gameMode)?.label ?? lobby.gameMode} · {lobby.variant} · hosted by {lobby.hostUsername}</div>
                                             <div className="mt-2 font-mono text-xs text-muted-foreground">{lobby.playerCount}/{lobby.maxPlayers} players · {lobby.code}</div>
                                         </div>
                                         <Button variant={joinable ? "default" : "outline"} disabled={!joinable} onClick={() => router.push(`/multiplayer/${lobby.code}`)}>

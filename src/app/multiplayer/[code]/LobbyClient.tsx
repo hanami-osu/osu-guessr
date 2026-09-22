@@ -50,13 +50,6 @@ import { Switch } from "@/components/ui/switch";
 import type { MultiplayerLobby, MultiplayerPlayer } from "@/lib/multiplayer";
 import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
 
-const GAME_MODE_OPTIONS = [
-    { value: GameMode.Background, label: "Background Guessr" },
-    { value: GameMode.Audio, label: "Audio Guessr" },
-    { value: GameMode.Skin, label: "Skin Guessr" },
-    { value: GameMode.ScorePp, label: "Score pp" },
-];
-
 type LobbyAction =
     | "start"
     | "cancel-start"
@@ -67,10 +60,6 @@ type LobbyAction =
     | "copy"
     | `kick:${number}`
     | `host:${number}`;
-
-function gameModeLabel(mode: GameMode): string {
-    return GAME_MODE_OPTIONS.find((option) => option.value === mode)?.label ?? mode;
-}
 
 function variantLabel(variant: GameVariant): string {
     return variant === "survival" ? "Survival" : "Classic";
@@ -155,7 +144,7 @@ export default function LobbyClient({
     const isHost = lobby?.hostId === userId;
     const currentPlayer = lobby?.players.find((player) => player.userId === userId);
     const isCurrentPlayerFinished = currentPlayer?.finished ?? false;
-    const guests = useMemo(() => lobby?.players.filter((player) => player.userId !== lobby.hostId) ?? [], [lobby]);
+    const guests = lobby?.players.filter((player) => player.userId !== lobby.hostId) ?? [];
     const readyGuestCount = guests.filter((player) => player.ready).length;
     const everyonePresent = Boolean(
         lobby &&
@@ -479,7 +468,7 @@ export default function LobbyClient({
                                                 Game mode
                                                 <Select value={setupGameMode} onValueChange={(value) => setSetupGameMode(value as GameMode)}>
                                                     <SelectTrigger><SelectValue /></SelectTrigger>
-                                                    <SelectContent>{GAME_MODE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                                                    <SelectContent>{GAME_MODES.map((mode) => <SelectItem key={mode.id} value={mode.id}>{mode.label}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             </label>
                                             <label className="block space-y-1.5 text-sm font-medium">
@@ -690,7 +679,7 @@ export default function LobbyClient({
                 <aside className="order-2 mt-10 self-start border-t border-border/60 pt-8 lg:order-none lg:sticky lg:top-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-5">
                     <div className="border-b border-border/60 pb-8">
                         <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{isFinished ? "Match complete" : "Next match"}</div>
-                        <h2 className="mt-3 text-3xl font-semibold tracking-tight">{gameModeLabel(lobby.gameMode)}</h2>
+                        <h2 className="mt-3 text-3xl font-semibold tracking-tight">{GAME_MODES.find((mode) => mode.id === lobby.gameMode)?.label ?? lobby.gameMode}</h2>
                         <p className="mt-2 text-lg text-muted-foreground">{variantLabel(lobby.variant)}</p>
                     </div>
 

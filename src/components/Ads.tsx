@@ -52,7 +52,6 @@ const createPromos = (t: Translations): Array<Promo> => {
 export function AdSlider({ compact = false }: { compact?: boolean }) {
     const { t } = useTranslationsContext();
     const promos = createPromos(t);
-    const [currentIndex, setCurrentIndex] = useState(0);
     const [sequence, setSequence] = useState(() => shuffle([...Array(promos.length).keys()]));
     const [sequenceIndex, setSequenceIndex] = useState(0);
 
@@ -79,11 +78,7 @@ export function AdSlider({ compact = false }: { compact?: boolean }) {
         return () => clearInterval(timer);
     }, [promos.length, sequence.length]);
 
-    useEffect(() => {
-        setCurrentIndex(sequence[sequenceIndex]);
-    }, [sequenceIndex, sequence]);
-
-    const currentPromo = promos[currentIndex];
+    const currentPromo = promos[sequence[sequenceIndex]];
 
     return (
         <div className={compact ? "mt-5 text-xs text-muted-foreground" : "max-w-md mx-auto my-8"}>

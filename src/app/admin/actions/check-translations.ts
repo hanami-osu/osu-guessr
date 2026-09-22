@@ -168,11 +168,7 @@ export async function fillMissingTranslations(languageCode: string) {
 export async function removeExtraTranslations(languageCode: string) {
     try {
         await requireAdmin();
-        const enPath = path.join(process.cwd(), "src/messages/en.json");
-        const targetPath = getMessagesPath(languageCode);
-
-        const enJson = JSON.parse(readFileSync(enPath, "utf8"));
-        const targetJson = JSON.parse(readFileSync(targetPath, "utf8"));
+        const { enJson, targetJson, targetPath } = readTranslationPair(languageCode);
 
         const enKeys = getAllKeys(enJson);
         const targetKeys = getAllKeys(targetJson);

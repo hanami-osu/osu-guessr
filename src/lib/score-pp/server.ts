@@ -407,7 +407,7 @@ export async function submitScorePpGuessForUser(
             const correct = resultType === "guess" && selectedScoreId === higher.sourceScoreId;
             const pointsEarned = calculateArcadeScore(correct, timeLeft, run.current_streak);
             const nextStreak = correct ? run.current_streak + 1 : 0;
-            const mistakes = run.round_history.filter((item) => !item.correct).length + (correct ? 0 : 1);
+            const mistakes = getMistakes(run) + (correct ? 0 : 1);
 
             const roundRecord: PersistedGameRound = {
                 round_number: run.current_round,
