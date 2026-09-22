@@ -28,7 +28,10 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
 
     const ClassicModeContent = () => (
         <section>
-            <h2 className={sectionTitleClass}><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.game.preGame.howToPlay.title}</h2>
+            <h2 className={sectionTitleClass}>
+                <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                {t.game.preGame.howToPlay.title}
+            </h2>
             <ul className={listClass}>
                 {gameMode === GameMode.ScorePp && (
                     <li className={listItemClass}>
@@ -50,7 +53,10 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
 
     const SurvivalModeContent = () => (
         <section>
-            <h2 className={sectionTitleClass}><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.game.preGame.howToPlay.title}</h2>
+            <h2 className={sectionTitleClass}>
+                <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                {t.game.preGame.howToPlay.title}
+            </h2>
             <ul className={listClass}>
                 {gameMode === GameMode.ScorePp && (
                     <li className={listItemClass}>
@@ -86,7 +92,7 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
                     </div>
                 </div>
 
-                <section className="relative z-10 -mt-px border-y border-border/60 bg-card">
+                <section className="relative z-10 bg-card">
                     <div className="grid grid-cols-2 gap-2 px-3 py-2.5 sm:px-5" role="radiogroup" aria-label={t.game.preGame.variantLabel}>
                         <button
                             type="button"
@@ -118,34 +124,67 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
                 <div className="px-5 py-4 sm:px-6 sm:py-5">
                     {selectedMode === "classic" ? <ClassicModeContent /> : <SurvivalModeContent />}
 
-                    <details className="group mt-4 border-t border-border/60 pt-3">
+                    <details className="group mt-6">
                         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 text-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
-                            <span className="flex items-center gap-2"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.game.preGame.scoring.title}</span>
+                            <span className="flex items-center gap-2">
+                                <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                                {t.game.preGame.scoring.title}
+                            </span>
                             <ChevronDown aria-hidden="true" className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
                         </summary>
                         <div className="pt-3">
                             {selectedMode === "classic" ? (
                                 <ul className={listClass}>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.classic.base.replace("{points}", BASE_POINTS.toString())}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.classic.timeBonus.replace("{points}", TIME_BONUS_MULTIPLIER.toString())}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.classic.streakBonus.replace("{points}", STREAK_BONUS.toString())}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.classic.skipPenalty.replace("{points}", SKIP_PENALTY.toString())}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.classic.pp}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.death.compete}</li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.classic.base.replace("{points}", BASE_POINTS.toString())}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.classic.timeBonus.replace("{points}", TIME_BONUS_MULTIPLIER.toString())}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.classic.streakBonus.replace("{points}", STREAK_BONUS.toString())}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.classic.skipPenalty.replace("{points}", SKIP_PENALTY.toString())}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.classic.pp}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.death.compete}
+                                    </li>
                                 </ul>
                             ) : (
                                 <ul className={listClass}>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.death.score}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.classic.skipPenalty.replace("{points}", SKIP_PENALTY.toString())}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.death.streakOnly}</li>
-                                    <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.scoring.death.compete}</li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.death.score}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.classic.skipPenalty.replace("{points}", SKIP_PENALTY.toString())}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.death.streakOnly}
+                                    </li>
+                                    <li className={listItemClass}>
+                                        <span aria-hidden="true" className={markerClass} />
+                                        {t.game.preGame.scoring.death.compete}
+                                    </li>
                                 </ul>
                             )}
                         </div>
                     </details>
 
                     {selectedMode === "classic" && (
-                        <section className="mt-4 border-t border-border/60 pt-3">
+                        <section className="mt-6">
                             <h2 className="text-xs font-semibold text-foreground">{t.game.preGame.warning.title}</h2>
                             <p className="mt-1 text-xs leading-5 text-muted-foreground">{t.game.preGame.warning.description.replace("{rounds}", MAX_ROUNDS.toString())}</p>
                         </section>

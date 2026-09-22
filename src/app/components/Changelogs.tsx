@@ -12,9 +12,12 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
     const sortedChangelogs = [...changelogs].reverse();
 
     return (
-        <div className="page-container">
+        <section className="page-container py-6">
             <div className="border-t border-border pt-6">
-                <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight mb-3"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.home.updates.title}</h2>
+                <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight mb-3">
+                    <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                    {t.home.updates.title}
+                </h2>
 
                 <div className="max-h-[420px] space-y-5 overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
                     {sortedChangelogs.map((log, i) => (
@@ -58,6 +61,6 @@ export function ChangelogsSection({ changelogs }: ChangelogsProps) {
                     ))}
                 </div>
             </div>
-        </div>
+        </section>
     );
 }

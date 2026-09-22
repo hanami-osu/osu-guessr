@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Gamepad2, Plus, RefreshCw, Users } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createMultiplayerLobbyAction, listMultiplayerLobbiesAction } from "@/actions/multiplayer-server";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { GAME_MODES } from "@/app/games/config";
@@ -95,7 +96,10 @@ export default function MultiplayerBrowser() {
     return (
         <div className="page-container py-8 md:py-10">
             <div className="mb-8 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary"><Users className="size-4" />Multiplayer</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <Users className="size-4" />
+                    Multiplayer
+                </div>
                 <h1 className="text-3xl font-semibold tracking-tight">Play together</h1>
                 <p className="max-w-2xl text-sm text-muted-foreground">Create a room with your own settings or join an active lobby.</p>
             </div>
@@ -103,7 +107,10 @@ export default function MultiplayerBrowser() {
             <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
                 <div className="flex flex-col gap-5">
                     <form onSubmit={(event) => void createLobby(event)} className="order-2 rounded-xl border border-border/60 bg-card p-5">
-                        <div className="mb-4 flex items-center gap-2 text-sm font-semibold"><Plus className="size-4 text-primary" />Create room</div>
+                        <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
+                            <Plus className="size-4 text-primary" />
+                            Create room
+                        </div>
                         <div className="space-y-4">
                             <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
                                 Lobby name
@@ -117,7 +124,9 @@ export default function MultiplayerBrowser() {
                                 <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
                                     Variant
                                     <Select value={variant} onValueChange={(value) => setVariant(value as GameVariant)}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="classic">Classic</SelectItem>
                                             <SelectItem value="survival">Survival</SelectItem>
@@ -128,20 +137,26 @@ export default function MultiplayerBrowser() {
                             <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
                                 Game mode
                                 <Select value={gameMode} onValueChange={(value) => setGameMode(value as GameMode)}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
                                     <SelectContent>
-                                        {GAME_MODES.map((mode) => <SelectItem key={mode.id} value={mode.id}>{mode.label}</SelectItem>)}
+                                        {GAME_MODES.map((mode) => (
+                                            <SelectItem key={mode.id} value={mode.id}>
+                                                {mode.label}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </label>
-                            <div className="flex items-center justify-between gap-4 rounded-md border border-border/60 px-3 py-2.5">
+                            <div className="flex items-center justify-between gap-4 py-2.5">
                                 <div>
                                     <div className="text-sm font-medium text-foreground">Private lobby</div>
                                     <div className="mt-0.5 text-xs text-muted-foreground">Hidden from active lobbies and joinable only by code.</div>
                                 </div>
                                 <Switch checked={isPrivate} onCheckedChange={setIsPrivate} aria-label="Private lobby" />
                             </div>
-                            <Button className="w-full" type="submit" disabled={isCreating || Boolean(session) && !name.trim()}>
+                            <Button className="w-full" type="submit" disabled={isCreating || (Boolean(session) && !name.trim())}>
                                 {isCreating ? "Creating..." : session ? "Create lobby" : "Sign in to create"}
                             </Button>
                         </div>
@@ -151,15 +166,23 @@ export default function MultiplayerBrowser() {
                         <div className="mb-3 text-sm font-semibold">Join by code</div>
                         <div className="flex gap-2">
                             <Input value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} maxLength={8} placeholder="ABCD1234" className="font-mono uppercase" />
-                            <Button type="submit" variant="outline" disabled={!joinCode.trim()}>Join</Button>
+                            <Button type="submit" variant="outline" disabled={!joinCode.trim()}>
+                                Join
+                            </Button>
                         </div>
                     </form>
                 </div>
 
                 <section className="min-w-0">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                        <h2 className="flex items-center gap-2 text-sm font-semibold"><Gamepad2 className="size-4 text-primary" />Active lobbies</h2>
-                        <Button variant="ghost" size="sm" onClick={() => void refresh()}><RefreshCw className="size-4" />Refresh</Button>
+                        <h2 className="flex items-center gap-2 text-sm font-semibold">
+                            <Gamepad2 className="size-4 text-primary" />
+                            Active lobbies
+                        </h2>
+                        <Button variant="ghost" size="sm" onClick={() => void refresh()}>
+                            <RefreshCw className="size-4" />
+                            Refresh
+                        </Button>
                     </div>
 
                     {error && <div className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
@@ -176,12 +199,26 @@ export default function MultiplayerBrowser() {
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <h3 className="truncate font-semibold">{lobby.name}</h3>
-                                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${lobby.status === "waiting" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                                                <span
+                                                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${lobby.status === "waiting" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                                                >
                                                     {lobby.status === "waiting" ? "Waiting" : lobby.status === "starting" ? "Starting" : "In progress"}
                                                 </span>
                                             </div>
-                                            <div className="mt-1 text-xs text-muted-foreground">{GAME_MODES.find((mode) => mode.id === lobby.gameMode)?.label ?? lobby.gameMode} · {lobby.variant} · hosted by {lobby.hostUsername}</div>
-                                            <div className="mt-2 font-mono text-xs text-muted-foreground">{lobby.playerCount}/{lobby.maxPlayers} players · {lobby.code}</div>
+                                            <div className="mt-1 text-xs text-muted-foreground">
+                                                {GAME_MODES.find((mode) => mode.id === lobby.gameMode)?.label ?? lobby.gameMode} · {lobby.variant} · hosted by{" "}
+                                                <Link
+                                                    href={`/user/${lobby.hostId}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                                >
+                                                    {lobby.hostUsername}
+                                                </Link>
+                                            </div>
+                                            <div className="mt-2 font-mono text-xs text-muted-foreground">
+                                                {lobby.playerCount}/{lobby.maxPlayers} players · {lobby.code}
+                                            </div>
                                         </div>
                                         <Button variant={joinable ? "default" : "outline"} disabled={!joinable} onClick={() => router.push(`/multiplayer/${lobby.code}`)}>
                                             {lobby.status === "starting" ? "Starting" : lobby.status === "playing" ? "In progress" : full ? "Full" : "Join"}

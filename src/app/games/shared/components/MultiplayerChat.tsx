@@ -2,6 +2,7 @@
 
 import { FormEvent, useLayoutEffect, useRef, useState } from "react";
 import { Send, Users } from "lucide-react";
+import Link from "next/link";
 import type { MultiplayerLobby } from "@/lib/multiplayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,14 +49,37 @@ export default function MultiplayerChat({ lobby, sendMessage }: { lobby?: Multip
                             return (
                                 <div key={item.id} className={`${index === 0 ? "" : "mt-2"} flex items-center gap-2 text-xs text-muted-foreground`}>
                                     <Users className="size-3.5 shrink-0" />
-                                    <span>{item.kind === "system" ? item.message : `${item.username} ${item.message}`}</span>
+                                    <span>
+                                        {item.kind === "system" ? (
+                                            item.message
+                                        ) : (
+                                            <>
+                                                <Link
+                                                    href={`/user/${item.userId}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                                >
+                                                    {item.username}
+                                                </Link>{" "}
+                                                {item.message}
+                                            </>
+                                        )}
+                                    </span>
                                 </div>
                             );
                         }
 
                         return (
                             <div key={item.id} className={`${index === 0 ? "" : "mt-2"} text-xs`}>
-                                <span className="font-medium">{item.username}</span>
+                                <Link
+                                    href={`/user/${item.userId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                >
+                                    {item.username}
+                                </Link>
                                 <span className="ml-2 break-words text-foreground/80">{item.message}</span>
                             </div>
                         );

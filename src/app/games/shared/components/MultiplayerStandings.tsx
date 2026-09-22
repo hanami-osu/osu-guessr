@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Check, SkipForward, Users, X } from "lucide-react";
 import type { MultiplayerLobby } from "@/lib/multiplayer";
 
@@ -17,8 +18,7 @@ export default function MultiplayerStandings({
 
     const roundParticipants = currentRound ? lobby.players.filter((player) => !player.finished || player.round >= currentRound) : [];
     const roundComplete = Boolean(currentRound && roundParticipants.length > 0 && roundParticipants.every((player) => player.submittedRound >= currentRound));
-    const visiblePoints = (player: MultiplayerLobby["players"][number]) =>
-        !roundComplete && currentRound && player.resultRound === currentRound ? player.points - player.resultPoints : player.points;
+    const visiblePoints = (player: MultiplayerLobby["players"][number]) => (!roundComplete && currentRound && player.resultRound === currentRound ? player.points - player.resultPoints : player.points);
     const players = [...lobby.players].sort((a, b) => visiblePoints(b) - visiblePoints(a) || b.round - a.round || a.joinedAt.localeCompare(b.joinedAt));
 
     return (
@@ -36,7 +36,11 @@ export default function MultiplayerStandings({
                     const offline = presenceUserIds ? !presenceUserIds.has(player.userId) : false;
                     const revealResult = Boolean(roundComplete && currentRound && player.resultRound === currentRound && player.resultCorrect !== null);
                     const status = revealResult
-                        ? player.resultSkipped ? "Skipped" : player.resultCorrect ? "Correct" : "Incorrect"
+                        ? player.resultSkipped
+                            ? "Skipped"
+                            : player.resultCorrect
+                              ? "Correct"
+                              : "Incorrect"
                         : offline
                           ? "Offline"
                           : player.finished
@@ -52,10 +56,19 @@ export default function MultiplayerStandings({
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="truncate text-sm font-medium">
-                                    {player.username}
+                                    <Link
+                                        href={`/user/${player.userId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                    >
+                                        {player.username}
+                                    </Link>
                                     {player.userId === currentUserId && <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">You</span>}
                                 </div>
-                                <div className={`flex items-center gap-1 truncate text-[11px] ${revealResult ? player.resultSkipped ? "text-warning" : player.resultCorrect ? "text-success" : "text-destructive" : "text-muted-foreground"}`}>
+                                <div
+                                    className={`flex items-center gap-1 truncate text-[11px] ${revealResult ? (player.resultSkipped ? "text-warning" : player.resultCorrect ? "text-success" : "text-destructive") : "text-muted-foreground"}`}
+                                >
                                     {revealResult && (player.resultSkipped ? <SkipForward className="size-3" /> : player.resultCorrect ? <Check className="size-3" /> : <X className="size-3" />)}
                                     <span>{status}</span>
                                 </div>

@@ -77,6 +77,7 @@ export interface MultiplayerLobby {
 export interface MultiplayerLobbySummary {
     code: string;
     name: string;
+    hostId: number;
     hostUsername: string;
     gameMode: GameMode;
     variant: GameVariant;
@@ -164,7 +165,21 @@ export async function finishMultiplayerCountdown(code: string): Promise<void> {
         } else {
             lobby.status = "playing";
             lobby.notice = null;
-            lobby.players = lobby.players.map((player) => ({ ...player, points: 0, round: 1, submittedRound: 0, readyRound: 0, resultRound: 0, resultCorrect: null, resultSkipped: false, resultPoints: 0, scoreSessionId: null, results: null, finished: false, completedMatch: false }));
+            lobby.players = lobby.players.map((player) => ({
+                ...player,
+                points: 0,
+                round: 1,
+                submittedRound: 0,
+                readyRound: 0,
+                resultRound: 0,
+                resultCorrect: null,
+                resultSkipped: false,
+                resultPoints: 0,
+                scoreSessionId: null,
+                results: null,
+                finished: false,
+                completedMatch: false,
+            }));
         }
         await writeMultiplayerLobby(lobby);
     });
@@ -232,6 +247,7 @@ export async function listMultiplayerLobbies(): Promise<MultiplayerLobbySummary[
         .map((lobby) => ({
             code: lobby.code,
             name: lobby.name,
+            hostId: lobby.hostId,
             hostUsername: lobby.players.find((player) => player.userId === lobby.hostId)?.username ?? "Unknown",
             gameMode: lobby.gameMode,
             variant: lobby.variant,
@@ -374,12 +390,7 @@ export async function leaveCurrentMultiplayerLobby(userId: number, exceptCode?: 
     }
 }
 
-async function requireMultiplayerLobbyAccess(
-    code: string,
-    userId: number,
-    gameMode?: GameMode,
-    variant?: GameVariant,
-): Promise<MultiplayerLobby> {
+async function requireMultiplayerLobbyAccess(code: string, userId: number, gameMode?: GameMode, variant?: GameVariant): Promise<MultiplayerLobby> {
     const lobby = await readMultiplayerLobby(code);
     if (!lobby || !lobby.players.some((player) => player.userId === userId)) {
         throw new Error("Multiplayer lobby not found");
@@ -389,22 +400,13 @@ async function requireMultiplayerLobbyAccess(
     return lobby;
 }
 
-export async function requireActiveMultiplayerLobby(
-    code: string,
-    userId: number,
-    gameMode: GameMode,
-    variant: GameVariant,
-): Promise<MultiplayerLobby> {
+export async function requireActiveMultiplayerLobby(code: string, userId: number, gameMode: GameMode, variant: GameVariant): Promise<MultiplayerLobby> {
     const lobby = await requireMultiplayerLobbyAccess(code, userId, gameMode, variant);
     if (lobby.status !== "playing") throw new Error("Multiplayer game has not started");
     return lobby;
 }
 
-export async function getOrCreateMultiplayerRound<T>(
-    code: string,
-    round: number,
-    create: () => Promise<T>,
-): Promise<T> {
+export async function getOrCreateMultiplayerRound<T>(code: string, round: number, create: () => Promise<T>): Promise<T> {
     const normalizedCode = normalizeLobbyCode(code);
     const key = roundKey(normalizedCode, round);
     const existing = await redisClient.get(key);
@@ -494,7 +496,20 @@ export async function addMultiplayerMessage(code: string, userId: number, messag
 export async function updateMultiplayerProgress(
     code: string,
     userId: number,
-    progress: { points: number; round: number; submittedRound?: number; readyRound?: number; resultRound?: number; resultCorrect?: boolean; resultSkipped?: boolean; resultPoints?: number; scoreSessionId?: string | null; results?: MultiplayerPlayer["results"]; finished?: boolean; completedMatch?: boolean },
+    progress: {
+        points: number;
+        round: number;
+        submittedRound?: number;
+        readyRound?: number;
+        resultRound?: number;
+        resultCorrect?: boolean;
+        resultSkipped?: boolean;
+        resultPoints?: number;
+        scoreSessionId?: string | null;
+        results?: MultiplayerPlayer["results"];
+        finished?: boolean;
+        completedMatch?: boolean;
+    },
     matchId?: string,
 ): Promise<void> {
     await withMultiplayerLobbyLock(code, async () => {

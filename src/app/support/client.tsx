@@ -11,7 +11,7 @@ export function SupportPageContent() {
     return (
         <div className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
             <div className="mx-auto max-w-5xl">
-                <header className="border-b border-border/60 py-5 sm:py-6">
+                <header className="py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.support.title}</h1>
                     <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">{t.support.description}</p>
                 </header>
@@ -23,7 +23,7 @@ export function SupportPageContent() {
                             <h2 className="text-sm font-semibold tracking-tight text-foreground">{t.support.benefits.title}</h2>
                         </div>
 
-                        <div className="divide-y divide-border/50 border-y border-border/50">
+                        <div>
                             {benefits.map((benefit, index) => (
                                 <div key={index} className="flex items-start gap-3 py-3.5">
                                     <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center text-primary">
@@ -43,7 +43,7 @@ export function SupportPageContent() {
 
                         <p className="max-w-xl text-sm leading-6 text-muted-foreground">{t.support.donate.description}</p>
 
-                        <div className="mt-4 flex items-start gap-3 border-y border-border/50 py-3 text-sm leading-6 text-muted-foreground">
+                        <div className="mt-5 flex items-start gap-3 py-1 text-sm leading-6 text-muted-foreground">
                             <Info className="mt-0.5 size-4 shrink-0 text-primary" />
                             <p>{t.support.donate.reminder}</p>
                         </div>

@@ -119,8 +119,8 @@ function asScorePpReviewScore(value: unknown): ScorePpReviewScore | null {
         return null;
     }
 
-    const globalRank = player.globalRank === null ? null : snapshotNumber(player, "globalRank") ?? null;
-    const maxBeatmapCombo = beatmap.maxCombo === null ? null : snapshotNumber(beatmap, "maxCombo") ?? null;
+    const globalRank = player.globalRank === null ? null : (snapshotNumber(player, "globalRank") ?? null);
+    const maxBeatmapCombo = beatmap.maxCombo === null ? null : (snapshotNumber(beatmap, "maxCombo") ?? null);
     const mods = Array.isArray(score.mods) ? score.mods.filter((mod): mod is string => typeof mod === "string") : [];
 
     return {
@@ -216,11 +216,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
 
     if (!game) notFound();
 
-    const [user, rounds, cookieStore] = await Promise.all([
-        findUserByBanchoId(game.userId),
-        prisma.gameRound.findMany({ where: { gameId: game.id }, orderBy: { roundNumber: "asc" } }),
-        cookies(),
-    ]);
+    const [user, rounds, cookieStore] = await Promise.all([findUserByBanchoId(game.userId), prisma.gameRound.findMany({ where: { gameId: game.id }, orderBy: { roundNumber: "asc" } }), cookies()]);
 
     const localeCookie = cookieStore.get("locale")?.value;
     const locale = isLocale(localeCookie) ? localeCookie : "en";
@@ -264,7 +260,15 @@ export default async function ScorePage({ params, searchParams }: Props) {
                             <div className="text-sm text-muted-foreground">
                                 {modeLabel} · {formatMode(game.variant)} · {game.endedAt.toLocaleString(locale)}
                             </div>
-                            <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{user?.username ?? `User ${game.userId}`}&apos;s score</h1>
+                            <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+                                <Link
+                                    href={`/user/${game.userId}?mode=${game.gameMode}&variant=${game.variant}`}
+                                    className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                >
+                                    {user?.username ?? `User ${game.userId}`}
+                                </Link>
+                                &apos;s score
+                            </h1>
                         </div>
                         <div className="text-right">
                             <div className="text-xs uppercase tracking-wider text-muted-foreground">{isScorePp ? t.game.scorePp.pp : "pp"}</div>
@@ -299,7 +303,6 @@ export default async function ScorePage({ params, searchParams }: Props) {
                     </dl>
                 )}
             </section>
-
 
             <section className="mt-8">
                 <div className="mb-3 flex items-center gap-2 px-1">
@@ -346,8 +349,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
                             const title = snapshotText(snapshot, "title") ?? snapshotText(snapshot, "name") ?? round.answerSnapshot;
                             const artist = snapshotText(snapshot, "artist");
                             const mapper = snapshotText(snapshot, "mapper");
-                            const submitted =
-                                round.resultType === "skip" ? "Skipped" : round.resultType === "timeout" ? "Timed out" : round.submittedGuess?.trim() || "No guess";
+                            const submitted = round.resultType === "skip" ? "Skipped" : round.resultType === "timeout" ? "Timed out" : round.submittedGuess?.trim() || "No guess";
 
                             return (
                                 <article key={round.id.toString()} className="grid gap-4 rounded-xl bg-muted/45 px-4 py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-8 md:px-5">
@@ -357,9 +359,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
                                             <div className="min-w-0 flex-1">
                                                 <div className="truncate font-medium text-foreground">{title}</div>
                                                 {(artist || mapper) && (
-                                                    <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                                                        {[artist, mapper ? `mapped by ${mapper}` : null].filter(Boolean).join(" · ")}
-                                                    </div>
+                                                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{[artist, mapper ? `mapped by ${mapper}` : null].filter(Boolean).join(" · ")}</div>
                                                 )}
                                             </div>
                                             {round.itemType === "mapset" && (
@@ -379,7 +379,9 @@ export default async function ScorePage({ params, searchParams }: Props) {
                                     <div className="min-w-0 border-t border-border/50 pt-3 md:border-l md:border-t-0 md:pl-8 md:pt-0">
                                         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1">
                                             <div className="text-xs font-medium text-muted-foreground">Your guess</div>
-                                            <div className={`inline-flex items-center gap-1.5 text-sm font-semibold ${round.correct ? "text-emerald-500" : round.resultType === "skip" ? "text-warning" : "text-destructive"}`}>
+                                            <div
+                                                className={`inline-flex items-center gap-1.5 text-sm font-semibold ${round.correct ? "text-emerald-500" : round.resultType === "skip" ? "text-warning" : "text-destructive"}`}
+                                            >
                                                 {round.correct ? <Check className="size-4" /> : <X className="size-4" />}
                                                 {round.correct ? "Correct" : round.resultType === "guess" ? "Incorrect" : formatResult(round.resultType)}
                                             </div>
@@ -390,7 +392,10 @@ export default async function ScorePage({ params, searchParams }: Props) {
                                                 <Clock3 className="size-3.5" />
                                                 {(round.responseTimeMs / 1000).toFixed(1)}s
                                             </span>
-                                            <span className="tabular-nums">{round.pointsEarned >= 0 ? "+" : ""}{round.pointsEarned.toLocaleString()} points</span>
+                                            <span className="tabular-nums">
+                                                {round.pointsEarned >= 0 ? "+" : ""}
+                                                {round.pointsEarned.toLocaleString()} points
+                                            </span>
                                             <span className="tabular-nums">{round.streakAfter}x streak</span>
                                         </div>
                                     </div>
@@ -454,52 +459,42 @@ function ScorePpReviewRound({
                     <Clock3 className="size-3.5" />
                     {(responseTimeMs / 1000).toFixed(1)}s
                 </span>
-                <span className="tabular-nums">{pointsEarned >= 0 ? "+" : ""}{pointsEarned.toLocaleString(locale)} points</span>
+                <span className="tabular-nums">
+                    {pointsEarned >= 0 ? "+" : ""}
+                    {pointsEarned.toLocaleString(locale)} points
+                </span>
                 <span className="tabular-nums">{streakAfter}x streak</span>
             </div>
         </article>
     );
 }
 
-function ScorePpReviewCard({
-    score,
-    side,
-    selected,
-    winner,
-    locale,
-    t,
-}: {
-    score: ScorePpReviewScore;
-    side: "A" | "B";
-    selected: boolean;
-    winner: boolean;
-    locale: string;
-    t: ReviewTranslations;
-}) {
-    const cardClass = winner
-        ? "border-success/70 bg-success/[0.045]"
-        : selected
-          ? "border-destructive/70 bg-destructive/[0.045]"
-          : "border-border/50 bg-background/20";
+function ScorePpReviewCard({ score, side, selected, winner, locale, t }: { score: ScorePpReviewScore; side: "A" | "B"; selected: boolean; winner: boolean; locale: string; t: ReviewTranslations }) {
+    const cardClass = winner ? "border-success/70 bg-success/[0.045]" : selected ? "border-destructive/70 bg-destructive/[0.045]" : "border-border/50 bg-background/20";
 
     return (
         <article className={`min-w-0 border px-3 py-3 ${cardClass}`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.game.scorePp.results.scoreSide.replace("{side}", side)}</div>
-                    <div className="mt-1 truncate font-semibold text-foreground">{score.player.username}</div>
-                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{score.beatmap.artist} - {score.beatmap.title} [{score.beatmap.difficultyName}]</div>
+                    <a
+                        href={`https://osu.ppy.sh/users/${score.player.userId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 block truncate font-semibold text-foreground hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                        {score.player.username}
+                    </a>
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {score.beatmap.artist} - {score.beatmap.title} [{score.beatmap.difficultyName}]
+                    </div>
                 </div>
                 <div className="shrink-0 text-right">
                     <div className={`font-mono text-xl font-bold tabular-nums ${winner ? "text-success" : "text-foreground"}`}>
                         {score.pp.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}pp
                     </div>
                     <div className="mt-1 flex justify-end gap-1 text-[10px] font-semibold uppercase tracking-wide">
-                        {selected && (
-                            <span className={`${winner ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"} px-1.5 py-0.5`}>
-                                {t.game.scorePp.results.yourPick}
-                            </span>
-                        )}
+                        {selected && <span className={`${winner ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"} px-1.5 py-0.5`}>{t.game.scorePp.results.yourPick}</span>}
                         {winner && !selected && <span className="bg-success/15 px-1.5 py-0.5 text-success">{t.game.scorePp.results.winningChoice}</span>}
                     </div>
                 </div>

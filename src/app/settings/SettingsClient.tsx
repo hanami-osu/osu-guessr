@@ -38,7 +38,7 @@ type SettingsSection = (typeof sections)[number];
 export default function SettingsClient({ initialApiKeys, initialBannerUrl, initialSection, initialLoadError = false }: SettingsClientProps) {
     const { t, locale, setLanguage } = useTranslationsContext();
 
-    const [activeSection, setActiveSection] = useState<SettingsSection>(sections.includes(initialSection as SettingsSection) ? initialSection as SettingsSection : "preferences");
+    const [activeSection, setActiveSection] = useState<SettingsSection>(sections.includes(initialSection as SettingsSection) ? (initialSection as SettingsSection) : "preferences");
 
     const [apiKeys, setApiKeys] = useState<Array<ApiKey>>(initialApiKeys);
     const [loading, setLoading] = useState({
@@ -222,7 +222,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
         }
 
         return apiKeys.map((key) => (
-            <div key={key.id} className="py-4 space-y-3">
+            <div key={key.id} className="space-y-3">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                         <p className="font-medium">{key.name}</p>
@@ -251,11 +251,11 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
     return (
         <div className="page-container pb-8 pt-3 md:pt-4">
             <div>
-                <header className="border-b border-border/60 py-5 sm:py-6">
+                <header className="py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t.settings.title}</h1>
                     <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{t.settings.description}</p>
                 </header>
-                <nav role="tablist" aria-label={t.settings.title} className="-mx-1 flex gap-1 overflow-x-auto border-b border-border/60 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <nav role="tablist" aria-label={t.settings.title} className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {sections.map((section, index) => (
                         <button
                             key={section}
@@ -273,10 +273,12 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         </button>
                     ))}
                 </nav>
-                <div className="py-6 sm:py-7">
-
+                <div className="mt-4 rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                     <section id="settings-profile" role="tabpanel" hidden={activeSection !== "profile"} aria-labelledby="settings-tab-profile">
-                        <h2 id="settings-profile-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.profile.title}</h2>
+                        <h2 id="settings-profile-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                            <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                            {t.settings.profile.title}
+                        </h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.profile.description}</p>
 
                         <div className="mt-5">
@@ -294,7 +296,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-background/70 to-transparent" />
                             </div>
 
-                            <div className="mt-5 border-t border-border/60 pt-5">
+                            <div className="mt-8">
                                 <label htmlFor="profile-banner-url" className="font-medium">
                                     {t.settings.profile.banner.title}
                                 </label>
@@ -317,26 +319,33 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                         {bannerSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                         {t.settings.profile.banner.save}
                                     </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => void saveBanner("")}
-                                        disabled={bannerSaving || (!savedBannerUrl && bannerUrl.trim().length === 0)}
-                                    >
+                                    <Button variant="outline" onClick={() => void saveBanner("")} disabled={bannerSaving || (!savedBannerUrl && bannerUrl.trim().length === 0)}>
                                         {t.settings.profile.banner.reset}
                                     </Button>
                                 </div>
-                                {bannerMessage && <p role="status" className="mt-2 text-sm text-success">{bannerMessage}</p>}
-                                {bannerError && <p role="alert" className="mt-2 text-sm text-destructive">{bannerError}</p>}
+                                {bannerMessage && (
+                                    <p role="status" className="mt-2 text-sm text-success">
+                                        {bannerMessage}
+                                    </p>
+                                )}
+                                {bannerError && (
+                                    <p role="alert" className="mt-2 text-sm text-destructive">
+                                        {bannerError}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </section>
 
                     <section id="settings-preferences" role="tabpanel" hidden={activeSection !== "preferences"} aria-labelledby="settings-tab-preferences">
-                        <h2 id="settings-preferences-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.preferences.title}</h2>
+                        <h2 id="settings-preferences-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                            <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                            {t.settings.preferences.title}
+                        </h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.preferences.description}</p>
 
-                        <div className="mt-5 divide-y divide-border/60">
-                            <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="mt-5 space-y-6">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium">{t.settings.preferences.language.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.preferences.language.description}</p>
@@ -355,7 +364,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 </Select>
                             </div>
 
-                            <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium">{t.settings.preferences.audioVolume.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.preferences.audioVolume.description}</p>
@@ -375,7 +384,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between gap-6 py-5">
+                            <div className="flex items-center justify-between gap-6">
                                 <div>
                                     <h3 className="font-medium">{t.settings.preferences.audioAutoplay.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.preferences.audioAutoplay.description}</p>
@@ -390,7 +399,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 />
                             </div>
 
-                            <div className="flex items-center justify-between gap-6 py-5">
+                            <div className="flex items-center justify-between gap-6">
                                 <div>
                                     <h3 className="font-medium">{t.settings.preferences.shortcuts.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.preferences.shortcuts.description}</p>
@@ -408,11 +417,14 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                     </section>
 
                     <section id="settings-account" role="tabpanel" hidden={activeSection !== "account"} aria-labelledby="settings-tab-account">
-                        <h2 id="settings-account-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.account.title}</h2>
+                        <h2 id="settings-account-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                            <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                            {t.settings.account.title}
+                        </h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.account.description}</p>
 
-                        <div className="mt-5 divide-y divide-border/60">
-                            <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="mt-5 space-y-6">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium">{t.settings.account.hanami.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.account.hanami.description}</p>
@@ -425,7 +437,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 </Button>
                             </div>
 
-                            <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium">{t.settings.account.signOut.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.account.signOut.description}</p>
@@ -441,7 +453,10 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                     <section id="settings-apiKeys" role="tabpanel" hidden={activeSection !== "apiKeys"} aria-labelledby="settings-tab-apiKeys">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                             <div>
-                                <h2 id="settings-apiKeys-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.apiKeys.title}</h2>
+                                <h2 id="settings-apiKeys-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                                    <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                                    {t.settings.apiKeys.title}
+                                </h2>
                                 <p className="mt-1 text-sm text-muted-foreground">{t.settings.apiKeys.description}</p>
                             </div>
                             <div className="text-sm text-muted-foreground">{t.settings.apiKeys.usage.replace("{count}", apiKeys.length.toString())}</div>
@@ -480,18 +495,19 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 </Button>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="divide-y divide-border/50">{renderKeyList()}</div>
-                            </div>
+                            <div className="space-y-4">{renderKeyList()}</div>
                         </div>
                     </section>
 
                     <section id="settings-privacy" role="tabpanel" hidden={activeSection !== "privacy"} aria-labelledby="settings-tab-privacy">
-                        <h2 id="settings-privacy-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.settings.privacy.title}</h2>
+                        <h2 id="settings-privacy-title" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                            <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                            {t.settings.privacy.title}
+                        </h2>
                         <p className="mt-1 text-sm text-muted-foreground">{t.settings.privacy.description}</p>
 
-                        <div className="mt-5 divide-y divide-border/60">
-                            <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="mt-5 space-y-6">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium">{t.settings.privacy.policy.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.privacy.policy.description}</p>
@@ -504,7 +520,7 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 </Button>
                             </div>
 
-                            <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium text-destructive">{t.settings.privacy.deletion.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.privacy.deletion.description}</p>
@@ -610,7 +626,11 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                         </Button>
                                     </div>
-                                    {copyError && <p role="alert" className="mt-2 text-sm text-destructive">{copyError}</p>}
+                                    {copyError && (
+                                        <p role="alert" className="mt-2 text-sm text-destructive">
+                                            {copyError}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </DialogDescription>

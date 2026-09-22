@@ -30,15 +30,27 @@ export default function ScorePpCard({ score, side, pp, isHigher, selected, revea
           : "border-border/60 hover:border-primary/50 hover:bg-muted/[0.08]";
 
     return (
-        <article className={`${disabled ? "" : "group"} relative isolate min-w-0 border transition-[border-color,background-color,opacity] duration-200 ${resultClass}`} aria-busy={disabled && !revealed ? true : undefined}>
+        <article
+            className={`${disabled ? "" : "group"} relative isolate min-w-0 border transition-[border-color,background-color,opacity] duration-200 ${resultClass}`}
+            aria-busy={disabled && !revealed ? true : undefined}
+        >
             <div className="flex h-11 items-center justify-between gap-3 px-3 lg:h-14 lg:px-4">
                 <div className="flex min-w-0 items-center gap-3">
                     <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-muted">
                         <Image src={score.player.avatarUrl || "/default-avatar.svg"} alt="" fill unoptimized sizes="32px" className="object-cover" />
                     </div>
                     <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-foreground sm:text-base">{score.player.username}</div>
-                        <div className="text-xs text-muted-foreground">{t.game.scorePp.globalRank} <span className="font-medium tabular-nums text-foreground/80">{rankLabel}</span></div>
+                        <a
+                            href={`https://osu.ppy.sh/users/${score.player.userId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="relative z-20 block truncate text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:text-base"
+                        >
+                            {score.player.username}
+                        </a>
+                        <div className="text-xs text-muted-foreground">
+                            {t.game.scorePp.globalRank} <span className="font-medium tabular-nums text-foreground/80">{rankLabel}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -92,11 +104,17 @@ export default function ScorePpCard({ score, side, pp, isHigher, selected, revea
                 </div>
                 <div className="min-w-0">
                     <dt className="text-xs text-muted-foreground">{t.game.scorePp.combo}</dt>
-                    <dd className="mt-1 text-xl font-semibold tracking-tight tabular-nums lg:text-2xl">{score.maxCombo.toLocaleString()}<span className="text-sm font-medium">x</span><span className="text-sm font-medium tracking-normal text-muted-foreground">/{score.beatmap.maxCombo?.toLocaleString() ?? "?"}x</span></dd>
+                    <dd className="mt-1 text-xl font-semibold tracking-tight tabular-nums lg:text-2xl">
+                        {score.maxCombo.toLocaleString()}
+                        <span className="text-sm font-medium">x</span>
+                        <span className="text-sm font-medium tracking-normal text-muted-foreground">/{score.beatmap.maxCombo?.toLocaleString() ?? "?"}x</span>
+                    </dd>
                 </div>
                 <div className="min-w-0">
                     <dt className="text-xs text-muted-foreground">{t.game.scorePp.miss}</dt>
-                    <dd className={`mt-1 text-xl font-semibold tracking-tight tabular-nums lg:text-2xl ${score.statistics.miss > 0 ? "text-destructive" : "text-foreground"}`}>{score.statistics.miss.toLocaleString()}</dd>
+                    <dd className={`mt-1 text-xl font-semibold tracking-tight tabular-nums lg:text-2xl ${score.statistics.miss > 0 ? "text-destructive" : "text-foreground"}`}>
+                        {score.statistics.miss.toLocaleString()}
+                    </dd>
                 </div>
             </dl>
 

@@ -18,17 +18,17 @@ export default function AboutClient() {
     return (
         <div className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
             <div>
-                <header className="border-b border-border/60 py-5 sm:py-6">
+                <header className="py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.about.title}</h1>
                 </header>
 
-                <div>
-                    <section className="py-5 sm:py-6">
+                <div className="space-y-4">
+                    <section className="rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.whatIs.title}</SectionHeading>
                         <p className="text-sm leading-6 text-muted-foreground">{t.about.whatIs.description1}</p>
                     </section>
 
-                    <section id="gameModes" className="scroll-mt-24 border-t border-border/60 py-5 sm:py-6">
+                    <section id="gameModes" className="scroll-mt-24 rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.gameModes.title}</SectionHeading>
                         <div className="grid gap-x-8 gap-y-5 md:grid-cols-3">
                             <div className="min-w-0">
@@ -58,7 +58,7 @@ export default function AboutClient() {
                         </div>
                     </section>
 
-                    <section id="howToPlay" className="scroll-mt-24 border-t border-border/60 py-5 sm:py-6">
+                    <section id="howToPlay" className="scroll-mt-24 rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.howToPlay.title}</SectionHeading>
                         <div className="space-y-3">
                             <div className="flex items-start gap-4">
@@ -85,7 +85,7 @@ export default function AboutClient() {
                         </div>
                     </section>
 
-                    <section id="scoringSystem" className="scroll-mt-24 border-t border-border/60 py-5 sm:py-6">
+                    <section id="scoringSystem" className="scroll-mt-24 rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.scoringSystem.title}</SectionHeading>
                         <div className="space-y-2">
                             <p className="text-sm leading-6 text-muted-foreground">
@@ -93,7 +93,7 @@ export default function AboutClient() {
                             </p>
                             <p className="text-sm leading-6 text-muted-foreground">{t.about.scoringSystem.gameInfo.time.replace("{seconds}", ROUND_TIME.toString())}</p>
                         </div>
-                        <div className="mt-5 border-t border-border/60 pt-5">
+                        <div className="mt-8">
                             <h3 className="mb-2 text-sm font-semibold">{t.about.howToPlay.steps[3].title}</h3>
                             <div className="space-y-2 text-sm leading-6 text-muted-foreground">
                                 <p>{t.about.scoringSystem.points.base.replace("{points}", BASE_POINTS.toString())}</p>
@@ -102,7 +102,7 @@ export default function AboutClient() {
                                 <p>{t.about.scoringSystem.points.skipPenalty.replace("{penalty}", SKIP_PENALTY.toString())}</p>
                             </div>
                         </div>
-                        <div className="mt-5 border-t border-border/60 pt-5">
+                        <div className="mt-8">
                             <h3 className="mb-2 text-sm font-semibold">{t.about.scoringSystem.pp.title}</h3>
                             <div className="space-y-2 text-sm leading-6 text-muted-foreground">
                                 <p>{t.about.scoringSystem.pp.description}</p>
@@ -111,7 +111,7 @@ export default function AboutClient() {
                         </div>
                     </section>
 
-                    <section className="border-t border-border/60 py-5 sm:py-6">
+                    <section className="rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.features.title}</SectionHeading>
                         <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                             <div className="min-w-0">
@@ -133,7 +133,7 @@ export default function AboutClient() {
                         </div>
                     </section>
 
-                    <section className="border-t border-border/60 py-5 sm:py-6">
+                    <section className="rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.documentation.title}</SectionHeading>
                         <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                             <div className="min-w-0">
@@ -158,7 +158,7 @@ export default function AboutClient() {
                         </div>
                     </section>
 
-                    <section id="credits" className="scroll-mt-24 border-t border-border/60 py-5 sm:py-6">
+                    <section id="credits" className="scroll-mt-24 rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.credits.title}</SectionHeading>
                         <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                             <div className="min-w-0">
@@ -204,7 +204,12 @@ export default function AboutClient() {
                                             <React.Fragment key={index}>
                                                 {part}
                                                 {index < array.length - 1 && (
-                                                    <a href="https://old.reddit.com/r/osugame/comments/14w0cs7/osuguesser_guess_osu_stuff/" className="text-primary underline" target="_blank" rel="noopener noreferrer">
+                                                    <a
+                                                        href="https://old.reddit.com/r/osugame/comments/14w0cs7/osuguesser_guess_osu_stuff/"
+                                                        className="text-primary underline"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
                                                         reddit thread
                                                     </a>
                                                 )}
@@ -224,7 +229,7 @@ export default function AboutClient() {
                         </div>
                     </section>
 
-                    <section id="contact" className="scroll-mt-24 border-t border-border/60 py-5 sm:py-6">
+                    <section id="contact" className="scroll-mt-24 rounded-xl bg-card/60 px-4 py-5 sm:px-6 sm:py-6">
                         <SectionHeading>{t.about.contact.title}</SectionHeading>
                         <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                             <div className="min-w-0">

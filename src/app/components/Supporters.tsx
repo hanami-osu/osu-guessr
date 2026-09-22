@@ -8,16 +8,19 @@ export function SupportersSection() {
     const { t } = useTranslationsContext();
 
     return (
-        <div className="page-container">
+        <section className="page-container pb-12">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.home.supporters.title}</h2>
+                <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                    <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                    {t.home.supporters.title}
+                </h2>
                 <SupportPageLink />
             </div>
 
             {supporters.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {supporters.map((supporter, index) => (
-                        <div key={index} className="border-t border-border py-4">
+                        <div key={index} className="rounded-xl bg-card/75 p-4">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="font-semibold">
                                     {supporter.url ? (
@@ -45,6 +48,6 @@ export function SupportersSection() {
                     <p>{t.home.supporters.beFirst}</p>
                 </div>
             )}
-        </div>
+        </section>
     );
 }

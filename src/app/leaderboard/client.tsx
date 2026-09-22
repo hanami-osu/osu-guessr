@@ -82,11 +82,14 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
     return (
         <div className="page-container pb-5 pt-3 md:pb-8 md:pt-4">
             <div>
-                <header className="border-b border-border/60 py-5 sm:py-6">
+                <header className="py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.leaderboard.title}</h1>
                     <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{t.leaderboard.description}</p>
+                </header>
 
-                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex flex-col gap-3 rounded-t-xl bg-card/60 px-4 pt-4 sm:flex-row sm:items-end sm:gap-6 sm:px-5">
+                    <div>
+                        <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.modeLabel}</p>
                         <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.modeLabel}>
                             {gameModes.map((mode) => (
                                 <button
@@ -105,9 +108,10 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                 </button>
                             ))}
                         </div>
+                    </div>
 
-                        <span aria-hidden="true" className="hidden h-5 w-px bg-border sm:block" />
-
+                    <div>
+                        <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.variantLabel}</p>
                         <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.variantLabel}>
                             {(["classic", "survival"] as const).map((variant) => (
                                 <button
@@ -127,45 +131,57 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                             ))}
                         </div>
                     </div>
-                </header>
+                </div>
 
-                <div className="py-4">
+                <div className="bg-card/60 pt-4">
                     {isLoading ? (
-                        <div className="border-y border-border/60 px-4 py-8 text-center text-sm text-muted-foreground" role="status">
+                        <div className="px-4 py-8 text-center text-sm text-muted-foreground" role="status">
                             {t.common.loading}
                         </div>
                     ) : error ? (
-                        <div className="border-y border-border/60 px-4 py-8 text-center text-sm text-destructive" role="alert">
+                        <div className="px-4 py-8 text-center text-sm text-destructive" role="alert">
                             {error}
                         </div>
                     ) : leaderboardData.length === 0 ? (
-                        <div className="border-y border-border/60 px-4 py-8 text-center text-sm text-muted-foreground" role="status">
+                        <div className="px-4 py-8 text-center text-sm text-muted-foreground" role="status">
                             {t.leaderboard.empty}
                         </div>
                     ) : (
-                        <div className="overflow-hidden border-y border-border/60">
+                        <div className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full table-fixed sm:table-auto">
                                     <caption className="sr-only">{t.leaderboard.title}</caption>
-                                    <thead className="bg-muted/35 text-[11px] font-semibold text-muted-foreground">
+                                    <thead className="text-[11px] font-semibold text-muted-foreground">
                                         <tr>
-                                            <th scope="col" className="w-14 px-3 py-2.5 text-left sm:w-auto sm:px-5">{t.leaderboard.table.rank}</th>
-                                            <th scope="col" className="px-2 py-2.5 text-left sm:px-5">{t.leaderboard.table.player}</th>
-                                            <th scope="col" className="w-24 px-3 py-2.5 text-right sm:w-auto sm:px-5">{t.leaderboard.table.profilePp}</th>
-                                            <th scope="col" className="hidden px-5 py-2.5 text-right lg:table-cell">{t.leaderboard.table.bestRunPp}</th>
+                                            <th scope="col" className="w-14 px-3 py-2.5 text-left sm:w-auto sm:px-5">
+                                                {t.leaderboard.table.rank}
+                                            </th>
+                                            <th scope="col" className="px-2 py-2.5 text-left sm:px-5">
+                                                {t.leaderboard.table.player}
+                                            </th>
+                                            <th scope="col" className="w-24 px-3 py-2.5 text-right sm:w-auto sm:px-5">
+                                                {t.leaderboard.table.profilePp}
+                                            </th>
+                                            <th scope="col" className="hidden px-5 py-2.5 text-right lg:table-cell">
+                                                {t.leaderboard.table.bestRunPp}
+                                            </th>
                                             {selectedVariant === "survival" && (
                                                 <th scope="col" className="hidden px-3 py-2.5 text-right sm:table-cell sm:px-5">
                                                     {t.leaderboard.table.bestStreak}
                                                 </th>
                                             )}
-                                            <th scope="col" className="hidden px-5 py-2.5 text-right md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
+                                            <th scope="col" className="hidden px-5 py-2.5 text-right md:table-cell">
+                                                {t.leaderboard.table.gamesPlayed}
+                                            </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-border/35">
+                                    <tbody className="divide-y divide-border/25">
                                         {leaderboardData.map((player, index) => (
                                             <tr key={player.bancho_id} className={`transition-colors hover:bg-muted/45 ${session?.user?.name === player.username ? "bg-primary/10" : ""}`}>
                                                 <td className="px-3 py-3 sm:px-5 sm:py-3.5">
-                                                    <span className={`${index + 1 <= 3 && page === 1 ? "rounded-md bg-primary/15 px-2 py-1 font-bold text-primary" : "text-muted-foreground"} font-mono text-sm tabular-nums`}>
+                                                    <span
+                                                        className={`${index + 1 <= 3 && page === 1 ? "rounded-md bg-primary/15 px-2 py-1 font-bold text-primary" : "text-muted-foreground"} font-mono text-sm tabular-nums`}
+                                                    >
                                                         {(page - 1) * pageSize + index + 1}
                                                     </span>
                                                 </td>
@@ -180,7 +196,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                                             className="size-8 rounded-xl ring-2 ring-transparent transition-all group-hover:ring-primary/20"
                                                         />
                                                         <div className="flex min-w-0 items-center gap-2">
-                                                            <span className="truncate text-sm font-semibold text-foreground">{player.username}</span>
+                                                            <span className="truncate text-sm font-semibold text-foreground group-hover:text-primary">{player.username}</span>
                                                             {player.badges &&
                                                                 player.badges.map((badge, badgeIndex) => (
                                                                     <Badge
@@ -220,7 +236,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                     )}
                 </div>
 
-                <div className="flex flex-col-reverse items-center justify-between gap-3 border-b border-border/50 py-3 sm:flex-row">
+                <div className="flex flex-col-reverse items-center justify-between gap-3 rounded-b-xl bg-card/60 px-4 py-4 sm:flex-row sm:px-5">
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">{t.leaderboard.pagination.pageSize}</span>
                         <Select
