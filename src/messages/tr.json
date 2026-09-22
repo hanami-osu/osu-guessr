@@ -12,7 +12,8 @@
             "learnMore": "Daha Fazla Bilgi",
             "artCredit": "Sanatçı: {artist_name}",
             "developerCredit": "Created by yorunoken",
-            "discordInvite": "Join our Discord"
+            "discordInvite": "Join our Discord",
+            "multiplayer": "Çok Oyunculu"
         },
         "statistics": {
             "title": "Oyun İstatistikleri",
@@ -37,10 +38,10 @@
             "title": "Son Güncellemeler"
         },
         "announcements": {
-            "title": "Latest announcements",
-            "latestLabel": "Latest Announcement",
-            "previous": "Previous announcements:",
-            "viewAll": "View all announcements"
+            "title": "Son duyurular",
+            "latestLabel": "Son Duyuru",
+            "previous": "Önceki duyurular:",
+            "viewAll": "Tüm duyuruları görüntüle"
         }
     },
     "common": {
@@ -52,7 +53,7 @@
         "delete": "Sil",
         "create": "Oluştur",
         "save": "Kaydet",
-        "support": "Support"
+        "support": "Destek"
     },
     "about": {
         "title": "{osu_guessr} Hakkında",
@@ -267,7 +268,8 @@
             "actions": {
                 "startGame": "Oyunu Başlat",
                 "backToHome": "Ana Sayfaya Dön"
-            }
+            },
+            "variantLabel": "Oyun varyantı"
         },
         "input": {
             "placeholder": "Şarkı adı...",
@@ -276,10 +278,15 @@
             "title": "Tahmininizi girin:",
             "yourGuess": "Tahmininiz:",
             "submit": "Gönder",
-            "skip": "Atla"
+            "skip": "Atla",
+            "suggestions": "Tahmin önerileri",
+            "suggestionsAvailable": "{count} öneri mevcut.",
+            "suggestionSelected": "{suggestion} seçildi."
         },
         "status": {
-            "loading": "Sonraki tur yükleniyor..."
+            "loading": "Sonraki tur yükleniyor...",
+            "waitingForPlayers": "Oyuncular bekleniyor ({submitted}/{total})",
+            "readyPlayers": "{ready}/{total} hazır"
         },
         "modes": {
             "classic": {
@@ -360,14 +367,16 @@
         },
         "audio": {
             "instructions": "Dinle ve şarkının adını tahmin et.",
-            "browserNotSupported": "Your browser does not support the audio element."
+            "browserNotSupported": "Your browser does not support the audio element.",
+            "loadFailed": "Ses yüklenemedi veya oynatılamadı.",
+            "retry": "Sesi tekrar dene"
         },
         "errors": {
             "startFailed": "Oyun başlatılamadı",
             "actionFailed": "Oyun işlemi tamamlanamadı"
         },
         "scorePp": {
-            "question": "Hangi osu! skoru daha fazla PP değerinde?",
+            "question": "Hangi osu! skoru daha fazla pp değerinde?",
             "helper": "Seçimini kilitlemek için iki taraftan birine tıkla",
             "globalRank": "Global sıralama",
             "chooseScore": "Skor {side} seç",
@@ -376,11 +385,11 @@
             "combo": "Kombo",
             "score": "Skor",
             "miss": "Kaçırma",
-            "pp": "PP",
+            "pp": "pp",
             "unranked": "Derecelendirilmemiş",
             "correct": "Doğru",
             "wrong": "Yanlış",
-            "higherResult": "Skor {side} daha fazla PP değerindeydi",
+            "higherResult": "Skor {side} daha fazla pp değerindeydi",
             "timeUp": "Süre doldu",
             "loading": "Skor çifti yükleniyor...",
             "unavailable": "Skor pp kullanılamıyor",
@@ -416,8 +425,22 @@
                 "reviewUnavailable": "Bu tur için karşılaştırma ayrıntıları kullanılamıyor."
             }
         },
-        "result": {},
-        "media": {}
+        "result": {
+            "correct": "Doğru Tahmin!",
+            "wrong": "Yanlış Tahmin!",
+            "skipped": "Atlandı",
+            "timeout": "Süre Doldu!"
+        },
+        "media": {
+            "by": "tarafından",
+            "mappedBy": "Mapleyen",
+            "viewBeatmap": "Beatmap'i Görüntüle",
+            "skinName": "Skin Adı: {name}",
+            "viewSkin": "Skin'i Görüntüle",
+            "unknown": "Bilinmiyor",
+            "backgroundAlt": "Beatmap arka planı",
+            "skinAlt": "Skin ekran görüntüsü"
+        }
     },
     "leaderboard": {
         "title": "Sıralama",
@@ -445,7 +468,13 @@
         },
         "empty": "Bu oyun modu ve varyant için oyuncu bulunamadı.",
         "loading": "Yükleniyor...",
-        "description": "Seçili oyun modu ve varyantın pp değerine göre sıralanır."
+        "description": "Seçili oyun modu ve varyantın pp değerine göre sıralanır.",
+        "pagination": {
+            "pageSize": "Sayfa boyutu",
+            "previous": "Önceki",
+            "page": "Sayfa {page}",
+            "next": "Sonraki"
+        }
     },
     "user": {
         "profile": {
@@ -508,7 +537,15 @@
             "shortcut": "⌘K",
             "noResults": "Kullanıcı bulunamadı",
             "startTyping": "Aramaya başlamak için yazmaya başla",
-            "searching": "Aranıyor..."
+            "searching": "Aranıyor...",
+            "failed": "Arama başarısız. Lütfen tekrar deneyin.",
+            "results": "Kullanıcı arama sonuçları",
+            "resultsFound": "{count} kullanıcı bulundu",
+            "previous": "Önceki",
+            "next": "Sonraki",
+            "previousPage": "Önceki sayfa",
+            "nextPage": "Sonraki sayfa",
+            "page": "Sayfa {page}/{total}"
         }
     },
     "settings": {
@@ -580,7 +617,8 @@
                 "delete": "Anahtarı Sil",
                 "viewDocs": "API Dokümantasyonunu Görüntüle",
                 "copy": "Copy Key",
-                "close": "Close"
+                "close": "Close",
+                "retry": "Tekrar Dene"
             },
             "dialog": {
                 "create": {
@@ -618,7 +656,8 @@
                 "createFailed": "Failed to create API key",
                 "deleteFailed": "Failed to delete API key",
                 "loadFailed": "Failed to load API keys",
-                "maxKeysReached": "Maximum number of API keys (5) reached"
+                "maxKeysReached": "Maximum number of API keys (5) reached",
+                "copyFailed": "API anahtarı kopyalanamadı"
             }
         },
         "privacy": {
@@ -676,7 +715,8 @@
                 "signIn": "Hanami ile Giriş Yap",
                 "signOut": "Çıkış Yap",
                 "viewProfile": "Profili Görüntüle",
-                "admin": "Admin"
+                "admin": "Admin",
+                "announcements": "Duyurular"
             },
             "accessibility": {
                 "openMenu": "Open navigation menu",
@@ -687,10 +727,10 @@
             }
         },
         "footer": {
-            "madeWith": "Geliştiren: {author}",
-            "about": "About",
-            "privacy": "Privacy Policy",
-            "tos": "Terms of Service"
+            "madeWith": "{author} tarafından",
+            "about": "Hakkında",
+            "privacy": "Gizlilik Politikası",
+            "tos": "Hizmet Şartları"
         },
         "report": {
             "button": "Sorun Bildir",
@@ -746,7 +786,9 @@
         "exitGame": {
             "classic": "Çıkılsın mı? Tüm turları bitirmeden bu koşu kaydedilmez.",
             "classicComplete": "Çıkılsın mı? Koşun ve pp'n kaydedilecek.",
-            "death": "Bu koşu şimdi bitirilsin mi?"
+            "death": "Bu koşu şimdi bitirilsin mi?",
+            "title": "Oyundan çıkılsın mı?",
+            "confirm": "Oyundan çık"
         }
     },
     "notifications": {
@@ -882,6 +924,8 @@
         }
     },
     "lockdown": {
-        "description": "Site kilitliyken yalnızca site sahibi erişebilir."
+        "description": "Site kilitliyken yalnızca site sahibi erişebilir.",
+        "title": "Site Kilitli",
+        "until": "Site {date} tarihine kadar geçici olarak kilitli."
     }
 }

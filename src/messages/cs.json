@@ -12,7 +12,8 @@
             "learnMore": "Zjistit více",
             "artCredit": "Dílo od {artist_name}",
             "developerCredit": "Vytvořil/a yorunoken",
-            "discordInvite": "Přidejte se na náš Discord"
+            "discordInvite": "Přidejte se na náš Discord",
+            "multiplayer": "Hra pro více hráčů"
         },
         "statistics": {
             "title": "Statistiky hry",
@@ -37,10 +38,10 @@
             "title": "Novinky"
         },
         "announcements": {
-            "title": "Latest announcements",
-            "latestLabel": "Latest Announcement",
-            "previous": "Previous announcements:",
-            "viewAll": "View all announcements"
+            "title": "Nejnovější oznámení",
+            "latestLabel": "Nejnovější oznámení",
+            "previous": "Předchozí oznámení:",
+            "viewAll": "Zobrazit všechna oznámení"
         }
     },
     "common": {
@@ -52,7 +53,7 @@
         "delete": "Smazat",
         "create": "Vytvořit",
         "save": "Uložit",
-        "support": "Support"
+        "support": "Podpora"
     },
     "about": {
         "title": "O {osu_guessr}",
@@ -267,7 +268,8 @@
             "actions": {
                 "startGame": "Začít hru",
                 "backToHome": "Domů"
-            }
+            },
+            "variantLabel": "Varianta hry"
         },
         "modes": {
             "classic": {
@@ -280,7 +282,9 @@
             }
         },
         "status": {
-            "loading": "Načítání dalšího kola..."
+            "loading": "Načítání dalšího kola...",
+            "waitingForPlayers": "Čekání na hráče ({submitted}/{total})",
+            "readyPlayers": "{ready}/{total} připraveno"
         },
         "input": {
             "placeholder": "Název písně...",
@@ -289,7 +293,10 @@
             "title": "Zadejte odpověď:",
             "yourGuess": "Váš tip:",
             "submit": "Odeslat",
-            "skip": "Přeskočit"
+            "skip": "Přeskočit",
+            "suggestions": "Návrhy tipů",
+            "suggestionsAvailable": "K dispozici je {count} návrhů.",
+            "suggestionSelected": "Vybráno {suggestion}."
         },
         "header": {
             "title": "{mode} Guessr",
@@ -360,14 +367,16 @@
         },
         "audio": {
             "instructions": "Poslouchejte a hádejte název písně.",
-            "browserNotSupported": "Your browser does not support the audio element."
+            "browserNotSupported": "Your browser does not support the audio element.",
+            "loadFailed": "Zvuk se nepodařilo načíst nebo přehrát.",
+            "retry": "Zkusit zvuk znovu"
         },
         "errors": {
             "startFailed": "Hru se nepodařilo spustit",
             "actionFailed": "Akci hry se nepodařilo dokončit"
         },
         "scorePp": {
-            "question": "Které skóre osu! má vyšší PP?",
+            "question": "Které skóre osu! má vyšší pp?",
             "helper": "Kliknutím na jednu stranu uzamknete svou volbu",
             "globalRank": "Globální pořadí",
             "chooseScore": "Vybrat skóre {side}",
@@ -376,11 +385,11 @@
             "combo": "Kombo",
             "score": "Skóre",
             "miss": "Chyby",
-            "pp": "PP",
+            "pp": "pp",
             "unranked": "Bez pořadí",
             "correct": "Správně",
             "wrong": "Špatně",
-            "higherResult": "Skóre {side} mělo více PP",
+            "higherResult": "Skóre {side} mělo více pp",
             "timeUp": "Čas vypršel",
             "loading": "Načítání dvojice skóre...",
             "unavailable": "Skóre pp není k dispozici",
@@ -416,8 +425,22 @@
                 "reviewUnavailable": "Podrobnosti porovnání pro toto kolo nejsou k dispozici."
             }
         },
-        "result": {},
-        "media": {}
+        "result": {
+            "correct": "Správný tip!",
+            "wrong": "Špatný tip!",
+            "skipped": "Přeskočeno",
+            "timeout": "Čas vypršel!"
+        },
+        "media": {
+            "by": "od",
+            "mappedBy": "Mapoval",
+            "viewBeatmap": "Zobrazit beatmapu",
+            "skinName": "Název skinu: {name}",
+            "viewSkin": "Zobrazit skin",
+            "unknown": "Neznámé",
+            "backgroundAlt": "Pozadí beatmapy",
+            "skinAlt": "Snímek skinu"
+        }
     },
     "leaderboard": {
         "title": "Žebříček",
@@ -445,7 +468,13 @@
         },
         "empty": "Pro tento herní režim a variantu nebyl nalezen žádný hráč.",
         "loading": "Načítání...",
-        "description": "Pořadí podle pp zvoleného herního režimu a varianty."
+        "description": "Pořadí podle pp zvoleného herního režimu a varianty.",
+        "pagination": {
+            "pageSize": "Velikost stránky",
+            "previous": "Předchozí",
+            "page": "Stránka {page}",
+            "next": "Další"
+        }
     },
     "user": {
         "profile": {
@@ -508,7 +537,15 @@
             "shortcut": "⌘K",
             "noResults": "Uživatelé nebyli nalezeni",
             "startTyping": "Začněte psát pro vyhledání uživatelů",
-            "searching": "Vyhledávání..."
+            "searching": "Vyhledávání...",
+            "failed": "Vyhledávání se nezdařilo. Zkuste to znovu.",
+            "results": "Výsledky hledání uživatelů",
+            "resultsFound": "Nalezeno uživatelů: {count}",
+            "previous": "Předchozí",
+            "next": "Další",
+            "previousPage": "Předchozí stránka",
+            "nextPage": "Další stránka",
+            "page": "Stránka {page} z {total}"
         }
     },
     "settings": {
@@ -580,7 +617,8 @@
                 "delete": "Smazat klíč",
                 "viewDocs": "Otevřít dokumentaci API",
                 "copy": "Copy Key",
-                "close": "Close"
+                "close": "Close",
+                "retry": "Zkusit znovu"
             },
             "dialog": {
                 "create": {
@@ -618,7 +656,8 @@
                 "createFailed": "Failed to create API key",
                 "deleteFailed": "Failed to delete API key",
                 "loadFailed": "Failed to load API keys",
-                "maxKeysReached": "Maximum number of API keys (5) reached"
+                "maxKeysReached": "Maximum number of API keys (5) reached",
+                "copyFailed": "API klíč se nepodařilo zkopírovat"
             }
         },
         "privacy": {
@@ -676,7 +715,8 @@
                 "signIn": "Přihlásit se přes Hanami",
                 "signOut": "Odhlásit se",
                 "viewProfile": "Zobrazit profil",
-                "admin": "Admin"
+                "admin": "Admin",
+                "announcements": "Oznámení"
             },
             "accessibility": {
                 "openMenu": "Open navigation menu",
@@ -687,10 +727,10 @@
             }
         },
         "footer": {
-            "madeWith": "Autor: {author}",
-            "about": "About",
-            "privacy": "Privacy Policy",
-            "tos": "Terms of Service"
+            "madeWith": "Od {author}",
+            "about": "O projektu",
+            "privacy": "Zásady ochrany soukromí",
+            "tos": "Podmínky služby"
         },
         "report": {
             "button": "Nahlásit problém",
@@ -746,7 +786,9 @@
         "exitGame": {
             "classic": "Odejít? Tento běh se uloží až po dokončení všech kol.",
             "classicComplete": "Ukončit? Váš běh a pp budou uloženy.",
-            "death": "Ukončit tento běh nyní?"
+            "death": "Ukončit tento běh nyní?",
+            "title": "Opustit hru?",
+            "confirm": "Opustit hru"
         }
     },
     "notifications": {
@@ -882,6 +924,8 @@
         }
     },
     "lockdown": {
-        "description": "Během uzamčení má přístup pouze vlastník webu."
+        "description": "Během uzamčení má přístup pouze vlastník webu.",
+        "title": "Web je uzamčen",
+        "until": "Web je dočasně uzamčen do {date}."
     }
 }

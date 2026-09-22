@@ -12,7 +12,8 @@
             "learnMore": "Learn More",
             "artCredit": "Art by {artist_name}",
             "developerCredit": "Created by yorunoken",
-            "discordInvite": "Join our Discord"
+            "discordInvite": "Join our Discord",
+            "multiplayer": "Multiplayer"
         },
         "statistics": {
             "title": "Game Statistics",
@@ -391,7 +392,8 @@
             "actions": {
                 "startGame": "Start Game",
                 "backToHome": "Back to Home"
-            }
+            },
+            "variantLabel": "Game variant"
         },
         "modes": {
             "classic": {
@@ -498,7 +500,7 @@
             "retry": "Retry audio"
         },
         "scorePp": {
-            "question": "Which osu! score is worth more PP?",
+            "question": "Which osu! score is worth more pp?",
             "helper": "Click either side to lock your answer",
             "globalRank": "Global rank",
             "chooseScore": "Choose Score {side}",
@@ -507,11 +509,11 @@
             "combo": "Combo",
             "score": "Score",
             "miss": "Miss",
-            "pp": "PP",
+            "pp": "pp",
             "unranked": "Unranked",
             "correct": "Correct",
             "wrong": "Wrong",
-            "higherResult": "Score {side} had more PP",
+            "higherResult": "Score {side} had more pp",
             "timeUp": "Time's up",
             "loading": "Loading score pair...",
             "unavailable": "Score pp unavailable",
@@ -590,7 +592,13 @@
         },
         "empty": "No players found for this game mode and variant.",
         "loading": "Loading...",
-        "description": "Ranked by pp for the selected game mode and variant."
+        "description": "Ranked by pp for the selected game mode and variant.",
+        "pagination": {
+            "pageSize": "Page size",
+            "previous": "Previous",
+            "page": "Page {page}",
+            "next": "Next"
+        }
     },
     "user": {
         "profile": {
@@ -608,7 +616,7 @@
                 "totalGames": "Total Games",
                 "globalRank": "Mode Rank",
                 "profilePp": "Overall pp",
-                "playtime": "Total Response Time",
+                "playtime": "Total answering time",
                 "rankHistory": "Rank history"
             },
             "noPlays": "No plays yet",
@@ -838,7 +846,8 @@
                 "signIn": "Sign in with Hanami",
                 "signOut": "Sign out",
                 "viewProfile": "View Profile",
-                "admin": "Admin"
+                "admin": "Admin",
+                "announcements": "Announcements"
             }
         },
         "footer": {
@@ -882,7 +891,7 @@
         "404": {
             "title": "404 - Page Not Found",
             "description": "This page does not exist.",
-            "reportIssue": "If you believe this is an error, please report it"
+            "reportIssue": "If you believe this is an error, please report it on"
         },
         "game": {
             "sessionExpired": "Session expired. Sign in again.",
@@ -901,7 +910,9 @@
         "exitGame": {
             "classic": "Exit? This run will not be saved until you finish all rounds.",
             "classicComplete": "Exit? Your run and pp will be saved.",
-            "death": "End this run now?"
+            "death": "End this run now?",
+            "title": "Leave game?",
+            "confirm": "Leave game"
         }
     },
     "notifications": {

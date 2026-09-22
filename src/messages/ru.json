@@ -12,7 +12,8 @@
             "learnMore": "Узнать больше",
             "artCredit": "Арт создан {artist_name}",
             "developerCredit": "Created by yorunoken",
-            "discordInvite": "Join our Discord"
+            "discordInvite": "Join our Discord",
+            "multiplayer": "Мультиплеер"
         },
         "statistics": {
             "title": "Игровые статистики",
@@ -37,10 +38,10 @@
             "title": "Последние обновления"
         },
         "announcements": {
-            "title": "Latest announcements",
-            "latestLabel": "Latest Announcement",
-            "previous": "Previous announcements:",
-            "viewAll": "View all announcements"
+            "title": "Последние объявления",
+            "latestLabel": "Последнее объявление",
+            "previous": "Предыдущие объявления:",
+            "viewAll": "Все объявления"
         }
     },
     "common": {
@@ -52,7 +53,7 @@
         "delete": "Удалить",
         "create": "Создать",
         "save": "Сохранить",
-        "support": "Support"
+        "support": "Поддержка"
     },
     "about": {
         "title": "Об игре {osu_guessr}",
@@ -267,7 +268,8 @@
             "actions": {
                 "startGame": "Начать игру",
                 "backToHome": "На главную"
-            }
+            },
+            "variantLabel": "Вариант игры"
         },
         "modes": {
             "classic": {
@@ -280,7 +282,9 @@
             }
         },
         "status": {
-            "loading": "Загружаем следующий раунд…"
+            "loading": "Загружаем следующий раунд…",
+            "waitingForPlayers": "Ожидание игроков ({submitted}/{total})",
+            "readyPlayers": "Готовы: {ready}/{total}"
         },
         "input": {
             "placeholder": "Название песни…",
@@ -289,7 +293,10 @@
             "title": "Введите ваше предположение:",
             "yourGuess": "Ваш ответ:",
             "submit": "Отправить",
-            "skip": "Пропустить"
+            "skip": "Пропустить",
+            "suggestions": "Подсказки для ответа",
+            "suggestionsAvailable": "Доступно подсказок: {count}.",
+            "suggestionSelected": "Выбрано: {suggestion}."
         },
         "header": {
             "title": "{mode} Guessr",
@@ -360,14 +367,16 @@
         },
         "audio": {
             "instructions": "Послушай и угадай название песни.",
-            "browserNotSupported": "Your browser does not support the audio element."
+            "browserNotSupported": "Your browser does not support the audio element.",
+            "loadFailed": "Не удалось загрузить или воспроизвести аудио.",
+            "retry": "Повторить аудио"
         },
         "errors": {
             "startFailed": "Не удалось начать игру",
             "actionFailed": "Не удалось выполнить действие игры"
         },
         "scorePp": {
-            "question": "Какой счёт osu! стоит больше PP?",
+            "question": "Какой счёт osu! стоит больше pp?",
             "helper": "Нажми на любую сторону, чтобы подтвердить выбор",
             "globalRank": "Мировой рейтинг",
             "chooseScore": "Выбрать счёт {side}",
@@ -376,11 +385,11 @@
             "combo": "Комбо",
             "score": "Счёт",
             "miss": "Промахи",
-            "pp": "PP",
+            "pp": "pp",
             "unranked": "Без рейтинга",
             "correct": "Верно",
             "wrong": "Неверно",
-            "higherResult": "Счёт {side} имел больше PP",
+            "higherResult": "Счёт {side} имел больше pp",
             "timeUp": "Время вышло",
             "loading": "Загрузка пары счетов...",
             "unavailable": "Счёт pp недоступен",
@@ -416,8 +425,22 @@
                 "reviewUnavailable": "Подробности сравнения для этого раунда недоступны."
             }
         },
-        "result": {},
-        "media": {}
+        "result": {
+            "correct": "Верно!",
+            "wrong": "Неверно!",
+            "skipped": "Пропущено",
+            "timeout": "Время вышло!"
+        },
+        "media": {
+            "by": "от",
+            "mappedBy": "Маппер",
+            "viewBeatmap": "Открыть битмап",
+            "skinName": "Название скина: {name}",
+            "viewSkin": "Открыть скин",
+            "unknown": "Неизвестно",
+            "backgroundAlt": "Фон битмапа",
+            "skinAlt": "Скриншот скина"
+        }
     },
     "leaderboard": {
         "title": "Лидерборд",
@@ -445,7 +468,13 @@
         },
         "empty": "Не найдено игроков для этого режима игры и варианта.",
         "loading": "Загрузка...",
-        "description": "Рейтинг по pp выбранного режима игры и варианта."
+        "description": "Рейтинг по pp выбранного режима игры и варианта.",
+        "pagination": {
+            "pageSize": "Размер страницы",
+            "previous": "Назад",
+            "page": "Страница {page}",
+            "next": "Далее"
+        }
     },
     "user": {
         "profile": {
@@ -508,7 +537,15 @@
             "shortcut": "⌘K",
             "noResults": "Пользователей не найдено",
             "startTyping": "Начните печатать для поиска игроков",
-            "searching": "Ищем..."
+            "searching": "Ищем...",
+            "failed": "Поиск не удался. Попробуйте ещё раз.",
+            "results": "Результаты поиска пользователей",
+            "resultsFound": "Найдено пользователей: {count}",
+            "previous": "Назад",
+            "next": "Далее",
+            "previousPage": "Предыдущая страница",
+            "nextPage": "Следующая страница",
+            "page": "Страница {page} из {total}"
         }
     },
     "settings": {
@@ -580,7 +617,8 @@
                 "delete": "Удалить ключ",
                 "viewDocs": "Посетить документацию по API",
                 "copy": "Copy Key",
-                "close": "Close"
+                "close": "Close",
+                "retry": "Попробовать снова"
             },
             "dialog": {
                 "create": {
@@ -618,7 +656,8 @@
                 "createFailed": "Failed to create API key",
                 "deleteFailed": "Failed to delete API key",
                 "loadFailed": "Failed to load API keys",
-                "maxKeysReached": "Maximum number of API keys (5) reached"
+                "maxKeysReached": "Maximum number of API keys (5) reached",
+                "copyFailed": "Не удалось скопировать API-ключ"
             }
         },
         "privacy": {
@@ -662,7 +701,8 @@
                 "signIn": "Войти через Hanami",
                 "signOut": "Выйти",
                 "viewProfile": "Посмотреть профиль",
-                "admin": "Admin"
+                "admin": "Admin",
+                "announcements": "Объявления"
             },
             "accessibility": {
                 "openMenu": "Open navigation menu",
@@ -674,9 +714,9 @@
         },
         "footer": {
             "madeWith": "Автор: {author}",
-            "about": "About",
-            "privacy": "Privacy Policy",
-            "tos": "Terms of Service"
+            "about": "О проекте",
+            "privacy": "Политика конфиденциальности",
+            "tos": "Условия использования"
         },
         "report": {
             "button": "Сообщить о проблеме",
@@ -746,7 +786,9 @@
         "exitGame": {
             "classic": "Выйти? Эта игра сохранится только после завершения всех раундов.",
             "classicComplete": "Выйти? Ваша игра и pp будут сохранены.",
-            "death": "Завершить эту игру сейчас?"
+            "death": "Завершить эту игру сейчас?",
+            "title": "Выйти из игры?",
+            "confirm": "Выйти из игры"
         }
     },
     "notifications": {
@@ -882,6 +924,8 @@
         }
     },
     "lockdown": {
-        "description": "Пока сайт заблокирован, доступ есть только у владельца."
+        "description": "Пока сайт заблокирован, доступ есть только у владельца.",
+        "title": "Сайт заблокирован",
+        "until": "Сайт временно заблокирован до {date}."
     }
 }

@@ -12,7 +12,8 @@
             "learnMore": "Dowiedz się więcej",
             "artCredit": "Grafika autorstwa: {artist_name}",
             "developerCredit": "Stworzone przez: yorunoken",
-            "discordInvite": "Dołącz do naszego Discorda"
+            "discordInvite": "Dołącz do naszego Discorda",
+            "multiplayer": "Tryb wieloosobowy"
         },
         "statistics": {
             "title": "Statystyki Gry",
@@ -37,10 +38,10 @@
             "title": "Najnowsze Aktualizacje"
         },
         "announcements": {
-            "title": "Latest announcements",
-            "latestLabel": "Latest Announcement",
-            "previous": "Previous announcements:",
-            "viewAll": "View all announcements"
+            "title": "Najnowsze ogłoszenia",
+            "latestLabel": "Najnowsze ogłoszenie",
+            "previous": "Poprzednie ogłoszenia:",
+            "viewAll": "Zobacz wszystkie ogłoszenia"
         }
     },
     "privacy": {
@@ -118,7 +119,7 @@
         "delete": "Usuń",
         "create": "Stwórz",
         "save": "Zapisz",
-        "support": "Support"
+        "support": "Wsparcie"
     },
     "about": {
         "title": "O Grze {osu_guessr}",
@@ -333,7 +334,8 @@
             "actions": {
                 "startGame": "Rozpocznij Grę",
                 "backToHome": "Wróć na Stronę Główną"
-            }
+            },
+            "variantLabel": "Wariant gry"
         },
         "modes": {
             "classic": {
@@ -346,7 +348,9 @@
             }
         },
         "status": {
-            "loading": "Ładowanie następnej rundy..."
+            "loading": "Ładowanie następnej rundy...",
+            "waitingForPlayers": "Oczekiwanie na graczy ({submitted}/{total})",
+            "readyPlayers": "{ready}/{total} gotowych"
         },
         "input": {
             "placeholder": "Tytuł piosenki...",
@@ -355,7 +359,10 @@
             "title": "Wpisz odpowiedź:",
             "yourGuess": "Twój typ:",
             "submit": "Potwierdź",
-            "skip": "Pomiń"
+            "skip": "Pomiń",
+            "suggestions": "Podpowiedzi odpowiedzi",
+            "suggestionsAvailable": "Dostępnych podpowiedzi: {count}.",
+            "suggestionSelected": "Wybrano {suggestion}."
         },
         "header": {
             "title": "{mode} Guessr",
@@ -426,14 +433,16 @@
         },
         "audio": {
             "instructions": "Posłuchaj i zgadnij tytuł utworu.",
-            "browserNotSupported": "Your browser does not support the audio element."
+            "browserNotSupported": "Your browser does not support the audio element.",
+            "loadFailed": "Nie udało się wczytać lub odtworzyć dźwięku.",
+            "retry": "Ponów odtwarzanie"
         },
         "errors": {
             "startFailed": "Nie udało się rozpocząć gry",
             "actionFailed": "Nie udało się wykonać akcji gry"
         },
         "scorePp": {
-            "question": "Który wynik osu! jest wart więcej PP?",
+            "question": "Który wynik osu! jest wart więcej pp?",
             "helper": "Kliknij dowolną stronę, aby zatwierdzić wybór",
             "globalRank": "Ranking globalny",
             "chooseScore": "Wybierz wynik {side}",
@@ -442,11 +451,11 @@
             "combo": "Seria",
             "score": "Wynik",
             "miss": "Pudła",
-            "pp": "PP",
+            "pp": "pp",
             "unranked": "Brak rankingu",
             "correct": "Dobrze",
             "wrong": "Źle",
-            "higherResult": "Wynik {side} miał więcej PP",
+            "higherResult": "Wynik {side} miał więcej pp",
             "timeUp": "Czas minął",
             "loading": "Wczytywanie pary wyników...",
             "unavailable": "Wynik pp jest niedostępny",
@@ -482,8 +491,22 @@
                 "reviewUnavailable": "Szczegóły porównania dla tej rundy są niedostępne."
             }
         },
-        "result": {},
-        "media": {}
+        "result": {
+            "correct": "Poprawna odpowiedź!",
+            "wrong": "Błędna odpowiedź!",
+            "skipped": "Pominięto",
+            "timeout": "Czas minął!"
+        },
+        "media": {
+            "by": "przez",
+            "mappedBy": "Mapper",
+            "viewBeatmap": "Zobacz beatmapę",
+            "skinName": "Nazwa skina: {name}",
+            "viewSkin": "Zobacz skin",
+            "unknown": "Nieznane",
+            "backgroundAlt": "Tło beatmapy",
+            "skinAlt": "Zrzut ekranu skina"
+        }
     },
     "leaderboard": {
         "title": "Ranking",
@@ -511,7 +534,13 @@
         },
         "empty": "Nie znaleziono graczy dla tego trybu gry i wariantu.",
         "loading": "Ładowanie...",
-        "description": "Ranking według pp wybranego trybu gry i wariantu."
+        "description": "Ranking według pp wybranego trybu gry i wariantu.",
+        "pagination": {
+            "pageSize": "Rozmiar strony",
+            "previous": "Poprzednia",
+            "page": "Strona {page}",
+            "next": "Następna"
+        }
     },
     "user": {
         "profile": {
@@ -574,7 +603,15 @@
             "shortcut": "⌘K",
             "noResults": "Nie znaleziono użytkowników",
             "startTyping": "Zacznij pisać, aby znaleźć użytkowników",
-            "searching": "Szukanie..."
+            "searching": "Szukanie...",
+            "failed": "Wyszukiwanie nie powiodło się. Spróbuj ponownie.",
+            "results": "Wyniki wyszukiwania użytkowników",
+            "resultsFound": "Znaleziono użytkowników: {count}",
+            "previous": "Poprzednia",
+            "next": "Następna",
+            "previousPage": "Poprzednia strona",
+            "nextPage": "Następna strona",
+            "page": "Strona {page} z {total}"
         }
     },
     "settings": {
@@ -646,7 +683,8 @@
                 "delete": "Usuń Klucz",
                 "viewDocs": "Zobacz Dokumentację API",
                 "copy": "Copy Key",
-                "close": "Close"
+                "close": "Close",
+                "retry": "Spróbuj ponownie"
             },
             "dialog": {
                 "create": {
@@ -684,7 +722,8 @@
                 "createFailed": "Failed to create API key",
                 "deleteFailed": "Failed to delete API key",
                 "loadFailed": "Failed to load API keys",
-                "maxKeysReached": "Maximum number of API keys (5) reached"
+                "maxKeysReached": "Maximum number of API keys (5) reached",
+                "copyFailed": "Nie udało się skopiować klucza API"
             }
         },
         "privacy": {
@@ -742,7 +781,8 @@
                 "signIn": "Zaloguj się przez Hanami",
                 "signOut": "Wyloguj się",
                 "viewProfile": "Zobacz Profil",
-                "admin": "Admin"
+                "admin": "Admin",
+                "announcements": "Ogłoszenia"
             },
             "accessibility": {
                 "openMenu": "Open navigation menu",
@@ -754,9 +794,9 @@
         },
         "footer": {
             "madeWith": "Autor: {author}",
-            "about": "O Grze",
-            "privacy": "Polityka Prywatności",
-            "tos": "Terms of Service"
+            "about": "O nas",
+            "privacy": "Polityka prywatności",
+            "tos": "Warunki korzystania"
         },
         "report": {
             "button": "Zgłoś Problem",
@@ -812,7 +852,9 @@
         "exitGame": {
             "classic": "Wyjść? Ta rozgrywka zostanie zapisana dopiero po ukończeniu wszystkich rund.",
             "classicComplete": "Wyjść? Twoja rozgrywka i pp zostaną zapisane.",
-            "death": "Zakończyć tę rozgrywkę teraz?"
+            "death": "Zakończyć tę rozgrywkę teraz?",
+            "title": "Opuścić grę?",
+            "confirm": "Opuść grę"
         }
     },
     "notifications": {
@@ -882,6 +924,8 @@
         }
     },
     "lockdown": {
-        "description": "Gdy strona jest zablokowana, dostęp ma tylko właściciel."
+        "description": "Gdy strona jest zablokowana, dostęp ma tylko właściciel.",
+        "title": "Strona zablokowana",
+        "until": "Strona jest tymczasowo zablokowana do {date}."
     }
 }
