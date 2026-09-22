@@ -34,13 +34,13 @@ export default function Header() {
 
     return (
         <header className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-50 shadow-sm">
-            <div className="container mx-auto flex items-center justify-between gap-2 px-2 py-3 sm:px-4">
-                <div className="flex min-w-0 items-center space-x-8">
+            <div className="mx-auto flex w-full max-w-[72rem] items-center justify-between gap-2 px-2 py-3 sm:px-4">
+                <div className="flex min-w-0 items-center gap-6 xl:gap-8">
                     <Link href="/" className="whitespace-nowrap text-xl font-bold text-primary transition-[color,opacity] duration-150 ease-smooth hover:text-primary/80 sm:text-2xl">
                         osu!guessr
                     </Link>
-                    <nav className="hidden md:block">
-                        <ul className="flex space-x-8 items-center">
+                    <nav className="hidden lg:block">
+                        <ul className="flex items-center gap-6 xl:gap-8">
                             {NAV_ITEMS.map((item) => (
                                 <li key={item}>
                                     <Link
@@ -61,14 +61,14 @@ export default function Header() {
 
                 <div className="flex shrink-0 items-center gap-1 sm:gap-4">
                     <LanguageSwitcher />
-                    <div className="hidden md:block">
+                    <div className="hidden lg:block">
                         <SupportPageLink />
                     </div>
 
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="md:hidden"
+                        className="lg:hidden"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                         aria-label={isMenuOpen ? t.components.header.accessibility.closeMenu : t.components.header.accessibility.openMenu}
                         aria-expanded={isMenuOpen}
@@ -118,7 +118,7 @@ export default function Header() {
                 </div>
 
                 {isMenuOpen && (
-                    <nav id={MOBILE_NAV_ID} aria-label={t.components.header.accessibility.mobileNavigation} className="absolute left-0 top-full w-full border-b border-border/60 bg-background/98 shadow-lg md:hidden">
+                    <nav id={MOBILE_NAV_ID} aria-label={t.components.header.accessibility.mobileNavigation} className="absolute left-0 top-full w-full border-b border-border/60 bg-background shadow-lg lg:hidden">
                         <ul className="page-container flex flex-col gap-1 py-3">
                             <li className="w-full pb-2">
                                 <UserSearch />

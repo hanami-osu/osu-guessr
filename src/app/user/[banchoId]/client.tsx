@@ -69,7 +69,7 @@ export default function UserProfileClient({
     const formatRank = (rank?: number) => (rank ? `#${rank.toLocaleString(locale)}` : "-");
 
     return (
-        <main className="page-container pb-5 pt-3 md:pb-8 md:pt-4">
+        <div className="page-container pb-5 pt-3 md:pb-8 md:pt-4">
             <div className="overflow-hidden rounded-2xl bg-card/70 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2 bg-muted/35 p-2.5 sm:gap-3 sm:px-4">
                     <nav aria-label={t.user.profile.modeLabel} className="flex flex-wrap items-center gap-1.5">
@@ -210,7 +210,7 @@ export default function UserProfileClient({
                     generatedAt={generatedAt}
                 />
             </div>
-        </main>
+        </div>
     );
 }
 
@@ -268,7 +268,7 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                                     </div>
 
                                     <div className="min-w-0 self-center px-3 py-2 sm:px-4">
-                                        <div className="truncate text-sm font-semibold text-foreground">{scoreText}</div>
+                                        <div className={`truncate text-sm font-semibold ${!isLegacyDeath && game.points < 0 ? "text-destructive" : "text-foreground"}`}>{scoreText}</div>
                                         <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
                                             <span className="truncate sm:hidden">{!isLegacyDeath ? detailText : ppText}</span>
                                             {!isLegacyDeath && <span aria-hidden="true" className="sm:hidden">·</span>}
@@ -354,6 +354,7 @@ function RankHistory({ title, points, locale }: { title: string; points: UserRan
         y: 5 + ((point.rank - bestRank) / range) * 30,
     }));
     const linePath = coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
+    const areaPath = `${linePath} L 100 40 L 0 40 Z`;
     const firstDate = new Date(points[0].recorded_at);
     const lastDate = new Date(points[points.length - 1].recorded_at);
     const dateLabel =
@@ -370,7 +371,7 @@ function RankHistory({ title, points, locale }: { title: string; points: UserRan
                 <span className="shrink-0 tabular-nums">{dateLabel}</span>
             </div>
             <div
-                className="relative h-12 cursor-crosshair text-primary"
+                className="relative h-24 cursor-crosshair text-primary"
                 onPointerMove={(event) => {
                     const bounds = event.currentTarget.getBoundingClientRect();
                     const position = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
@@ -379,6 +380,13 @@ function RankHistory({ title, points, locale }: { title: string; points: UserRan
                 onPointerLeave={() => setHoveredIndex(null)}
             >
                 <svg aria-label={title} role="img" viewBox="0 0 100 40" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
+                    <defs>
+                        <linearGradient id="rank-history-fill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="currentColor" stopOpacity="0.24" />
+                            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+                        </linearGradient>
+                    </defs>
+                    <path d={areaPath} fill="url(#rank-history-fill)" stroke="none" />
                     <path d={linePath} fill="none" stroke="currentColor" strokeWidth="1.35" vectorEffect="non-scaling-stroke" />
                 </svg>
                 {hoveredPoint && hoveredCoordinate && (

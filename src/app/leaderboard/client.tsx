@@ -16,14 +16,16 @@ import { createLatestRequestGate } from "@/lib/latest-request";
 
 interface LeaderboardClientProps {
     initialData: TopPlayer[];
+    initialMode: GameMode;
+    initialVariant: GameVariant;
     initialError?: string | null;
 }
 
-export default function LeaderboardClient({ initialData, initialError = null }: LeaderboardClientProps) {
+export default function LeaderboardClient({ initialData, initialMode, initialVariant, initialError = null }: LeaderboardClientProps) {
     const { t, locale } = useTranslationsContext();
     const { data: session } = useSession();
-    const [selectedMode, setSelectedMode] = useState<GameMode>(GameMode.Background);
-    const [selectedVariant, setSelectedVariant] = useState<GameVariant>("classic");
+    const [selectedMode, setSelectedMode] = useState<GameMode>(initialMode);
+    const [selectedVariant, setSelectedVariant] = useState<GameVariant>(initialVariant);
     const [leaderboardData, setLeaderboardData] = useState<Array<TopPlayer>>(initialData);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(initialError);
@@ -33,6 +35,13 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
     const isInitialRender = useRef(true);
 
     const errorMessage = t.notifications.error;
+
+    function syncFilters(mode: GameMode, variant: GameVariant) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("mode", mode);
+        url.searchParams.set("variant", variant);
+        window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
 
     useEffect(() => {
         if (isInitialRender.current) {
@@ -71,7 +80,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
     const gameModes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp];
 
     return (
-        <main className="page-container pb-5 pt-3 md:pb-8 md:pt-4">
+        <div className="page-container pb-5 pt-3 md:pb-8 md:pt-4">
             <div>
                 <header className="border-b border-border/60 py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.leaderboard.title}</h1>
@@ -88,6 +97,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                     onClick={() => {
                                         setSelectedMode(mode);
                                         setPage(1);
+                                        syncFilters(mode, selectedVariant);
                                     }}
                                     className={`border-b-2 px-2 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === mode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
                                 >
@@ -108,6 +118,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                     onClick={() => {
                                         setSelectedVariant(variant);
                                         setPage(1);
+                                        syncFilters(selectedMode, variant);
                                     }}
                                     className={`border-b-2 px-2 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedVariant === variant ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
                                 >
@@ -188,7 +199,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
                                                         </div>
                                                     </Link>
                                                 </td>
-                                                <td className="bg-primary/[0.06] px-3 py-3 text-right text-sm font-bold tabular-nums text-primary sm:px-5 sm:py-3.5">
+                                                <td className="px-3 py-3 text-right text-sm font-bold tabular-nums text-primary sm:px-5 sm:py-3.5">
                                                     {Number(player.profile_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}
                                                 </td>
                                                 <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground lg:table-cell">
@@ -211,7 +222,7 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
 
                 <div className="flex flex-col-reverse items-center justify-between gap-3 border-b border-border/50 py-3 sm:flex-row">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Page size</span>
+                        <span className="text-xs text-muted-foreground">{t.leaderboard.pagination.pageSize}</span>
                         <Select
                             value={String(pageSize)}
                             onValueChange={(v) => {
@@ -234,17 +245,17 @@ export default function LeaderboardClient({ initialData, initialError = null }: 
 
                     <div className="flex items-center justify-center gap-1">
                         <Button variant="ghost" size="sm" className="h-8" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                            {"Prev"}
+                            {t.leaderboard.pagination.previous}
                         </Button>
-                        <span className="mx-2 min-w-14 text-center text-xs text-muted-foreground">Page {page}</span>
+                        <span className="mx-2 min-w-14 text-center text-xs text-muted-foreground">{t.leaderboard.pagination.page.replace("{page}", String(page))}</span>
                         <Button variant="ghost" size="sm" className="h-8" onClick={() => setPage((p) => p + 1)} disabled={leaderboardData.length < pageSize}>
-                            {"Next"}
+                            {t.leaderboard.pagination.next}
                         </Button>
                     </div>
                 </div>
 
                 <AdSlider />
             </div>
-        </main>
+        </div>
     );
 }

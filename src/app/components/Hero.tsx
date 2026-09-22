@@ -44,7 +44,7 @@ export default function Hero() {
                             </Button>
                         )}
                         <Button asChild variant="outline" size="lg" className="text-sm px-6 w-full sm:w-auto bg-background/60">
-                            <Link href="/multiplayer"><Users className="size-4" />Multiplayer</Link>
+                            <Link href="/multiplayer"><Users className="size-4" />{t.home.hero.multiplayer}</Link>
                         </Button>
                         <Button asChild variant="outline" size="lg" className="text-sm px-6 w-full sm:w-auto bg-background/60">
                             <Link href="/about">{t.home.hero.learnMore}</Link>

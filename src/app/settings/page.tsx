@@ -13,7 +13,9 @@ export const metadata: Metadata = {
     robots: { index: false, follow: false },
 };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
+    const { tab } = await searchParams;
+    const initialSection = typeof tab === "string" ? tab : undefined;
     const session = await auth();
 
     if (!session?.user?.banchoId) {
@@ -22,9 +24,9 @@ export default async function SettingsPage() {
 
     try {
         const [apiKeys, bannerUrl] = await Promise.all([listApiKeysAction(), getProfileBannerAction()]);
-        return <SettingsClient initialApiKeys={apiKeys} initialBannerUrl={bannerUrl} />;
+        return <SettingsClient initialApiKeys={apiKeys} initialBannerUrl={bannerUrl} initialSection={initialSection} />;
     } catch (error) {
         console.error("Failed to load API keys:", error);
-        return <SettingsClient initialApiKeys={[]} initialBannerUrl={null} initialLoadError />;
+        return <SettingsClient initialApiKeys={[]} initialBannerUrl={null} initialSection={initialSection} initialLoadError />;
     }
 }

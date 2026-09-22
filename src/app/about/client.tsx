@@ -16,7 +16,7 @@ export default function AboutClient() {
     const { t } = useTranslationsContext();
 
     return (
-        <main className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
+        <div className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
             <div>
                 <header className="border-b border-border/60 py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.about.title}</h1>
@@ -141,7 +141,7 @@ export default function AboutClient() {
                                 <p className="mb-3 text-sm leading-6 text-foreground/80">{t.about.documentation.api.description}</p>
                                 <a
                                     href="https://github.com/hanami-osu/osu-guessr/blob/main/docs/API.md"
-                                    className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                                    className="inline-flex items-center gap-2 text-sm text-primary underline"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
@@ -151,7 +151,7 @@ export default function AboutClient() {
                             <div className="min-w-0">
                                 <h3 className="mb-1.5 text-sm font-semibold text-foreground">{t.about.documentation.technical.title}</h3>
                                 <p className="mb-3 text-sm leading-6 text-foreground/80">{t.about.documentation.technical.description}</p>
-                                <a href="https://github.com/hanami-osu/osu-guessr#readme" className="inline-flex items-center gap-2 text-sm text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                <a href="https://github.com/hanami-osu/osu-guessr#readme" className="inline-flex items-center gap-2 text-sm text-primary underline" target="_blank" rel="noopener noreferrer">
                                     {t.common.viewMore} →
                                 </a>
                             </div>
@@ -168,7 +168,7 @@ export default function AboutClient() {
                                         <React.Fragment key={index}>
                                             {part}
                                             {index < array.length - 1 && (
-                                                <a href="https://osu.ppy.sh/u/yorunoken" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                                <a href="https://osu.ppy.sh/u/yorunoken" className="text-primary underline" target="_blank" rel="noopener noreferrer">
                                                     yorunoken
                                                 </a>
                                             )}
@@ -179,7 +179,7 @@ export default function AboutClient() {
                             <div className="min-w-0">
                                 <h3 className="mb-1.5 text-sm font-semibold text-foreground">{t.about.credits.artwork.title}</h3>
                                 <p className="text-sm leading-6 text-muted-foreground">
-                                    <a href="https://twitter.com/Akariimia" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                    <a href="https://twitter.com/Akariimia" className="text-primary underline" target="_blank" rel="noopener noreferrer">
                                         {t.home.hero.artCredit}
                                     </a>
                                 </p>
@@ -192,7 +192,7 @@ export default function AboutClient() {
                                             <React.Fragment key={index}>
                                                 {part}
                                                 {index < array.length - 1 && (
-                                                    <a href="https://guesser.lapaii.dev" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                                    <a href="https://guesser.lapaii.dev" className="text-primary underline" target="_blank" rel="noopener noreferrer">
                                                         Lapaii{"'"}s Score Guesser
                                                     </a>
                                                 )}
@@ -204,7 +204,7 @@ export default function AboutClient() {
                                             <React.Fragment key={index}>
                                                 {part}
                                                 {index < array.length - 1 && (
-                                                    <a href="https://old.reddit.com/r/osugame/comments/14w0cs7/osuguesser_guess_osu_stuff/" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                                    <a href="https://old.reddit.com/r/osugame/comments/14w0cs7/osuguesser_guess_osu_stuff/" className="text-primary underline" target="_blank" rel="noopener noreferrer">
                                                         reddit thread
                                                     </a>
                                                 )}
@@ -232,13 +232,13 @@ export default function AboutClient() {
                                 <div className="space-y-2">
                                     <p className="text-sm leading-6 text-muted-foreground">
                                         • GitHub:{" "}
-                                        <a href="https://github.com/hanami-osu/osu-guessr" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                        <a href="https://github.com/hanami-osu/osu-guessr" className="text-primary underline" target="_blank" rel="noopener noreferrer">
                                             osu-guessr
                                         </a>
                                     </p>
                                     <p className="text-sm leading-6 text-muted-foreground">
                                         • Twitter:{" "}
-                                        <a href="https://twitter.com/_yorunoken" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                        <a href="https://twitter.com/_yorunoken" className="text-primary underline" target="_blank" rel="noopener noreferrer">
                                             @_yorunoken
                                         </a>
                                     </p>
@@ -253,7 +253,7 @@ export default function AboutClient() {
                                     <p className="text-sm leading-6 text-muted-foreground">{t.about.contact.contribute.items.bugs}</p>
                                     <p className="text-sm leading-6 text-muted-foreground">{t.about.contact.contribute.items.code}</p>
                                     <p className="text-sm leading-6 text-muted-foreground">{t.about.contact.contribute.items.docs}</p>
-                                    <a href="https://github.com/hanami-osu/osu-guessr" className="mt-2 inline-flex items-center gap-2 text-sm text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                                    <a href="https://github.com/hanami-osu/osu-guessr" className="mt-2 inline-flex items-center gap-2 text-sm text-primary underline" target="_blank" rel="noopener noreferrer">
                                         {t.common.viewMore} →
                                     </a>
                                 </div>
@@ -262,6 +262,6 @@ export default function AboutClient() {
                     </section>
                 </div>
             </div>
-        </main>
+        </div>
     );
 }

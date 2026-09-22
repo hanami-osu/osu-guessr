@@ -478,7 +478,7 @@ export default function AdminMenu() {
             </header>
 
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
-                <main className="min-w-0">
+                <div className="min-w-0">
                     <CollapsibleSection id="mapsets" title="Mapsets" description="Import, remove, and inspect the beatmapsets used by the game." icon={<Disc3 />} defaultOpen>
                         <div className="space-y-7">
                             <AdminGroup title="Single mapset" description="Enter an osu! beatmapset ID.">
@@ -841,7 +841,7 @@ export default function AdminMenu() {
                             </div>
                         </AdminGroup>
                     </CollapsibleSection>
-                </main>
+                </div>
 
                 <aside className="pt-5 lg:sticky lg:top-6 lg:self-start">
                     <div className="border-l border-border/60 pl-5">

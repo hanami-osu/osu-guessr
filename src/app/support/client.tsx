@@ -9,7 +9,7 @@ export function SupportPageContent() {
     const benefits = Object.values(t.support.benefits.items);
 
     return (
-        <main className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
+        <div className="page-container pb-6 pt-3 md:pb-8 md:pt-4">
             <div className="mx-auto max-w-5xl">
                 <header className="border-b border-border/60 py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.support.title}</h1>
@@ -60,6 +60,6 @@ export function SupportPageContent() {
                     </section>
                 </div>
             </div>
-        </main>
+        </div>
     );
 }

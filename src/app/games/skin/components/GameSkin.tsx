@@ -20,7 +20,7 @@ export default function GameSkin({ mediaUrl, isRevealed, result, songInfo }: Gam
                         {songInfo.mapsetId && (
                             <a
                                 href={`https://skins.osuck.net/skins/${songInfo.mapsetId}`}
-                                className="inline-block mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                                className="inline-block mt-2 px-4 py-2 bg-primary-strong text-primary-foreground rounded-md hover:bg-primary-strong/90 transition-colors"
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
