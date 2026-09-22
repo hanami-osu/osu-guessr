@@ -8,6 +8,7 @@
         "build": "prisma generate && IS_DOCKER_BUILD=true next build && NODE_ENV=production bun build server.ts --target=node --format=cjs --outfile=.server/server.js --packages external",
         "start": "dotenv -e .env -- env NODE_ENV=production node .server/server.js",
         "check": "prisma generate && eslint src && tsc --noEmit",
+        "format": "prettier --write .",
         "test": "bun test --isolate",
         "sync": "bun scripts/sync-translations",
         "backfill:arcade-scores": "dotenv -e .env -- bun scripts/backfill-arcade-scores.ts",
@@ -58,6 +59,7 @@
         "eslint": "^9.23.0",
         "eslint-config-next": "15.1.6",
         "postcss": "^8.5.3",
+        "prettier": "^3.9.8",
         "prisma": "^7.8.0",
         "tailwindcss": "^3.4.17",
         "typescript": "^5.8.2"
