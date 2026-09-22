@@ -11,7 +11,7 @@ import GuessInput from "../components/GuessInput";
 import LoadingScreen from "../components/LoadingScreen";
 import GameHeader from "../components/Header";
 import { ReportDialog } from "@/components/ReportDialog";
-import { AdSlider } from "@/components/Ads";
+import { LeaveGameDialog } from "@/components/LeaveGameDialog";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -25,6 +25,7 @@ import MultiplayerChat from "../components/MultiplayerChat";
 import { useGameKeyboardShortcuts } from "../hooks/useGameKeyboardShortcuts";
 import { usePreventUnload } from "../hooks/usePreventUnload";
 import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
+import { useLeaveGameGuard } from "@/hooks/useLeaveGameGuard";
 
 interface GameScreenProps {
     onExit(): void;
@@ -43,15 +44,18 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
     const [isLoading, setIsLoading] = useState(true);
     const [countdown, setCountdown] = useState<number>(AUTO_ADVANCE_DELAY_MS / 1000);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+    const [exitDialogOpen, setExitDialogOpen] = useState(false);
+    const [pendingLeaveHref, setPendingLeaveHref] = useState<string | null>(null);
     const [startupError, setStartupError] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
 
     const gameClient = useRef<GameClient | null>(null);
+    const advancePausedRef = useRef(false);
     const navigatingToResults = useRef(false);
     const multiplayerAdvanceDeadline = useRef<{ key: string; at: number } | null>(null);
     const publicStatsRef = useRef<{ points: number; streak: number; highestStreak: number; mistakes: number } | null>(null);
     const scoreUrl = useCallback(
-        (sessionId: string) => multiplayerLobbyCode ? `/scores/${sessionId}?lobby=${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${sessionId}`,
+        (sessionId: string) => multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${sessionId}`,
         [multiplayerLobbyCode],
     );
     const currentRound = gameState?.rounds.current;
@@ -232,19 +236,18 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
         void handleNextRound();
     }, [handleNextRound, isLoading, multiplayerRoundState?.allReady, multiplayerRoundState?.ready, revealed]);
 
-    const handleExit = useCallback(async (): Promise<boolean> => {
+    const exitConfirmation = gameState
+        ? gameVariant === "survival"
+            ? t.confirmations.exitGame.death
+            : isClassicGameIncomplete(gameState)
+              ? t.confirmations.exitGame.classic
+              : gameState.score.total > 0
+                ? t.confirmations.exitGame.classicComplete
+                : null
+        : null;
+
+    const runExit = useCallback(async (href?: string): Promise<boolean> => {
         if (!gameClient.current || !gameState) return false;
-
-        const confirmation =
-            gameVariant === "survival"
-                ? t.confirmations.exitGame.death
-                : isClassicGameIncomplete(gameState)
-                  ? t.confirmations.exitGame.classic
-                  : gameState.score.total > 0
-                    ? t.confirmations.exitGame.classicComplete
-                    : null;
-
-        if (confirmation && !window.confirm(confirmation)) return false;
 
         setIsLoading(true);
         setActionError(null);
@@ -258,7 +261,9 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 },
                 MAX_ROUNDS,
             );
-            if (hasSavedScore) {
+            if (href) {
+                router.push(href);
+            } else if (hasSavedScore) {
                 router.replace(scoreUrl(gameState.sessionId));
             } else {
                 onExit();
@@ -271,7 +276,18 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
         } finally {
             setIsLoading(false);
         }
-    }, [gameState, onExit, gameVariant, router, scoreUrl, t.confirmations.exitGame, t.errors.game.unknown]);
+    }, [gameState, onExit, gameVariant, router, scoreUrl, t.errors.game.unknown]);
+
+    const requestExit = useCallback(() => {
+        if (exitConfirmation) {
+            setExitDialogOpen(true);
+            return;
+        }
+        void runExit();
+    }, [exitConfirmation, runExit]);
+
+    const requestRouteLeave = useCallback((href: string) => setPendingLeaveHref(href), []);
+    useLeaveGameGuard(Boolean(gameState && exitConfirmation && !navigatingToResults.current), requestRouteLeave);
 
     usePreventUnload(Boolean(gameClient.current && gameState && gameVariant === "classic" && isClassicGameIncomplete(gameState)));
 
@@ -305,20 +321,25 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 };
             }
 
+            let elapsed = 0;
+            let lastTick = performance.now();
             setCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
 
-            const countdownInterval = setInterval(() => {
-                setCountdown((prev) => Math.max(0, prev - 1));
-            }, 1000);
+            const tick = window.setInterval(() => {
+                const now = performance.now();
+                const delta = now - lastTick;
+                lastTick = now;
+                if (advancePausedRef.current) return;
 
-            const advanceTimer = setTimeout(() => {
-                handleNextRound();
-            }, AUTO_ADVANCE_DELAY_MS);
+                elapsed += delta;
+                setCountdown(Math.max(0, Math.ceil((AUTO_ADVANCE_DELAY_MS - elapsed) / 1000)));
+                if (elapsed >= AUTO_ADVANCE_DELAY_MS) {
+                    window.clearInterval(tick);
+                    void handleNextRound();
+                }
+            }, 250);
 
-            return () => {
-                clearInterval(countdownInterval);
-                clearTimeout(advanceTimer);
-            };
+            return () => window.clearInterval(tick);
         }
     }, [actionError, gameState, handleNextRound, isLoading, isReportDialogOpen, multiplayerLobbyCode, showAdvanceCountdown]);
 
@@ -354,7 +375,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                         />
                     </div>
                 )}
-                <div className="relative min-w-0 bg-muted/30">
+                <div className="relative min-w-0 bg-muted/30" onMouseEnter={() => { advancePausedRef.current = true; }} onMouseLeave={() => { advancePausedRef.current = false; }} onFocusCapture={() => { advancePausedRef.current = true; }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false; }}>
                     <GameMedia
                         mediaUrl={gameMode === "audio" ? gameState.currentBeatmap.audioUrl! : gameState.currentBeatmap.imageUrl!}
                         isRevealed={revealed}
@@ -363,7 +384,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                     />
                     {isLoading && !revealed && <LoadingScreen />}
                 </div>
-                <div className="flex min-w-0 flex-col gap-4">
+                <div className="flex min-w-0 flex-col gap-4" onMouseEnter={() => { advancePausedRef.current = true; }} onMouseLeave={() => { advancePausedRef.current = false; }} onFocusCapture={() => { advancePausedRef.current = true; }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false; }}>
                     {actionError && (
                         <Alert variant="destructive" role="alert">
                             <AlertCircle className="h-4 w-4" />
@@ -396,7 +417,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                     <MultiplayerChat lobby={multiplayerLobby} sendMessage={sendChat} />
                     <GameShortcuts hasSuggestions />
                     <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
-                        <GameActionButton intent="exit" onClick={handleExit} disabled={isLoading}>
+                        <GameActionButton intent="exit" onClick={requestExit} disabled={isLoading}>
                             {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
                         </GameActionButton>
                         {gameMode !== GameMode.Skin && revealed && resultVisible && gameState.currentBeatmap.mapsetId && (
@@ -406,7 +427,21 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 </div>
             </div>
 
-            <AdSlider compact />
+            <LeaveGameDialog
+                open={exitDialogOpen || pendingLeaveHref !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setExitDialogOpen(false);
+                        setPendingLeaveHref(null);
+                    }
+                }}
+                title={t.confirmations.exitGame.title}
+                description={exitConfirmation ?? t.confirmations.exitGame.classicComplete}
+                confirmLabel={t.confirmations.exitGame.confirm}
+                cancelLabel={t.common.cancel}
+                onConfirm={() => void runExit(pendingLeaveHref ?? undefined)}
+                disabled={isLoading}
+            />
         </div>
     );
 }

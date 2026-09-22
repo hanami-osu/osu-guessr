@@ -77,17 +77,17 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
     return (
         <div className="overflow-hidden rounded-xl bg-card">
             <div>
-                <header className="relative isolate overflow-hidden px-5 pb-4 pt-10 sm:px-6 sm:pb-5 sm:pt-12">
+                <div className="relative isolate overflow-hidden px-5 pb-4 pt-10 sm:px-6 sm:pb-5 sm:pt-12">
                     <Image src={modeArtwork} alt="" fill priority sizes="(min-width: 896px) 896px, 100vw" className="-z-20 object-cover object-center" />
                     <div aria-hidden="true" className="absolute -inset-px -z-10 bg-gradient-to-t from-card from-5% via-card/85 to-card/40" />
                     <div className="min-w-0 pr-6">
                         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t.game.preGame.title[gameMode as keyof typeof t.game.preGame.title]}</h1>
                         <p className="mt-1 max-w-xl text-sm leading-5 text-muted-foreground">{gameDescription}</p>
                     </div>
-                </header>
+                </div>
 
                 <section className="relative z-10 -mt-px border-y border-border/60 bg-card">
-                    <div className="grid grid-cols-2 gap-2 px-3 py-2.5 sm:px-5" role="radiogroup" aria-label={t.game.preGame.title[gameMode as keyof typeof t.game.preGame.title]}>
+                    <div className="grid grid-cols-2 gap-2 px-3 py-2.5 sm:px-5" role="radiogroup" aria-label={t.game.preGame.variantLabel}>
                         <button
                             type="button"
                             role="radio"

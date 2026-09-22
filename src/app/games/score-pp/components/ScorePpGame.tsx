@@ -9,8 +9,8 @@ import { useTranslationsContext } from "@/context/translations-provider";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { endScorePpRunAction, getScorePpRoundAction, getScorePpRunStateAction, startScorePpRunAction, submitScorePpGuessAction } from "@/actions/score-pp-server";
 import type { ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunState } from "@/lib/score-pp/types";
-import { AdSlider } from "@/components/Ads";
 import { ReportDialog } from "@/components/ReportDialog";
+import { LeaveGameDialog } from "@/components/LeaveGameDialog";
 import GameActionButton from "../../shared/components/GameActionButton";
 import GameShortcuts from "../../shared/components/GameShortcuts";
 import GameStartError from "../../shared/components/GameStartError";
@@ -22,6 +22,7 @@ import MultiplayerChat from "../../shared/components/MultiplayerChat";
 import { AUTO_ADVANCE_DELAY_MS, MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES } from "../../config";
 import ScorePpCard from "./ScorePpCard";
 import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
+import { useLeaveGameGuard } from "@/hooks/useLeaveGameGuard";
 
 interface Exclusions {
     scoreIds: string[];
@@ -50,7 +51,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
     const router = useRouter();
     const { t } = useTranslationsContext();
     const scoreUrl = useCallback(
-        (runSessionId: string) => multiplayerLobbyCode ? `/scores/${runSessionId}?lobby=${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${runSessionId}`,
+        (runSessionId: string) => multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${runSessionId}`,
         [multiplayerLobbyCode],
     );
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -68,10 +69,13 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+    const [exitDialogOpen, setExitDialogOpen] = useState(false);
+    const [pendingLeaveHref, setPendingLeaveHref] = useState<string | null>(null);
     const [terminalRound, setTerminalRound] = useState(false);
     const [error, setError] = useState<ScorePpError | null>(null);
     const exclusions = useRef<Exclusions>(EMPTY_EXCLUSIONS);
     const deadline = useRef(0);
+    const advancePausedRef = useRef(false);
     const multiplayerAdvanceDeadline = useRef<{ key: string; at: number } | null>(null);
     const publicStatsRef = useRef<{ points: number; streak: number; maxStreak: number; mistakes: number } | null>(null);
     const resolving = useRef(false);
@@ -207,14 +211,17 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                 ? await multiplayerRequest<string>("score_pp.start", { variant: gameVariant })
                 : await startScorePpRunAction(gameVariant);
             setSessionId(nextSessionId);
-            await loadRound(nextSessionId, 1);
+            const recovered = await recoverRun(nextSessionId);
+            if (!recovered) throw new Error("Could not restore Score PP session");
+            if (!recovered.terminal && !recovered.pair) await loadRound(nextSessionId, recovered.round);
+            else setIsLoading(false);
         } catch {
             setError("start");
             setIsLoading(false);
         } finally {
             starting.current = false;
         }
-    }, [gameVariant, loadRound, multiplayerLobbyCode, multiplayerRequest]);
+    }, [gameVariant, loadRound, multiplayerLobbyCode, multiplayerRequest, recoverRun]);
 
     useEffect(() => {
         void startRun();
@@ -310,9 +317,9 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
           : baseNextRoundLabel;
 
     useEffect(() => {
-        if (!resolution || !multiplayerRoundState?.ready || !multiplayerRoundState.allReady || isLoading || isSubmitting) return;
+        if (!resolution || terminalRound || !multiplayerRoundState?.ready || !multiplayerRoundState.allReady || isLoading || isSubmitting) return;
         void nextRound();
-    }, [isLoading, isSubmitting, multiplayerRoundState?.allReady, multiplayerRoundState?.ready, nextRound, resolution]);
+    }, [isLoading, isSubmitting, multiplayerRoundState?.allReady, multiplayerRoundState?.ready, nextRound, resolution, terminalRound]);
 
     useEffect(() => {
         if (!showAdvanceCountdown || isLoading || isReportDialogOpen || error) return;
@@ -337,12 +344,25 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
             };
         }
 
-        const tick = window.setInterval(() => setRevealCountdown((value) => Math.max(0, value - 1)), 1000);
-        const advance = window.setTimeout(() => void nextRound(), AUTO_ADVANCE_DELAY_MS);
-        return () => {
-            window.clearInterval(tick);
-            window.clearTimeout(advance);
-        };
+        let elapsed = 0;
+        let lastTick = performance.now();
+        setRevealCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
+
+        const tick = window.setInterval(() => {
+            const now = performance.now();
+            const delta = now - lastTick;
+            lastTick = now;
+            if (advancePausedRef.current) return;
+
+            elapsed += delta;
+            setRevealCountdown(Math.max(0, Math.ceil((AUTO_ADVANCE_DELAY_MS - elapsed) / 1000)));
+            if (elapsed >= AUTO_ADVANCE_DELAY_MS) {
+                window.clearInterval(tick);
+                void nextRound();
+            }
+        }, 250);
+
+        return () => window.clearInterval(tick);
     }, [error, isLoading, isReportDialogOpen, multiplayerLobbyCode, nextRound, round, sessionId, showAdvanceCountdown]);
 
     const skipRound = useCallback(() => {
@@ -357,28 +377,40 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
 
     usePreventUnload(gameVariant === "classic" && Boolean(sessionId) && !terminalRound && !(round >= MAX_ROUNDS && resolution));
 
-    const handleExit = useCallback(async () => {
+    const exitConfirmation = gameVariant === "survival" ? t.confirmations.exitGame.death : t.confirmations.exitGame.classic;
+
+    const runExit = useCallback(async (href?: string) => {
         if (!sessionId || isLoading || isSubmitting) return;
         if (terminalRound) {
-            router.replace(scoreUrl(sessionId));
+            if (href) router.push(href);
+            else router.replace(scoreUrl(sessionId));
             return;
         }
-
-        const confirmation = gameVariant === "survival" ? t.confirmations.exitGame.death : t.confirmations.exitGame.classic;
-        if (!window.confirm(confirmation)) return;
 
         setIsLoading(true);
         setError(null);
         try {
             const runPp = multiplayerLobbyCode ? await multiplayerRequest("score_pp.end", { sessionId }) : await endScorePpRunAction(sessionId);
-            router.replace(runPp === null ? "/" : scoreUrl(sessionId));
+            if (href) router.push(href);
+            else router.replace(runPp === null ? "/" : scoreUrl(sessionId));
         } catch {
             const recovered = await recoverRun(sessionId);
             if (!recovered?.terminal) setError("end");
         } finally {
             setIsLoading(false);
         }
-    }, [gameVariant, isLoading, isSubmitting, multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl, sessionId, t.confirmations.exitGame.classic, t.confirmations.exitGame.death, terminalRound]);
+    }, [isLoading, isSubmitting, multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl, sessionId, terminalRound]);
+
+    const requestExit = useCallback(() => {
+        if (terminalRound && sessionId) {
+            router.replace(scoreUrl(sessionId));
+            return;
+        }
+        setExitDialogOpen(true);
+    }, [router, scoreUrl, sessionId, terminalRound]);
+
+    const requestRouteLeave = useCallback((href: string) => setPendingLeaveHref(href), []);
+    useLeaveGameGuard(Boolean(sessionId && !terminalRound), requestRouteLeave);
 
     if (!sessionId && error === "start" && !isLoading) {
         return <GameStartError message={t.game.scorePp.errors.start} onRetry={startRun} />;
@@ -434,7 +466,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
             </div>
 
             {pair ? (
-                <div className="grid items-stretch lg:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)]">
+                <div className="grid items-stretch lg:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)]" onMouseEnter={() => { advancePausedRef.current = true; }} onMouseLeave={() => { advancePausedRef.current = false; }} onFocusCapture={() => { advancePausedRef.current = true; }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false; }}>
                     <ScorePpCard
                         key={`${pair.id}-${pair.left.sourceScoreId}`}
                         score={pair.left}
@@ -468,7 +500,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
             ) : null}
 
             <div className="mt-4 grid grid-cols-2 items-center gap-3 border-t border-border/60 pt-4 sm:grid-cols-[1fr_auto_1fr]">
-                <GameActionButton className="w-full sm:w-auto sm:justify-self-start" intent="exit" onClick={() => void handleExit()} disabled={isLoading || isSubmitting}>
+                <GameActionButton className="w-full sm:w-auto sm:justify-self-start" intent="exit" onClick={requestExit} disabled={isLoading || isSubmitting}>
                     {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
                 </GameActionButton>
                 {visibleResolution ? (
@@ -515,7 +547,21 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                 )}
             </div>
 
-            <AdSlider compact />
+            <LeaveGameDialog
+                open={exitDialogOpen || pendingLeaveHref !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setExitDialogOpen(false);
+                        setPendingLeaveHref(null);
+                    }
+                }}
+                title={t.confirmations.exitGame.title}
+                description={exitConfirmation}
+                confirmLabel={t.confirmations.exitGame.confirm}
+                cancelLabel={t.common.cancel}
+                onConfirm={() => void runExit(pendingLeaveHref ?? undefined)}
+                disabled={isLoading || isSubmitting}
+            />
         </div>
     );
 }
