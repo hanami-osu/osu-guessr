@@ -16,6 +16,15 @@ type TestProvider = {
     profile: (profile: Profile, tokens: unknown) => { id: string; name: string; image: string };
 };
 type TestAuthConfig = {
+    cookies?: {
+        sessionToken: { name: string };
+        callbackUrl: { name: string };
+        csrfToken: { name: string };
+        pkceCodeVerifier: { name: string };
+        state: { name: string };
+        nonce: { name: string };
+        webauthnChallenge: { name: string };
+    };
     providers: TestProvider[];
     callbacks: {
         jwt: (args: { token: Record<string, unknown>; profile?: Profile }) => Promise<Record<string, unknown>>;
@@ -47,6 +56,18 @@ beforeAll(async () => {
 });
 
 describe("Hanami authentication configuration", () => {
+    test("namespaces development auth cookies away from other localhost Auth.js apps", () => {
+        expect(authConfig.cookies).toEqual({
+            sessionToken: { name: "osu-guessr.authjs.session-token" },
+            callbackUrl: { name: "osu-guessr.authjs.callback-url" },
+            csrfToken: { name: "osu-guessr.authjs.csrf-token" },
+            pkceCodeVerifier: { name: "osu-guessr.authjs.pkce.code_verifier" },
+            state: { name: "osu-guessr.authjs.state" },
+            nonce: { name: "osu-guessr.authjs.nonce" },
+            webauthnChallenge: { name: "osu-guessr.authjs.challenge" },
+        });
+    });
+
     test("uses the public Hanami OIDC provider with the approved authorization contract", () => {
         const [provider] = authConfig.providers;
 

@@ -4,6 +4,18 @@ import { isAdminUserId } from "@/lib/admin";
 import { upsertUser } from "@/lib/user-service";
 import NextAuth, { DefaultSession } from "next-auth";
 
+const developmentCookies = process.env.NODE_ENV !== "production"
+    ? {
+          sessionToken: { name: "osu-guessr.authjs.session-token" },
+          callbackUrl: { name: "osu-guessr.authjs.callback-url" },
+          csrfToken: { name: "osu-guessr.authjs.csrf-token" },
+          pkceCodeVerifier: { name: "osu-guessr.authjs.pkce.code_verifier" },
+          state: { name: "osu-guessr.authjs.state" },
+          nonce: { name: "osu-guessr.authjs.nonce" },
+          webauthnChallenge: { name: "osu-guessr.authjs.challenge" },
+      }
+    : undefined;
+
 declare module "next-auth" {
     interface Session {
         user: {
@@ -14,6 +26,7 @@ declare module "next-auth" {
 }
 
 export const { auth, handlers } = NextAuth({
+    cookies: developmentCookies,
     callbacks: {
         jwt: async ({ token, profile }) => {
             if (profile) {
