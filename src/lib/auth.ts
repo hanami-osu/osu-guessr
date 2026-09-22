@@ -4,17 +4,18 @@ import { isAdminUserId } from "@/lib/admin";
 import { upsertUser } from "@/lib/user-service";
 import NextAuth, { DefaultSession } from "next-auth";
 
-const developmentCookies = process.env.NODE_ENV !== "production"
-    ? {
-          sessionToken: { name: "osu-guessr.authjs.session-token" },
-          callbackUrl: { name: "osu-guessr.authjs.callback-url" },
-          csrfToken: { name: "osu-guessr.authjs.csrf-token" },
-          pkceCodeVerifier: { name: "osu-guessr.authjs.pkce.code_verifier" },
-          state: { name: "osu-guessr.authjs.state" },
-          nonce: { name: "osu-guessr.authjs.nonce" },
-          webauthnChallenge: { name: "osu-guessr.authjs.challenge" },
-      }
-    : undefined;
+const developmentCookies =
+    process.env.NODE_ENV !== "production"
+        ? {
+              sessionToken: { name: "osu-guessr.authjs.session-token" },
+              callbackUrl: { name: "osu-guessr.authjs.callback-url" },
+              csrfToken: { name: "osu-guessr.authjs.csrf-token" },
+              pkceCodeVerifier: { name: "osu-guessr.authjs.pkce.code_verifier" },
+              state: { name: "osu-guessr.authjs.state" },
+              nonce: { name: "osu-guessr.authjs.nonce" },
+              webauthnChallenge: { name: "osu-guessr.authjs.challenge" },
+          }
+        : undefined;
 
 declare module "next-auth" {
     interface Session {
@@ -60,8 +61,6 @@ export const { auth, handlers } = NextAuth({
             };
         },
     },
-    providers: [
-        HanamiProvider({ issuer: env.HANAMI_ISSUER, clientId: env.HANAMI_CLIENT_ID }),
-    ],
+    providers: [HanamiProvider({ issuer: env.HANAMI_ISSUER, clientId: env.HANAMI_CLIENT_ID })],
     trustHost: true,
 });

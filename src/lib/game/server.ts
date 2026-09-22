@@ -12,21 +12,8 @@ import { canPersistGameResult } from "@/lib/game/completion";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp, type ContentPerformanceStats } from "@/lib/game/performance-points";
 import { Prisma } from "@/generated/prisma/client";
-import {
-    acquireGameSessionLock,
-    deleteGameSession,
-    readOwnedGameSession,
-    releaseGameSessionLock,
-    writeGameSession,
-} from "@/lib/game/session-storage";
-import {
-    getMultiplayerRoundState,
-    getOrCreateMultiplayerRound,
-    normalizeLobbyCode,
-    readMultiplayerLobby,
-    requireActiveMultiplayerLobby,
-    updateMultiplayerProgress,
-} from "@/lib/multiplayer";
+import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
+import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer";
 
 const GRACE_PERIOD = 1;
 const ROUND_TIME_MS = ROUND_TIME * 1000;
@@ -81,13 +68,7 @@ type GuessRoundItem = {
     skinData?: string;
 };
 
-async function getGuessRoundItem(
-    gameMode: GameMode,
-    sessionId: string,
-    lobbyCode?: string,
-    round: number = 1,
-    multiplayerMatchId?: string,
-): Promise<GuessRoundItem> {
+async function getGuessRoundItem(gameMode: GameMode, sessionId: string, lobbyCode?: string, round: number = 1, multiplayerMatchId?: string): Promise<GuessRoundItem> {
     if (!lobbyCode) {
         if (gameMode === GameMode.Audio) {
             const audio = await getRandomAudio(sessionId);
@@ -216,11 +197,16 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     ) {
         await writeGameSession({ ...pendingState, end_pending: false }, 120);
         if (gameState.multiplayer_lobby_id) {
-            await updateMultiplayerProgress(gameState.multiplayer_lobby_id, userId, {
-                points: gameState.total_points,
-                round: gameState.current_round,
-                finished: true,
-            }, gameState.multiplayer_match_id ?? undefined).catch((error) => console.error("Failed to update multiplayer progress:", error));
+            await updateMultiplayerProgress(
+                gameState.multiplayer_lobby_id,
+                userId,
+                {
+                    points: gameState.total_points,
+                    round: gameState.current_round,
+                    finished: true,
+                },
+                gameState.multiplayer_match_id ?? undefined,
+            ).catch((error) => console.error("Failed to update multiplayer progress:", error));
         }
         return null;
     }
@@ -241,179 +227,179 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     const persistedPp = await withTransactionRetry(() =>
         prisma.$transaction(
             async (tx) => {
-            const existingGame = await tx.game.findUnique({ where: { sessionId } });
-            if (existingGame) return Number(existingGame.pp);
+                const existingGame = await tx.game.findUnique({ where: { sessionId } });
+                if (existingGame) return Number(existingGame.pp);
 
-            const persistedGame = await tx.game.create({
-                data: {
-                    sessionId,
-                    userId,
-                    gameMode: gameState.game_mode,
-                    points,
-                    streak: gameState.highest_streak,
-                    variant: gameState.variant,
-                    runType: gameState.run_type ?? "standard",
-                    challengeId: gameState.challenge_id ?? null,
-                    seed: gameState.seed ?? null,
-                    configSnapshot: toPrismaJson(gameState.config_snapshot),
-                    ranked,
-                    rulesetVersion,
-                    ppVersion,
-                    pp: runPp,
-                    roundsPlayed: roundHistory.length,
-                    correctCount: gameState.correct_guesses,
-                    skipCount,
-                    timeoutCount,
-                    totalResponseTimeMs,
-                    startedAt: new Date(gameState.started_at ?? Date.now()),
-                    endReason,
-                },
-            });
+                const persistedGame = await tx.game.create({
+                    data: {
+                        sessionId,
+                        userId,
+                        gameMode: gameState.game_mode,
+                        points,
+                        streak: gameState.highest_streak,
+                        variant: gameState.variant,
+                        runType: gameState.run_type ?? "standard",
+                        challengeId: gameState.challenge_id ?? null,
+                        seed: gameState.seed ?? null,
+                        configSnapshot: toPrismaJson(gameState.config_snapshot),
+                        ranked,
+                        rulesetVersion,
+                        ppVersion,
+                        pp: runPp,
+                        roundsPlayed: roundHistory.length,
+                        correctCount: gameState.correct_guesses,
+                        skipCount,
+                        timeoutCount,
+                        totalResponseTimeMs,
+                        startedAt: new Date(gameState.started_at ?? Date.now()),
+                        endReason,
+                    },
+                });
 
-            if (roundHistory.length > 0) {
-                await tx.gameRound.createMany({
-                    data: roundHistory.map((round) => ({
-                        gameId: persistedGame.id,
-                        roundNumber: round.round_number,
+                if (roundHistory.length > 0) {
+                    await tx.gameRound.createMany({
+                        data: roundHistory.map((round) => ({
+                            gameId: persistedGame.id,
+                            roundNumber: round.round_number,
+                            itemType: round.item_type,
+                            itemId: round.item_id,
+                            submittedGuess: round.submitted_guess,
+                            answerSnapshot: round.answer_snapshot,
+                            resultType: round.result_type,
+                            correct: round.correct,
+                            responseTimeMs: round.response_time_ms,
+                            timeLimitMs: round.time_limit_ms,
+                            pointsEarned: round.points_earned,
+                            streakBefore: round.streak_before,
+                            streakAfter: round.streak_after,
+                            difficultySnapshot: round.difficulty_snapshot,
+                            contentSnapshot: toPrismaJson(round.content_snapshot),
+                        })),
+                    });
+                }
+
+                if (!ranked) return runPp;
+
+                for (const round of roundHistory) {
+                    const statKey = {
+                        gameMode: gameState.game_mode,
                         itemType: round.item_type,
                         itemId: round.item_id,
-                        submittedGuess: round.submitted_guess,
-                        answerSnapshot: round.answer_snapshot,
-                        resultType: round.result_type,
-                        correct: round.correct,
-                        responseTimeMs: round.response_time_ms,
-                        timeLimitMs: round.time_limit_ms,
-                        pointsEarned: round.points_earned,
-                        streakBefore: round.streak_before,
-                        streakAfter: round.streak_after,
-                        difficultySnapshot: round.difficulty_snapshot,
-                        contentSnapshot: toPrismaJson(round.content_snapshot),
-                    })),
-                });
-            }
+                        rulesetVersion,
+                        ppVersion,
+                    };
+                    const contribution = await tx.contentStatContribution.createMany({
+                        data: [
+                            {
+                                userId,
+                                ...statKey,
+                                correct: round.correct,
+                                resultType: round.result_type,
+                                responseTimeMs: round.response_time_ms,
+                            },
+                        ],
+                        skipDuplicates: true,
+                    });
+                    if (contribution.count === 0) continue;
 
-            if (!ranked) return runPp;
+                    const persistedStats = await tx.contentStat.findUnique({
+                        where: { gameMode_itemType_itemId_rulesetVersion_ppVersion: statKey },
+                        select: {
+                            appearances: true,
+                            correctCount: true,
+                            totalResponseTimeMs: true,
+                            fastestCorrectMs: true,
+                        },
+                    });
+                    const nextDifficulty = calculateEmpiricalDifficulty({
+                        appearances: Number(persistedStats?.appearances ?? 0) + 1,
+                        correct_count: Number(persistedStats?.correctCount ?? 0) + (round.correct ? 1 : 0),
+                        total_response_time_ms: Number(persistedStats?.totalResponseTimeMs ?? 0) + round.response_time_ms,
+                    });
+                    const fastestCorrectMs = round.correct ? Math.min(persistedStats?.fastestCorrectMs ?? round.response_time_ms, round.response_time_ms) : undefined;
 
-            for (const round of roundHistory) {
-                const statKey = {
+                    await tx.contentStat.upsert({
+                        where: { gameMode_itemType_itemId_rulesetVersion_ppVersion: statKey },
+                        create: {
+                            ...statKey,
+                            appearances: 1,
+                            correctCount: round.correct ? 1 : 0,
+                            skipCount: round.result_type === "skip" ? 1 : 0,
+                            timeoutCount: round.result_type === "timeout" ? 1 : 0,
+                            totalResponseTimeMs: round.response_time_ms,
+                            fastestCorrectMs: round.correct ? round.response_time_ms : null,
+                            empiricalDifficulty: nextDifficulty,
+                        },
+                        update: {
+                            appearances: { increment: 1 },
+                            correctCount: { increment: round.correct ? 1 : 0 },
+                            skipCount: { increment: round.result_type === "skip" ? 1 : 0 },
+                            timeoutCount: { increment: round.result_type === "timeout" ? 1 : 0 },
+                            totalResponseTimeMs: { increment: round.response_time_ms },
+                            ...(fastestCorrectMs === undefined ? {} : { fastestCorrectMs }),
+                            empiricalDifficulty: nextDifficulty,
+                        },
+                    });
+                }
+
+                const achievementKey = {
+                    userId,
                     gameMode: gameState.game_mode,
-                    itemType: round.item_type,
-                    itemId: round.item_id,
+                    variant: gameState.variant,
                     rulesetVersion,
                     ppVersion,
                 };
-                const contribution = await tx.contentStatContribution.createMany({
-                    data: [
-                        {
-                            userId,
-                            ...statKey,
-                            correct: round.correct,
-                            resultType: round.result_type,
-                            responseTimeMs: round.response_time_ms,
+                const [existingAchievement, topRuns] = await Promise.all([
+                    tx.userAchievement.findUnique({
+                        where: { userId_gameMode_variant_rulesetVersion_ppVersion: achievementKey },
+                    }),
+                    tx.game.findMany({
+                        where: {
+                            ...achievementKey,
+                            ranked: true,
+                            pp: { gt: 0 },
                         },
-                    ],
-                    skipDuplicates: true,
-                });
-                if (contribution.count === 0) continue;
+                        select: { pp: true },
+                        orderBy: [{ pp: "desc" }, { endedAt: "asc" }],
+                        take: 100,
+                    }),
+                ]);
+                const profilePp = calculateProfilePp(topRuns.map(({ pp }) => Number(pp)));
 
-                const persistedStats = await tx.contentStat.findUnique({
-                    where: { gameMode_itemType_itemId_rulesetVersion_ppVersion: statKey },
-                    select: {
-                        appearances: true,
-                        correctCount: true,
-                        totalResponseTimeMs: true,
-                        fastestCorrectMs: true,
-                    },
-                });
-                const nextDifficulty = calculateEmpiricalDifficulty({
-                    appearances: Number(persistedStats?.appearances ?? 0) + 1,
-                    correct_count: Number(persistedStats?.correctCount ?? 0) + (round.correct ? 1 : 0),
-                    total_response_time_ms: Number(persistedStats?.totalResponseTimeMs ?? 0) + round.response_time_ms,
-                });
-                const fastestCorrectMs = round.correct ? Math.min(persistedStats?.fastestCorrectMs ?? round.response_time_ms, round.response_time_ms) : undefined;
-
-                await tx.contentStat.upsert({
-                    where: { gameMode_itemType_itemId_rulesetVersion_ppVersion: statKey },
+                await tx.userAchievement.upsert({
+                    where: { userId_gameMode_variant_rulesetVersion_ppVersion: achievementKey },
                     create: {
-                        ...statKey,
-                        appearances: 1,
-                        correctCount: round.correct ? 1 : 0,
-                        skipCount: round.result_type === "skip" ? 1 : 0,
-                        timeoutCount: round.result_type === "timeout" ? 1 : 0,
-                        totalResponseTimeMs: round.response_time_ms,
-                        fastestCorrectMs: round.correct ? round.response_time_ms : null,
-                        empiricalDifficulty: nextDifficulty,
+                        ...achievementKey,
+                        totalScore: points,
+                        gamesPlayed: 1,
+                        roundsPlayed: roundHistory.length,
+                        totalCorrect: gameState.correct_guesses,
+                        totalSkips: skipCount,
+                        totalTimeouts: timeoutCount,
+                        totalResponseTimeMs,
+                        highestStreak: gameState.highest_streak,
+                        highestScore: points,
+                        bestRunPp: runPp,
+                        profilePp,
+                        lastPlayed: persistedGame.endedAt,
                     },
                     update: {
-                        appearances: { increment: 1 },
-                        correctCount: { increment: round.correct ? 1 : 0 },
-                        skipCount: { increment: round.result_type === "skip" ? 1 : 0 },
-                        timeoutCount: { increment: round.result_type === "timeout" ? 1 : 0 },
-                        totalResponseTimeMs: { increment: round.response_time_ms },
-                        ...(fastestCorrectMs === undefined ? {} : { fastestCorrectMs }),
-                        empiricalDifficulty: nextDifficulty,
+                        totalScore: { increment: points },
+                        gamesPlayed: { increment: 1 },
+                        roundsPlayed: { increment: roundHistory.length },
+                        totalCorrect: { increment: gameState.correct_guesses },
+                        totalSkips: { increment: skipCount },
+                        totalTimeouts: { increment: timeoutCount },
+                        totalResponseTimeMs: { increment: totalResponseTimeMs },
+                        highestStreak: Math.max(existingAchievement?.highestStreak ?? 0, gameState.highest_streak),
+                        highestScore: Math.max(existingAchievement?.highestScore ?? 0, points),
+                        bestRunPp: Math.max(Number(existingAchievement?.bestRunPp ?? 0), runPp),
+                        profilePp,
+                        lastPlayed: persistedGame.endedAt,
                     },
                 });
-            }
 
-            const achievementKey = {
-                userId,
-                gameMode: gameState.game_mode,
-                variant: gameState.variant,
-                rulesetVersion,
-                ppVersion,
-            };
-            const [existingAchievement, topRuns] = await Promise.all([
-                tx.userAchievement.findUnique({
-                    where: { userId_gameMode_variant_rulesetVersion_ppVersion: achievementKey },
-                }),
-                tx.game.findMany({
-                    where: {
-                        ...achievementKey,
-                        ranked: true,
-                        pp: { gt: 0 },
-                    },
-                    select: { pp: true },
-                    orderBy: [{ pp: "desc" }, { endedAt: "asc" }],
-                    take: 100,
-                }),
-            ]);
-            const profilePp = calculateProfilePp(topRuns.map(({ pp }) => Number(pp)));
-
-            await tx.userAchievement.upsert({
-                where: { userId_gameMode_variant_rulesetVersion_ppVersion: achievementKey },
-                create: {
-                    ...achievementKey,
-                    totalScore: points,
-                    gamesPlayed: 1,
-                    roundsPlayed: roundHistory.length,
-                    totalCorrect: gameState.correct_guesses,
-                    totalSkips: skipCount,
-                    totalTimeouts: timeoutCount,
-                    totalResponseTimeMs,
-                    highestStreak: gameState.highest_streak,
-                    highestScore: points,
-                    bestRunPp: runPp,
-                    profilePp,
-                    lastPlayed: persistedGame.endedAt,
-                },
-                update: {
-                    totalScore: { increment: points },
-                    gamesPlayed: { increment: 1 },
-                    roundsPlayed: { increment: roundHistory.length },
-                    totalCorrect: { increment: gameState.correct_guesses },
-                    totalSkips: { increment: skipCount },
-                    totalTimeouts: { increment: timeoutCount },
-                    totalResponseTimeMs: { increment: totalResponseTimeMs },
-                    highestStreak: Math.max(existingAchievement?.highestStreak ?? 0, gameState.highest_streak),
-                    highestScore: Math.max(existingAchievement?.highestScore ?? 0, points),
-                    bestRunPp: Math.max(Number(existingAchievement?.bestRunPp ?? 0), runPp),
-                    profilePp,
-                    lastPlayed: persistedGame.endedAt,
-                },
-            });
-
-            return runPp;
+                return runPp;
             },
             { isolationLevel: "Serializable" },
         ),
@@ -421,19 +407,24 @@ export async function finishGameSession(sessionId: string, userId: number, reque
 
     await writeGameSession({ ...finalizingState, pp: persistedPp, end_pending: false }, 120);
     if (gameState.multiplayer_lobby_id) {
-        await updateMultiplayerProgress(gameState.multiplayer_lobby_id, userId, {
-            points,
-            round: gameState.current_round,
-            scoreSessionId: sessionId,
-            results: {
-                correct: roundHistory.filter((round) => round.correct).length,
-                incorrect: roundHistory.filter((round) => !round.correct && round.result_type === "guess").length,
-                skipped: skipCount,
-                timedOut: timeoutCount,
+        await updateMultiplayerProgress(
+            gameState.multiplayer_lobby_id,
+            userId,
+            {
+                points,
+                round: gameState.current_round,
+                scoreSessionId: sessionId,
+                results: {
+                    correct: roundHistory.filter((round) => round.correct).length,
+                    incorrect: roundHistory.filter((round) => !round.correct && round.result_type === "guess").length,
+                    skipped: skipCount,
+                    timedOut: timeoutCount,
+                },
+                finished: true,
+                completedMatch: endReason !== "quit",
             },
-            finished: true,
-            completedMatch: endReason !== "quit",
-        }, gameState.multiplayer_match_id ?? undefined).catch((error) => console.error("Failed to update multiplayer progress:", error));
+            gameState.multiplayer_match_id ?? undefined,
+        ).catch((error) => console.error("Failed to update multiplayer progress:", error));
     }
     return persistedPp;
 }
@@ -635,11 +626,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
 
         if (isNextRound) {
             if (gameState.multiplayer_lobby_id) {
-                const multiplayerState = await getMultiplayerRoundState(
-                    gameState.multiplayer_lobby_id,
-                    userId,
-                    gameState.current_round,
-                );
+                const multiplayerState = await getMultiplayerRoundState(gameState.multiplayer_lobby_id, userId, gameState.current_round);
                 if (!multiplayerState.allReady) throw new Error("Waiting for other players");
             }
 
@@ -749,12 +736,17 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
         await writeGameSession(updatedGameState);
 
         if (gameState.multiplayer_lobby_id) {
-            await updateMultiplayerProgress(gameState.multiplayer_lobby_id, userId, {
-                points: updatedGameState.total_points,
-                round: updatedGameState.current_round,
-                ...(!isNextRound ? { submittedRound: gameState.current_round, resultRound: gameState.current_round, resultCorrect: isCorrect, resultSkipped: isSkipped, resultPoints: points } : {}),
-                finished: runFailed,
-            }, gameState.multiplayer_match_id ?? undefined).catch((error) => console.error("Failed to update multiplayer progress:", error));
+            await updateMultiplayerProgress(
+                gameState.multiplayer_lobby_id,
+                userId,
+                {
+                    points: updatedGameState.total_points,
+                    round: updatedGameState.current_round,
+                    ...(!isNextRound ? { submittedRound: gameState.current_round, resultRound: gameState.current_round, resultCorrect: isCorrect, resultSkipped: isSkipped, resultPoints: points } : {}),
+                    finished: runFailed,
+                },
+                gameState.multiplayer_match_id ?? undefined,
+            ).catch((error) => console.error("Failed to update multiplayer progress:", error));
         }
 
         if (isSurvivalMode && madeMistake && !survivalFailed) {

@@ -23,10 +23,10 @@ Example volume layout:
 
 ```yaml
 services:
-  app:
-    volumes:
-      - ./mapsets:/app/mapsets
-      - ./tmp:/app/tmp
+    app:
+        volumes:
+            - ./mapsets:/app/mapsets
+            - ./tmp:/app/tmp
 ```
 
 Create host bind-mount directories with appropriate ownership and permissions before starting the container. Do not make them world-writable as a shortcut.

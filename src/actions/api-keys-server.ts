@@ -36,7 +36,7 @@ export async function listApiKeysAction() {
                 FROM api_keys
                 WHERE user_id = ?
                 ORDER BY created_at DESC`,
-            [session.user.banchoId]
+            [session.user.banchoId],
         );
 
         return keys;
@@ -48,7 +48,7 @@ export async function deleteApiKeyAction(keyId: string): Promise<void> {
         await query(
             `DELETE FROM api_keys
             WHERE id = ? AND user_id = ?`,
-            [keyId, session.user.banchoId]
+            [keyId, session.user.banchoId],
         );
     });
 }

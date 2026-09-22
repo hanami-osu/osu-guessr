@@ -1,5 +1,10 @@
 export class GameError extends Error {
-    constructor(message: string, public code: string, public recoverable: boolean = true, public cause?: Error) {
+    constructor(
+        message: string,
+        public code: string,
+        public recoverable: boolean = true,
+        public cause?: Error,
+    ) {
         super(message);
         this.name = "GameError";
     }

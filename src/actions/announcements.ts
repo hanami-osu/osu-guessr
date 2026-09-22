@@ -11,7 +11,7 @@ export async function listAnnouncements(): Promise<Announcement[]> {
             FROM announcements
             ORDER BY created_at DESC
         `);
-        return (results as Announcement[]).map((r) => ({ ...r, created_at: new Date(r.created_at).toISOString() } as unknown as Announcement));
+        return (results as Announcement[]).map((r) => ({ ...r, created_at: new Date(r.created_at).toISOString() }) as unknown as Announcement);
     } catch (error) {
         console.error("Error listing announcements:", error);
         return [];
@@ -27,9 +27,9 @@ export async function listRecentAnnouncements(limit: number = 6): Promise<Announ
             ORDER BY created_at DESC
             LIMIT ?
         `,
-            [limit]
+            [limit],
         );
-        return (results as Announcement[]).map((r) => ({ ...r, created_at: new Date(r.created_at).toISOString() } as unknown as Announcement));
+        return (results as Announcement[]).map((r) => ({ ...r, created_at: new Date(r.created_at).toISOString() }) as unknown as Announcement);
     } catch (error) {
         console.error("Error listing recent announcements:", error);
         return [];

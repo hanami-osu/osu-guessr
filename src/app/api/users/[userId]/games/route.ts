@@ -12,27 +12,31 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
-    return withApiKey(request, async () => {
-        const { userId } = await params;
-        const { searchParams } = new URL(request.url);
-        const query = querySchema.parse({
-            mode: searchParams.get("mode") ?? undefined,
-            variant: searchParams.get("variant") ?? undefined,
-            limit: searchParams.get("limit") ?? undefined,
-            offset: searchParams.get("offset") ?? undefined,
-        });
+    return withApiKey(
+        request,
+        async () => {
+            const { userId } = await params;
+            const { searchParams } = new URL(request.url);
+            const query = querySchema.parse({
+                mode: searchParams.get("mode") ?? undefined,
+                variant: searchParams.get("variant") ?? undefined,
+                limit: searchParams.get("limit") ?? undefined,
+                offset: searchParams.get("offset") ?? undefined,
+            });
 
-        const banchoId = apiUserIdSchema.parse(userId);
-        const [games, total] = await Promise.all([getUserLatestGamesAction(banchoId, query.mode, query.variant, query.limit, query.offset), getUserGamesCountAction(banchoId, query.mode, query.variant)]);
+            const banchoId = apiUserIdSchema.parse(userId);
+            const [games, total] = await Promise.all([getUserLatestGamesAction(banchoId, query.mode, query.variant, query.limit, query.offset), getUserGamesCountAction(banchoId, query.mode, query.variant)]);
 
-        return NextResponse.json({
-            success: true,
-            data: games,
-            meta: {
-                total,
-                offset: query.offset,
-                limit: query.limit,
-            },
-        });
-    }, { fallbackMessage: "Failed to fetch user games", logLabel: "Games error" });
+            return NextResponse.json({
+                success: true,
+                data: games,
+                meta: {
+                    total,
+                    offset: query.offset,
+                    limit: query.limit,
+                },
+            });
+        },
+        { fallbackMessage: "Failed to fetch user games", logLabel: "Games error" },
+    );
 }

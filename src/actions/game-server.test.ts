@@ -97,12 +97,7 @@ const getMultiplayerRoundStateMock = mock(async () => ({
 }));
 const getOrCreateMultiplayerRoundMock = mock(async (_code: string, _round: number, create: () => Promise<unknown>) => create());
 const updateMultiplayerProgressMock = mock(
-    async (
-        _code: string,
-        _userId: number,
-        _progress: { points: number; round: number; submittedRound?: number; readyRound?: number; scoreSessionId?: string | null; finished?: boolean },
-        _matchId?: string,
-    ) => {
+    async (_code: string, _userId: number, _progress: { points: number; round: number; submittedRound?: number; readyRound?: number; scoreSessionId?: string | null; finished?: boolean }, _matchId?: string) => {
         void _matchId;
         if (_progress.scoreSessionId !== undefined) multiplayerLobby.players[0].scoreSessionId = _progress.scoreSessionId;
         if (_progress.finished !== undefined) multiplayerLobby.players[0].finished = _progress.finished;

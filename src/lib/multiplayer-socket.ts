@@ -3,13 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createMultiplayerSocketTokenAction } from "@/actions/multiplayer-server";
 import type { MultiplayerLobby, MultiplayerRoundState } from "@/lib/multiplayer";
-import {
-    parseMultiplayerMessage,
-    stringifyMultiplayerMessage,
-    type MultiplayerRpcAction,
-    type MultiplayerRpcError,
-    type MultiplayerRpcResult,
-} from "@/lib/multiplayer-protocol";
+import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcAction, type MultiplayerRpcError, type MultiplayerRpcResult } from "@/lib/multiplayer-protocol";
 
 type LobbyEvent = { type: "lobby"; lobby: MultiplayerLobby };
 type DeletedEvent = { type: "deleted"; code: string };
@@ -94,8 +88,7 @@ export function useMultiplayerSocket(code?: string, round?: number, enabled: boo
                         } else if (message.type === "deleted") {
                             setLobby(null);
                             setUnavailable(true);
-                        }
-                        else if (message.type === "presence") setPresenceUserIds(new Set(message.userIds));
+                        } else if (message.type === "presence") setPresenceUserIds(new Set(message.userIds));
                         else if (message.type === "rpc_result") {
                             const pending = pendingRequestsRef.current.get(message.id);
                             if (pending) {
@@ -144,38 +137,44 @@ export function useMultiplayerSocket(code?: string, round?: number, enabled: boo
         };
     }, [code, enabled]);
 
-    const request = useCallback(function request<T>(action: MultiplayerRpcAction, payload: Record<string, unknown>): Promise<T> {
-        if (!code || !enabled) return Promise.reject(new Error("Multiplayer connection is unavailable"));
+    const request = useCallback(
+        function request<T>(action: MultiplayerRpcAction, payload: Record<string, unknown>): Promise<T> {
+            if (!code || !enabled) return Promise.reject(new Error("Multiplayer connection is unavailable"));
 
-        const id = crypto.randomUUID();
-        const message = stringifyMultiplayerMessage({ type: "rpc", id, action, payload });
-        return new Promise<T>((resolve, reject) => {
-            const pending: PendingRequest = {
-                message,
-                sent: false,
-                resolve: (value) => resolve(value as T),
-                reject,
-            };
-            pendingRequestsRef.current.set(id, pending);
+            const id = crypto.randomUUID();
+            const message = stringifyMultiplayerMessage({ type: "rpc", id, action, payload });
+            return new Promise<T>((resolve, reject) => {
+                const pending: PendingRequest = {
+                    message,
+                    sent: false,
+                    resolve: (value) => resolve(value as T),
+                    reject,
+                };
+                pendingRequestsRef.current.set(id, pending);
 
+                const socket = socketRef.current;
+                if (socket?.readyState === WebSocket.OPEN) {
+                    pending.sent = true;
+                    socket.send(message);
+                }
+            });
+        },
+        [code, enabled],
+    );
+
+    const sendReady = useCallback(
+        (readyRound: number): boolean => {
             const socket = socketRef.current;
-            if (socket?.readyState === WebSocket.OPEN) {
-                pending.sent = true;
-                socket.send(message);
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                setError("Multiplayer connection is reconnecting");
+                return false;
             }
-        });
-    }, [code, enabled]);
-
-    const sendReady = useCallback((readyRound: number): boolean => {
-        const socket = socketRef.current;
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
-            setError("Multiplayer connection is reconnecting");
-            return false;
-        }
-        if (!lobby) return false;
-        socket.send(JSON.stringify({ type: "ready", round: readyRound, matchId: lobby.matchId }));
-        return true;
-    }, [lobby]);
+            if (!lobby) return false;
+            socket.send(JSON.stringify({ type: "ready", round: readyRound, matchId: lobby.matchId }));
+            return true;
+        },
+        [lobby],
+    );
 
     const sendChat = useCallback((message: string): boolean => {
         const socket = socketRef.current;

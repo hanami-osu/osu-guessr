@@ -1,9 +1,4 @@
-import type {
-    ScorePpBeatmapSnapshot,
-    ScorePpHitStatisticsSnapshot,
-    ScorePpPlayerSnapshot,
-    ScorePpScoreSnapshot,
-} from "./types";
+import type { ScorePpBeatmapSnapshot, ScorePpHitStatisticsSnapshot, ScorePpPlayerSnapshot, ScorePpScoreSnapshot } from "./types";
 
 export interface ScorePpSourceScore {
     sourceScoreId: string;

@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-const optionalUrl = (message: string) =>
-    z.preprocess((value) => (value === "" ? undefined : value), z.string().url(message).optional());
+const optionalUrl = (message: string) => z.preprocess((value) => (value === "" ? undefined : value), z.string().url(message).optional());
 
 const envSchema = z.object({
     DATABASE_URL: optionalUrl("DATABASE_URL must be a valid database URL"),

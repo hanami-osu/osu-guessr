@@ -14,7 +14,7 @@ export const metadata: Metadata = createPageMetadata({
 
 export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ mode?: string | string[]; variant?: string | string[] }> }) {
     const { mode, variant } = await searchParams;
-    const initialMode = typeof mode === "string" && Object.values(GameMode).includes(mode as GameMode) ? mode as GameMode : GameMode.Background;
+    const initialMode = typeof mode === "string" && Object.values(GameMode).includes(mode as GameMode) ? (mode as GameMode) : GameMode.Background;
     const initialVariant = variant === "survival" ? "survival" : "classic";
 
     try {

@@ -47,9 +47,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         const rank = user.ranks?.modeRanks[currentMode]?.[currentVariant];
         const pp = Number(modeStats?.profile_pp ?? 0);
         const context = `${formatLabel(currentMode)} · ${formatLabel(currentVariant)}`;
-        const performance = [rank ? `#${rank.toLocaleString("en-US")}` : null, modeStats ? `${pp.toLocaleString("en-US", { maximumFractionDigits: 1 })} pp` : null]
-            .filter(Boolean)
-            .join(" · ");
+        const performance = [rank ? `#${rank.toLocaleString("en-US")}` : null, modeStats ? `${pp.toLocaleString("en-US", { maximumFractionDigits: 1 })} pp` : null].filter(Boolean).join(" · ");
         const description = performance ? `${context} · ${performance}` : `${context} player statistics on osu!guessr.`;
 
         return createPageMetadata({
@@ -105,14 +103,6 @@ export default async function UserProfile({ params, searchParams }: Props) {
         );
     } catch (error) {
         console.error("Failed to fetch user data:", error);
-        return (
-            <UserProfileClient
-                currentMode={currentMode}
-                currentVariant={currentVariant}
-                banchoId={banchoId}
-                user={null}
-                loadError={error instanceof Error ? error.message : "Failed to load user data"}
-            />
-        );
+        return <UserProfileClient currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} user={null} loadError={error instanceof Error ? error.message : "Failed to load user data"} />;
     }
 }

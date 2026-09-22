@@ -74,12 +74,12 @@ export interface ScorePpPairSelectionExclusions extends ScorePpPairExclusions {
 function hasExcludedContent(pair: ScorePpPairSnapshot, exclusions: ScorePpPairSelectionExclusions): boolean {
     return Boolean(
         exclusions.pairIds?.has(pair.id) ||
-            exclusions.scoreIds?.has(pair.left.sourceScoreId) ||
-            exclusions.scoreIds?.has(pair.right.sourceScoreId) ||
-            exclusions.userIds?.has(pair.left.player.userId) ||
-            exclusions.userIds?.has(pair.right.player.userId) ||
-            exclusions.beatmapIds?.has(pair.left.beatmap.beatmapId) ||
-            exclusions.beatmapIds?.has(pair.right.beatmap.beatmapId),
+        exclusions.scoreIds?.has(pair.left.sourceScoreId) ||
+        exclusions.scoreIds?.has(pair.right.sourceScoreId) ||
+        exclusions.userIds?.has(pair.left.player.userId) ||
+        exclusions.userIds?.has(pair.right.player.userId) ||
+        exclusions.beatmapIds?.has(pair.left.beatmap.beatmapId) ||
+        exclusions.beatmapIds?.has(pair.right.beatmap.beatmapId),
     );
 }
 
@@ -92,12 +92,7 @@ async function getActiveScorePpBatchId(): Promise<string | null> {
     return batch?.id ?? null;
 }
 
-async function findCandidates(
-    batchId: string,
-    relativePpGap: { gte?: number; gt?: number; lte: number },
-    exclusions: ScorePpPairSelectionExclusions,
-    rng: () => number,
-): Promise<ScorePpPairSnapshot[]> {
+async function findCandidates(batchId: string, relativePpGap: { gte?: number; gt?: number; lte: number }, exclusions: ScorePpPairSelectionExclusions, rng: () => number): Promise<ScorePpPairSnapshot[]> {
     const where = { batchId, active: true, relativePpGap } satisfies Prisma.ScorePpPairWhereInput;
     const count = await prisma.scorePpPair.count({ where });
     if (count === 0) return [];

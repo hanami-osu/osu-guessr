@@ -8,12 +8,7 @@ export function calculateArcadeScore(isCorrect: boolean, timeLeftSeconds: number
     return BASE_POINTS + timeLeft * TIME_BONUS_MULTIPLIER + streak * STREAK_BONUS;
 }
 
-export function calculateArcadeScoreFromRound(round: {
-    correct: boolean;
-    responseTimeMs: number;
-    timeLimitMs: number | null;
-    streakBefore: number;
-}): number {
+export function calculateArcadeScoreFromRound(round: { correct: boolean; responseTimeMs: number; timeLimitMs: number | null; streakBefore: number }): number {
     const timeLimitMs = round.timeLimitMs ?? ROUND_TIME * 1000;
     const responseTimeMs = Math.max(0, Math.min(round.responseTimeMs, timeLimitMs));
     const timeLeftSeconds = Math.max(0, Math.ceil((timeLimitMs - responseTimeMs) / 1000));

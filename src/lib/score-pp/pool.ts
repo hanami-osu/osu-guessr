@@ -97,11 +97,7 @@ function pairKey(leftScoreId: string, rightScoreId: string): string {
     return leftScoreId.localeCompare(rightScoreId) <= 0 ? `${leftScoreId}:${rightScoreId}` : `${rightScoreId}:${leftScoreId}`;
 }
 
-function pickPairFromSample(
-    sortedScores: readonly ScorePpScoreSnapshot[],
-    round: number,
-    usedPairKeys: ReadonlySet<string>,
-): ScorePpPairCandidate | null {
+function pickPairFromSample(sortedScores: readonly ScorePpScoreSnapshot[], round: number, usedPairKeys: ReadonlySet<string>): ScorePpPairCandidate | null {
     const maxGap = getScorePpMaxRelativeGap(round);
 
     for (let anchorAttempt = 0; anchorAttempt < 64; anchorAttempt += 1) {
@@ -204,10 +200,7 @@ async function activateBatch(batchId: string, pairCount: number, targetCount: nu
     });
     const staleIds = stale.map(({ id }) => id);
     if (staleIds.length > 0) {
-        await prisma.$transaction([
-            prisma.scorePpPair.deleteMany({ where: { batchId: { in: staleIds } } }),
-            prisma.scorePpBatch.deleteMany({ where: { id: { in: staleIds } } }),
-        ]);
+        await prisma.$transaction([prisma.scorePpPair.deleteMany({ where: { batchId: { in: staleIds } } }), prisma.scorePpBatch.deleteMany({ where: { id: { in: staleIds } } })]);
     }
 }
 

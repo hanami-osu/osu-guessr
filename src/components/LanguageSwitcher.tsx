@@ -18,7 +18,13 @@ export function LanguageSwitcher() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="space-y-2" align="end" aria-label={t.components.header.accessibility.changeLanguage}>
                 {Object.entries(languages).map(([code, name]) => (
-                    <DropdownMenuItem key={code} role="menuitemradio" aria-checked={locale === code} onClick={() => setLanguage(code as Locale)} className={`${locale === code ? "bg-accent" : ""} hover:cursor-pointer`}>
+                    <DropdownMenuItem
+                        key={code}
+                        role="menuitemradio"
+                        aria-checked={locale === code}
+                        onClick={() => setLanguage(code as Locale)}
+                        className={`${locale === code ? "bg-accent" : ""} hover:cursor-pointer`}
+                    >
                         <Check className={`mr-2 h-4 w-4 ${locale === code ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
                         {name}
                     </DropdownMenuItem>

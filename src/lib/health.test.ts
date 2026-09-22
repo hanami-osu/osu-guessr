@@ -8,7 +8,7 @@ describe("getApplicationHealth", () => {
                 redisPing: async () => "PONG",
                 mariaDbPing: async () => [{ ok: 1 }],
             },
-            "deployment-123"
+            "deployment-123",
         );
 
         expect(result).toEqual({
@@ -32,7 +32,7 @@ describe("getApplicationHealth", () => {
                     mariaDbChecked = true;
                 },
             },
-            undefined
+            undefined,
         );
 
         expect(mariaDbChecked).toBe(true);
@@ -53,7 +53,7 @@ describe("getApplicationHealth", () => {
                     throw new Error("database unavailable");
                 },
             },
-            "deployment"
+            "deployment",
         );
         const timeout = await getApplicationHealth(
             {
@@ -61,7 +61,7 @@ describe("getApplicationHealth", () => {
                 mariaDbPing: async () => undefined,
             },
             "deployment",
-            5
+            5,
         );
 
         expect(databaseFailure.status).toBe(503);

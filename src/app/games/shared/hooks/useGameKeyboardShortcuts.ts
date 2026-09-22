@@ -20,7 +20,8 @@ export function useGameKeyboardShortcuts({ disabled, onNextRound, onSkip }: Game
             if (
                 target instanceof HTMLElement &&
                 target.closest("button, a[href], input, textarea, select, summary, [contenteditable='true'], [role='button'], [role='link'], [role='menuitem'], [role='option']")
-            ) return;
+            )
+                return;
 
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && onSkip) {
                 event.preventDefault();

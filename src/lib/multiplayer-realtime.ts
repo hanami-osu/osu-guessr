@@ -15,10 +15,7 @@ export async function getPresentMultiplayerUsers(code: string): Promise<number[]
     return [...new Set(members.map((member) => Number(member.split(":", 1)[0])).filter((id) => Number.isSafeInteger(id) && id > 0))];
 }
 
-export type MultiplayerRealtimeEvent =
-    | { type: "lobby"; lobby: MultiplayerLobby }
-    | { type: "deleted"; code: string }
-    | { type: "presence"; code: string; userIds: number[] };
+export type MultiplayerRealtimeEvent = { type: "lobby"; lobby: MultiplayerLobby } | { type: "deleted"; code: string } | { type: "presence"; code: string; userIds: number[] };
 
 function normalizeCode(code: string): string {
     return code.trim().toUpperCase();

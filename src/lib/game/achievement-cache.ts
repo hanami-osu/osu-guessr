@@ -40,15 +40,7 @@ export async function rebuildUserAchievementCache(): Promise<void> {
                         ppVersion: true,
                         pp: true,
                     },
-                    orderBy: [
-                        { userId: "asc" },
-                        { gameMode: "asc" },
-                        { variant: "asc" },
-                        { rulesetVersion: "asc" },
-                        { ppVersion: "asc" },
-                        { pp: "desc" },
-                        { endedAt: "asc" },
-                    ],
+                    orderBy: [{ userId: "asc" }, { gameMode: "asc" }, { variant: "asc" }, { rulesetVersion: "asc" }, { ppVersion: "asc" }, { pp: "desc" }, { endedAt: "asc" }],
                 }),
             ]);
 

@@ -56,10 +56,15 @@ async function getRandomMapset(filenameColumn: "audio_filename" | "image_filenam
     if (!mapset) return null;
 
     if (!storedMapset) {
-        await query(
-            "INSERT INTO mapset_data (mapset_id, title, artist, mapper, ranked_at, star_rating_min, star_rating_max) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [mapset.mapset_id, mapset.title, mapset.artist, mapset.mapper, mapset.ranked_at ?? null, mapset.star_rating_min ?? null, mapset.star_rating_max ?? null],
-        );
+        await query("INSERT INTO mapset_data (mapset_id, title, artist, mapper, ranked_at, star_rating_min, star_rating_max) VALUES (?, ?, ?, ?, ?, ?, ?)", [
+            mapset.mapset_id,
+            mapset.title,
+            mapset.artist,
+            mapset.mapper,
+            mapset.ranked_at ?? null,
+            mapset.star_rating_min ?? null,
+            mapset.star_rating_max ?? null,
+        ]);
     }
 
     return { ...tags, ...mapset };
@@ -121,7 +126,7 @@ async function selectRandomSkin(sessionId?: string): Promise<SkinData | null> {
          ${excludedCondition}
          ORDER BY RAND()
          LIMIT 1`,
-        params
+        params,
     );
 
     return result.length > 0 ? (result[0] as SkinData) : null;

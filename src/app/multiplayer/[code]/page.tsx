@@ -5,11 +5,7 @@ import { normalizeLobbyCode, readMultiplayerLobby } from "@/lib/multiplayer";
 
 export const dynamic = "force-dynamic";
 
-export default async function MultiplayerLobbyPage({
-    params,
-}: {
-    params: Promise<{ code: string }>;
-}) {
+export default async function MultiplayerLobbyPage({ params }: { params: Promise<{ code: string }> }) {
     const session = await auth();
     if (!session?.user?.banchoId) return <SignInPrompt />;
 

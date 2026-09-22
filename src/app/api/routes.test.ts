@@ -37,13 +37,7 @@ const request = (path: string, withKey = true) =>
     });
 
 beforeAll(async () => {
-    [
-        { GET: leaderboardGet },
-        { GET: searchGet },
-        { GET: userGet },
-        { GET: userStatsGet },
-        { GET: userGamesGet },
-    ] = await Promise.all([
+    [{ GET: leaderboardGet }, { GET: searchGet }, { GET: userGet }, { GET: userStatsGet }, { GET: userGamesGet }] = await Promise.all([
         import("./games/leaderboard/route"),
         import("./users/search/route"),
         import("./users/[userId]/route"),

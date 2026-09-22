@@ -211,7 +211,12 @@ export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isR
                 />
 
                 {showSuggestions && suggestions.length > 0 && (
-                    <div id={listboxId} role="listbox" aria-label={t.game.input.suggestions} className="motion-scale-in absolute z-50 mt-1 w-full origin-top overflow-hidden border border-border/60 bg-background shadow-lg">
+                    <div
+                        id={listboxId}
+                        role="listbox"
+                        aria-label={t.game.input.suggestions}
+                        className="motion-scale-in absolute z-50 mt-1 w-full origin-top overflow-hidden border border-border/60 bg-background shadow-lg"
+                    >
                         <div className="max-h-[min(240px,35dvh)] divide-y divide-border/40 overflow-y-auto backdrop-blur-sm">
                             {suggestions.map((suggestion, index) => (
                                 <div

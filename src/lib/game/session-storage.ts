@@ -16,12 +16,7 @@ async function readGameSession<T>(sessionId: string): Promise<T | null> {
     return cached ? (JSON.parse(cached) as T) : null;
 }
 
-export async function readOwnedGameSession<T extends { user_id: number }>(
-    sessionId: string,
-    userId: number,
-    notFoundMessage: string,
-    matches?: (session: T) => boolean,
-): Promise<T> {
+export async function readOwnedGameSession<T extends { user_id: number }>(sessionId: string, userId: number, notFoundMessage: string, matches?: (session: T) => boolean): Promise<T> {
     const session = await readGameSession<T>(sessionId);
     if (!session || session.user_id !== userId || (matches && !matches(session))) {
         throw new Error(notFoundMessage);

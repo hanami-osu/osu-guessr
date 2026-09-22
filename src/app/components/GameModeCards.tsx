@@ -51,7 +51,10 @@ export default function GameModeCards() {
     return (
         <section className="scroll-mt-24 py-6 md:py-8" id="gamemodes">
             <div className="page-container">
-                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground"><span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />{t.gameModes.title}</h2>
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
+                    <span aria-hidden="true" className="h-3.5 w-1 rounded-full bg-primary" />
+                    {t.gameModes.title}
+                </h2>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
                     {GAME_MODES.map((mode) => (
@@ -68,7 +71,13 @@ export default function GameModeCards() {
                                 <ScorePpPreview />
                             ) : (
                                 <div className="relative aspect-[16/9] overflow-hidden bg-card">
-                                    <Image src={mode.image || "/placeholder.svg"} alt="" fill sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw" className="object-cover opacity-85 transition-[opacity,transform] duration-200 group-hover:scale-[1.015] group-hover:opacity-100" />
+                                    <Image
+                                        src={mode.image || "/placeholder.svg"}
+                                        alt=""
+                                        fill
+                                        sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
+                                        className="object-cover opacity-85 transition-[opacity,transform] duration-200 group-hover:scale-[1.015] group-hover:opacity-100"
+                                    />
                                 </div>
                             )}
                             <div className="p-4">
@@ -84,11 +93,7 @@ export default function GameModeCards() {
                 {selectedGame && (
                     <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-xl border-border/50 bg-card p-0 sm:max-w-2xl">
                         <DialogTitle className="sr-only">{t.game.preGame.title[selectedGame.id]}</DialogTitle>
-                        <PreGameMenu
-                            gameMode={selectedGame.id}
-                            onCancel={closeGameModal}
-                            onStart={(variant) => router.push(`${selectedGame.url}?variant=${variant}`)}
-                        />
+                        <PreGameMenu gameMode={selectedGame.id} onCancel={closeGameModal} onStart={(variant) => router.push(`${selectedGame.url}?variant=${variant}`)} />
                     </DialogContent>
                 )}
             </Dialog>

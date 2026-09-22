@@ -104,7 +104,13 @@ export function ReportDialog({ mapsetId, mapsetTitle, alternatives = [], onOpenC
 
                     <div className="space-y-2">
                         <Label htmlFor="report-description">{t.components.report.dialog.description.label}</Label>
-                        <Textarea id="report-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.components.report.dialog.description.placeholder} className="h-32" />
+                        <Textarea
+                            id="report-description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder={t.components.report.dialog.description.placeholder}
+                            className="h-32"
+                        />
                         <p className="text-xs text-muted-foreground">{t.components.report.dialog.description.minLength}</p>
                     </div>
 

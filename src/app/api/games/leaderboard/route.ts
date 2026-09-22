@@ -13,19 +13,23 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-    return withApiKey(request, async () => {
-        const { searchParams } = new URL(request.url);
-        const query = querySchema.parse({
-            mode: searchParams.get("mode") ?? undefined,
-            variant: searchParams.get("variant") ?? undefined,
-            limit: searchParams.get("limit") ?? undefined,
-        });
+    return withApiKey(
+        request,
+        async () => {
+            const { searchParams } = new URL(request.url);
+            const query = querySchema.parse({
+                mode: searchParams.get("mode") ?? undefined,
+                variant: searchParams.get("variant") ?? undefined,
+                limit: searchParams.get("limit") ?? undefined,
+            });
 
-        const leaderboard = await getTopPlayersAction(query.mode, query.variant, query.limit);
+            const leaderboard = await getTopPlayersAction(query.mode, query.variant, query.limit);
 
-        return NextResponse.json({
-            success: true,
-            data: normalizeDatabaseValue(leaderboard),
-        });
-    }, { fallbackMessage: "Failed to fetch leaderboard", logLabel: "Leaderboard error" });
+            return NextResponse.json({
+                success: true,
+                data: normalizeDatabaseValue(leaderboard),
+            });
+        },
+        { fallbackMessage: "Failed to fetch leaderboard", logLabel: "Leaderboard error" },
+    );
 }

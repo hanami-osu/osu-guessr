@@ -248,9 +248,7 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                         {visibleGames.map((game, index) => {
                             const endedAt = new Date(game.ended_at);
                             const isLegacyDeath = variant === "survival" && game.variant === "death" && game.ruleset_version === 0 && game.pp_version === 0;
-                            const scoreText = isLegacyDeath
-                                ? streakTemplate.replace("{count}", game.streak.toLocaleString(locale))
-                                : pointsTemplate.replace("{points}", game.points.toLocaleString(locale));
+                            const scoreText = isLegacyDeath ? streakTemplate.replace("{count}", game.streak.toLocaleString(locale)) : pointsTemplate.replace("{points}", game.points.toLocaleString(locale));
                             const detailText = streakTemplate.replace("{count}", game.streak.toLocaleString(locale));
                             const dateText = relativeDates && generatedAt ? formatHoursAgo(endedAt, new Date(generatedAt)) : endedAt.toLocaleDateString(locale, { dateStyle: "medium" });
                             const fullDateText = endedAt.toLocaleString(locale, { dateStyle: "full", timeStyle: "long" });
@@ -263,7 +261,9 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                                     href={`/scores/${game.id}`}
                                     className="group grid min-h-14 grid-cols-[3.25rem_minmax(0,1fr)_6.75rem] items-stretch overflow-hidden rounded-xl bg-muted/55 ring-1 ring-inset ring-border/35 transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:bg-muted/75 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_6rem_6.75rem]"
                                 >
-                                    <div className={`flex items-center justify-center border-r border-border/35 ${isTopSection && index < 3 ? "bg-primary/15 text-primary" : "bg-background/15 text-muted-foreground"}`}>
+                                    <div
+                                        className={`flex items-center justify-center border-r border-border/35 ${isTopSection && index < 3 ? "bg-primary/15 text-primary" : "bg-background/15 text-muted-foreground"}`}
+                                    >
                                         {isTopSection ? <span className="text-sm font-bold tabular-nums">#{index + 1}</span> : <Clock3 aria-hidden="true" className="size-4" />}
                                     </div>
 
@@ -271,7 +271,11 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                                         <div className={`truncate text-sm font-semibold ${!isLegacyDeath && game.points < 0 ? "text-destructive" : "text-foreground"}`}>{scoreText}</div>
                                         <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
                                             <span className="truncate sm:hidden">{!isLegacyDeath ? detailText : ppText}</span>
-                                            {!isLegacyDeath && <span aria-hidden="true" className="sm:hidden">·</span>}
+                                            {!isLegacyDeath && (
+                                                <span aria-hidden="true" className="sm:hidden">
+                                                    ·
+                                                </span>
+                                            )}
                                             <time dateTime={endedAt.toISOString()} title={fullDateText} className="shrink-0 cursor-help">
                                                 {dateText}
                                             </time>
@@ -288,7 +292,10 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                                     </div>
 
                                     <div className="relative flex items-center justify-center border-l border-primary/10 bg-primary/[0.08] px-2 text-center">
-                                        <div title={hasPp ? undefined : "pp was not recorded for this legacy score"} className={`text-sm font-bold tabular-nums ${hasPp ? "text-primary" : "text-muted-foreground"}`}>
+                                        <div
+                                            title={hasPp ? undefined : "pp was not recorded for this legacy score"}
+                                            className={`text-sm font-bold tabular-nums ${hasPp ? "text-primary" : "text-muted-foreground"}`}
+                                        >
                                             {ppText}
                                         </div>
                                         <ChevronRight aria-hidden="true" className="absolute right-2 size-4 text-primary/45 transition-transform group-hover:translate-x-0.5" />

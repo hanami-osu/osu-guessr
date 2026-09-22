@@ -22,7 +22,14 @@ export default function GameActionButton({ intent = "primary", loadingLabel, dis
                 className,
             )}
         >
-            {loadingLabel ? <><LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /><span role="status">{loadingLabel}</span></> : children}
+            {loadingLabel ? (
+                <>
+                    <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                    <span role="status">{loadingLabel}</span>
+                </>
+            ) : (
+                children
+            )}
         </Button>
     );
 }

@@ -23,8 +23,12 @@ export function LeaveGameDialog({ open, onOpenChange, title, description, confir
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={disabled}>{cancelLabel}</Button>
-                    <Button type="button" onClick={onConfirm} disabled={disabled}>{confirmLabel}</Button>
+                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={disabled}>
+                        {cancelLabel}
+                    </Button>
+                    <Button type="button" onClick={onConfirm} disabled={disabled}>
+                        {confirmLabel}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

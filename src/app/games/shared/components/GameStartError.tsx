@@ -15,7 +15,9 @@ export default function GameStartError({ message, onRetry }: { message: string; 
                 <AlertTitle>{t.game.errors.startFailed}</AlertTitle>
                 <AlertDescription className="mt-2 space-y-4">
                     <p>{message}</p>
-                    <Button type="button" variant="outline" onClick={onRetry}>{t.game.actions.retry}</Button>
+                    <Button type="button" variant="outline" onClick={onRetry}>
+                        {t.game.actions.retry}
+                    </Button>
                 </AlertDescription>
             </Alert>
         </div>

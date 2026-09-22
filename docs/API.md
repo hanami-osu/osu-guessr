@@ -98,7 +98,7 @@ Query parameters:
         total: number;
         offset: number;
         limit: number;
-    };
+    }
 }
 ```
 
@@ -220,7 +220,7 @@ Query parameters:
         highest_run_pp: number;
         total_games: number;
         total_users: number;
-    };
+    }
 }
 ```
 

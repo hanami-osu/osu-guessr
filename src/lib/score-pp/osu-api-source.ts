@@ -92,18 +92,7 @@ function mapSourceScore(score: Record<string, unknown>): { source: ScorePpSource
     const statistics = objectField(score.statistics) ?? {};
     const status = stringField(beatmapData?.status);
 
-    if (
-        !sourceScoreId ||
-        !userId ||
-        !beatmapId ||
-        !pp ||
-        accuracy == null ||
-        maxCombo == null ||
-        rulesetId !== 0 ||
-        !endedAt ||
-        !beatmap ||
-        !["ranked", "approved"].includes(status ?? "")
-    ) {
+    if (!sourceScoreId || !userId || !beatmapId || !pp || accuracy == null || maxCombo == null || rulesetId !== 0 || !endedAt || !beatmap || !["ranked", "approved"].includes(status ?? "")) {
         return null;
     }
 

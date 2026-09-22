@@ -239,14 +239,7 @@ export async function getUserStatsAction(banchoId: number, variant?: GameVariant
     return rows.map(mapAchievement);
 }
 
-export async function getUserLatestGamesAction(
-    banchoId: number,
-    gameMode?: GameMode,
-    variant: GameVariant = "classic",
-    limit?: number,
-    offset: number = 0,
-    endedAfter?: Date,
-): Promise<Array<Game>> {
+export async function getUserLatestGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit?: number, offset: number = 0, endedAfter?: Date): Promise<Array<Game>> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validatedVariant = gameVariantSchema.parse(variant);
     const pagination = z
@@ -312,12 +305,7 @@ export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode:
     };
 }
 
-export async function getUserRankHistoryAction(
-    banchoId: number,
-    gameMode: GameMode,
-    variant: GameVariant = "classic",
-    days: number = 60,
-): Promise<UserRankHistoryPoint[]> {
+export async function getUserRankHistoryAction(banchoId: number, gameMode: GameMode, variant: GameVariant = "classic", days: number = 60): Promise<UserRankHistoryPoint[]> {
     const validatedMode = gameModeSchema.parse(gameMode);
     const validated = z.object({ variant: gameVariantSchema, days: z.number().int().min(1).max(60) }).parse({ variant, days });
     const now = new Date();
@@ -464,10 +452,7 @@ export async function getTopPlayersAction(
         skip: validated.offset,
     });
     const userIds = achievements.map((achievement) => achievement.userId);
-    const [users, badgesByUser] = await Promise.all([
-        userIds.length === 0 ? [] : prisma.user.findMany({ where: { banchoId: { in: userIds } } }),
-        getBadgesForUsers(userIds),
-    ]);
+    const [users, badgesByUser] = await Promise.all([userIds.length === 0 ? [] : prisma.user.findMany({ where: { banchoId: { in: userIds } } }), getBadgesForUsers(userIds)]);
     const usersById = new Map(users.map((user) => [user.banchoId, user]));
 
     return achievements.flatMap((achievement) => {

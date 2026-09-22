@@ -86,7 +86,7 @@ describe("createReportRecord", () => {
                     if (sql.includes("INSERT INTO reports")) inserted = true;
                     return [];
                 },
-            })
+            }),
         ).rejects.toBeInstanceOf(ReportMapsetNotFoundError);
 
         expect(inserted).toBe(false);
@@ -95,12 +95,7 @@ describe("createReportRecord", () => {
     test("rejects an invalid report type before querying", async () => {
         const query = mock(async () => []);
 
-        await expect(
-            createReportRecord(
-                { ...validReport, reportType: "not-a-report-type" },
-                { query }
-            )
-        ).rejects.toBeInstanceOf(ZodError);
+        await expect(createReportRecord({ ...validReport, reportType: "not-a-report-type" }, { query })).rejects.toBeInstanceOf(ZodError);
 
         expect(query).not.toHaveBeenCalled();
     });

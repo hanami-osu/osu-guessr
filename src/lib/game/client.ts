@@ -124,10 +124,7 @@ export class GameClient {
         if (!sessionId) return false;
 
         try {
-            const state = await this.execute(
-                () => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)),
-                "resumeStoredGame",
-            );
+            const state = await this.execute(() => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)), "resumeStoredGame");
             if (this.disposed) return false;
             if (state.gameStatus !== "active") {
                 this.clearStoredSessionId();
@@ -177,22 +174,16 @@ export class GameClient {
             const previousState = this.session!.state;
             try {
                 const sessionId = this.session!.id;
-                const state = await this.execute(
-                    () => this.request("game.submit", { sessionId, guess }, () => submitGuessAction(sessionId, guess)),
-                    operationName,
-                    false,
-                    false,
-                );
+                const state = await this.execute(() => this.request("game.submit", { sessionId, guess }, () => submitGuessAction(sessionId, guess)), operationName, false, false);
                 this.updateState(state);
                 if (restartTimer && state.gameStatus === "active") this.startTimer();
             } catch (error) {
                 const recovered = await this.recoverState();
                 const mutationCommitted = Boolean(
-                    recovered && (
-                        guess === undefined
-                            ? recovered.rounds.current > previousState.rounds.current || recovered.gameStatus === "finished"
-                            : recovered.rounds.current > previousState.rounds.current || recovered.currentBeatmap.revealed
-                    ),
+                    recovered &&
+                    (guess === undefined
+                        ? recovered.rounds.current > previousState.rounds.current || recovered.gameStatus === "finished"
+                        : recovered.rounds.current > previousState.rounds.current || recovered.currentBeatmap.revealed),
                 );
                 if (mutationCommitted) {
                     if (restartTimer && recovered?.gameStatus === "active" && !recovered.currentBeatmap.revealed) this.startTimer();
@@ -278,10 +269,7 @@ export class GameClient {
         session.isActive = false;
 
         try {
-            const pp = await this.execute(
-                () => this.request("game.end", { sessionId: session.id }, () => endGameAction(session.id)),
-                "endGame",
-            );
+            const pp = await this.execute(() => this.request("game.end", { sessionId: session.id }, () => endGameAction(session.id)), "endGame");
             this.updateState({ ...session.state, pp: pp ?? session.state.pp, gameStatus: "finished" });
             this.cleanup();
             return pp;

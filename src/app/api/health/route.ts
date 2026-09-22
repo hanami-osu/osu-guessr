@@ -9,7 +9,7 @@ export async function GET() {
             redisPing: () => redisClient.ping(),
             mariaDbPing: () => query("SELECT 1"),
         },
-        process.env.NEXT_DEPLOYMENT_ID
+        process.env.NEXT_DEPLOYMENT_ID,
     );
 
     return NextResponse.json(health.body, { status: health.status });

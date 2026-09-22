@@ -9,18 +9,22 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-    return withApiKey(request, async () => {
-        const { searchParams } = new URL(request.url);
-        const validated = querySchema.parse({
-            query: searchParams.get("query") || "",
-            limit: searchParams.get("limit") ?? undefined,
-        });
+    return withApiKey(
+        request,
+        async () => {
+            const { searchParams } = new URL(request.url);
+            const validated = querySchema.parse({
+                query: searchParams.get("query") || "",
+                limit: searchParams.get("limit") ?? undefined,
+            });
 
-        const users = await searchUsersAction(validated.query, validated.limit);
+            const users = await searchUsersAction(validated.query, validated.limit);
 
-        return NextResponse.json({
-            success: true,
-            data: users,
-        });
-    }, { fallbackMessage: "Failed to search users", logLabel: "User search error" });
+            return NextResponse.json({
+                success: true,
+                data: users,
+            });
+        },
+        { fallbackMessage: "Failed to search users", logLabel: "User search error" },
+    );
 }

@@ -16,5 +16,13 @@ const GAME_MEDIA: Record<GuessGameMode, typeof GameAudio | typeof GameImage | ty
 export default function MenuManager({ gameMode, gameVariant, multiplayerLobbyCode }: { gameMode: GuessGameMode; gameVariant: GameVariant; multiplayerLobbyCode?: string }) {
     const router = useRouter();
 
-    return <GameScreen onExit={() => router.replace(multiplayerLobbyCode ? "/" : `/?game=${gameMode}`)} gameVariant={gameVariant} gameMode={gameMode} GameMedia={GAME_MEDIA[gameMode]} multiplayerLobbyCode={multiplayerLobbyCode} />;
+    return (
+        <GameScreen
+            onExit={() => router.replace(multiplayerLobbyCode ? "/" : `/?game=${gameMode}`)}
+            gameVariant={gameVariant}
+            gameMode={gameMode}
+            GameMedia={GAME_MEDIA[gameMode]}
+            multiplayerLobbyCode={multiplayerLobbyCode}
+        />
+    );
 }

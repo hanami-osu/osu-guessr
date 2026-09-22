@@ -4,20 +4,20 @@ import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
 function buildDatabaseUrl(): string {
-  if (process.env["DATABASE_URL"]) {
-    return process.env["DATABASE_URL"];
-  }
+    if (process.env["DATABASE_URL"]) {
+        return process.env["DATABASE_URL"];
+    }
 
-  const host = process.env["DB_HOST"] || "127.0.0.1";
-  return `mysql://root@${host}:3306/osu_guessr`;
+    const host = process.env["DB_HOST"] || "127.0.0.1";
+    return `mysql://root@${host}:3306/osu_guessr`;
 }
 
 export default defineConfig({
-  schema: "prisma/schema.prisma",
-  migrations: {
-    path: "prisma/migrations",
-  },
-  datasource: {
-    url: buildDatabaseUrl(),
-  },
+    schema: "prisma/schema.prisma",
+    migrations: {
+        path: "prisma/migrations",
+    },
+    datasource: {
+        url: buildDatabaseUrl(),
+    },
 });

@@ -61,8 +61,7 @@ export function calculateRunPp(rounds: PerformanceRound[], variant: GameVariant)
     const consistency = responseRatios.length < 2 ? 0.5 : 1 - clamp(Math.sqrt(variance) / 0.35, 0, 1);
     const consistencyFactor = 0.9 + consistency * 0.1;
 
-    const difficultyFactor =
-        correctRounds.reduce((total, round) => total + clamp(round.difficulty_snapshot ?? 1, 0.75, 1.5), 0) / correctRounds.length;
+    const difficultyFactor = correctRounds.reduce((total, round) => total + clamp(round.difficulty_snapshot ?? 1, 0.75, 1.5), 0) / correctRounds.length;
 
     const lengthBase = variant === "survival" ? correctRounds.length : rounds.length;
     const lengthFactor = Math.sqrt(lengthBase / 10);

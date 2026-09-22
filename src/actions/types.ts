@@ -2,7 +2,7 @@ export enum GameMode {
     Background = "background",
     Audio = "audio",
     Skin = "skin",
-    ScorePp = "score_pp"
+    ScorePp = "score_pp",
 }
 export type GuessGameMode = Exclude<GameMode, GameMode.ScorePp>;
 export type GameVariant = "classic" | "survival";

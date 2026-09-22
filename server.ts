@@ -5,13 +5,7 @@ import redisClient from "@/lib/redis";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { endGameForUser, getGameStateForUser, getSuggestions, startGameForUser, submitGuessForUser } from "@/lib/game/server";
 import { readOwnedGameSession } from "@/lib/game/session-storage";
-import {
-    endScorePpRunForUser,
-    getScorePpRoundForUser,
-    getScorePpRunStateForUser,
-    startScorePpRunForUser,
-    submitScorePpGuessForUser,
-} from "@/lib/score-pp/server";
+import { endScorePpRunForUser, getScorePpRoundForUser, getScorePpRunStateForUser, startScorePpRunForUser, submitScorePpGuessForUser } from "@/lib/score-pp/server";
 import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcRequest } from "@/lib/multiplayer-protocol";
 import {
     addMultiplayerMessage,
@@ -52,14 +46,17 @@ type MultiplayerGameSession = {
     multiplayer_match_id?: string | null;
 };
 
-type ClientMessage = {
-    type: "ready";
-    round: number;
-    matchId: string;
-} | {
-    type: "chat";
-    message: string;
-} | MultiplayerRpcRequest;
+type ClientMessage =
+    | {
+          type: "ready";
+          round: number;
+          matchId: string;
+      }
+    | {
+          type: "chat";
+          message: string;
+      }
+    | MultiplayerRpcRequest;
 
 const socketsByLobby = new Map<string, Set<WebSocket>>();
 const browserSockets = new Set<WebSocket>();
@@ -71,10 +68,13 @@ function scheduleCountdown(lobby: MultiplayerLobby): void {
     if (previous) clearTimeout(previous);
     countdowns.delete(lobby.code);
     if (lobby.status !== "starting" || !lobby.startAt) return;
-    const timer = setTimeout(() => {
-        countdowns.delete(lobby.code);
-        void finishMultiplayerCountdown(lobby.code).catch((error) => console.error("Failed to start multiplayer match:", error));
-    }, Math.max(0, lobby.startAt - Date.now()));
+    const timer = setTimeout(
+        () => {
+            countdowns.delete(lobby.code);
+            void finishMultiplayerCountdown(lobby.code).catch((error) => console.error("Failed to start multiplayer match:", error));
+        },
+        Math.max(0, lobby.startAt - Date.now()),
+    );
     countdowns.set(lobby.code, timer);
     timer.unref();
 }
@@ -88,10 +88,12 @@ function presenceMember(userId: number, connectionId: string): string {
 }
 
 async function touchPresence(context: SocketContext): Promise<void> {
-    await redisClient.zAdd(presenceKey(context.code), [{
-        score: Date.now(),
-        value: presenceMember(context.userId, context.connectionId),
-    }]);
+    await redisClient.zAdd(presenceKey(context.code), [
+        {
+            score: Date.now(),
+            value: presenceMember(context.userId, context.connectionId),
+        },
+    ]);
     await redisClient.expire(presenceKey(context.code), Math.ceil(PRESENCE_TTL_MS / 1000) * 2);
 }
 
@@ -113,8 +115,7 @@ async function publishPresence(code: string): Promise<void> {
 
 function scheduleDisconnectedPlayerCleanup(context: Pick<SocketContext, "code" | "userId">): void {
     const timer = setTimeout(() => {
-        void cleanupDisconnectedMultiplayerPlayer(context.code, context.userId)
-            .catch((error) => console.error("Failed to clean up disconnected multiplayer player:", error));
+        void cleanupDisconnectedMultiplayerPlayer(context.code, context.userId).catch((error) => console.error("Failed to clean up disconnected multiplayer player:", error));
     }, DISCONNECT_GRACE_MS);
     timer.unref();
 }
@@ -178,22 +179,11 @@ async function handleRpc(context: SocketContext, message: MultiplayerRpcRequest)
         }
         case "score_pp.round": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);
-            return getScorePpRoundForUser(
-                context.userId,
-                sessionId,
-                payload.round as number,
-                payload.exclusions as { scoreIds: string[]; userIds: number[]; beatmapIds: number[] },
-            );
+            return getScorePpRoundForUser(context.userId, sessionId, payload.round as number, payload.exclusions as { scoreIds: string[]; userIds: number[]; beatmapIds: number[] });
         }
         case "score_pp.submit": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);
-            return submitScorePpGuessForUser(
-                context.userId,
-                sessionId,
-                payload.pairId as number,
-                payload.selectedScoreId as string | null,
-                payload.submissionType as "guess" | "skip" | "timeout",
-            );
+            return submitScorePpGuessForUser(context.userId, sessionId, payload.pairId as number, payload.selectedScoreId as string | null, payload.submissionType as "guess" | "skip" | "timeout");
         }
         case "score_pp.end": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);

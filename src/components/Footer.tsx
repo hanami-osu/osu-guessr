@@ -32,20 +32,10 @@ export default function Footer() {
                     <a href="https://hanami.yorunoken.com/legal/terms" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.tos}
                     </a>
-                    <a
-                        href="https://github.com/hanami-osu/osu-guessr"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-foreground transition-colors duration-200"
-                    >
+                    <a href="https://github.com/hanami-osu/osu-guessr" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors duration-200">
                         Source
                     </a>
-                    <a
-                        href="https://github.com/hanami-osu/osu-guessr/blob/main/LICENSE"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-foreground transition-colors duration-200"
-                    >
+                    <a href="https://github.com/hanami-osu/osu-guessr/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors duration-200">
                         AGPL-3.0
                     </a>
                 </div>

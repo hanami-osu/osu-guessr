@@ -50,7 +50,7 @@ describe("importer file validation", () => {
                 { name: "small.mp3", size: 1000, isValidMp3: true },
                 { name: "renamed.mp3", size: 3000, isValidMp3: false },
                 { name: "large.mp3", size: 2000, isValidMp3: true },
-            ])
+            ]),
         ).toBe("large.mp3");
         expect(() => selectAudioImportFile([{ name: "audio.wav", size: 1000, isValidMp3: false }])).toThrow(UnsupportedAudioFormatError);
     });

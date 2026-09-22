@@ -3,7 +3,10 @@ import { GameVariant } from "@/app/games/config";
 import { z } from "zod";
 
 const profileModeSchema = z.nativeEnum(GameMode).catch(GameMode.Background);
-const profileVariantSchema = z.enum(["classic", "survival", "death"]).catch("classic").transform((variant) => (variant === "death" ? "survival" : variant));
+const profileVariantSchema = z
+    .enum(["classic", "survival", "death"])
+    .catch("classic")
+    .transform((variant) => (variant === "death" ? "survival" : variant));
 
 export function parseProfileFilters(mode?: string, variant?: string): { mode: GameMode; variant: GameVariant } {
     return {

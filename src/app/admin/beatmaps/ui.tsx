@@ -44,22 +44,25 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
         setImages(nextImages);
     }, []);
 
-    const fetchMapsets = useCallback(async (p = 1, q = "") => {
-        setIsLoading(true);
-        setOutput("Loading mapsets...");
-        setSelected({});
-        try {
-            setImages({});
-            const list = await listMapsets(p, limit, q);
-            setMapsets(list || []);
-            setOutput(`Loaded ${list.length} mapsets`);
-            await fetchImages(list || []);
-        } catch (err) {
-            setOutput(`Error loading mapsets: ${String(err)}`);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [fetchImages]);
+    const fetchMapsets = useCallback(
+        async (p = 1, q = "") => {
+            setIsLoading(true);
+            setOutput("Loading mapsets...");
+            setSelected({});
+            try {
+                setImages({});
+                const list = await listMapsets(p, limit, q);
+                setMapsets(list || []);
+                setOutput(`Loaded ${list.length} mapsets`);
+                await fetchImages(list || []);
+            } catch (err) {
+                setOutput(`Error loading mapsets: ${String(err)}`);
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [fetchImages],
+    );
 
     useEffect(() => {
         if (isInitialRender.current) {
@@ -148,7 +151,9 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
             <header className="flex flex-col gap-5 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <Button asChild variant="ghost" size="sm" className="mb-3 -ml-3 text-muted-foreground">
-                        <Link href="/admin"><ArrowLeft /> Admin</Link>
+                        <Link href="/admin">
+                            <ArrowLeft /> Admin
+                        </Link>
                     </Button>
                     <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Beatmaps</h1>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">Search, inspect, and remove imported mapsets.</p>
@@ -165,8 +170,14 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
                     <Input aria-label="Search beatmaps" className="pl-9" placeholder="Search artist or title" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Button type="submit" size="sm" disabled={isLoading}>Search</Button>
-                    {search && <Button type="button" size="sm" variant="ghost" onClick={handleClearSearch} disabled={isLoading}>Clear</Button>}
+                    <Button type="submit" size="sm" disabled={isLoading}>
+                        Search
+                    </Button>
+                    {search && (
+                        <Button type="button" size="sm" variant="ghost" onClick={handleClearSearch} disabled={isLoading}>
+                            Clear
+                        </Button>
+                    )}
                     <Button type="button" size="sm" variant="outline" onClick={handleSelectAll} disabled={isLoading || mapsets.length === 0}>
                         {allSelected ? "Unselect page" : "Select page"}
                     </Button>
@@ -209,7 +220,9 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
 
                         <div className="min-w-0">
                             <div className="truncate font-medium">{mapset.title}</div>
-                            <div className="mt-0.5 truncate text-sm text-muted-foreground">{mapset.artist} · mapped by {mapset.mapper}</div>
+                            <div className="mt-0.5 truncate text-sm text-muted-foreground">
+                                {mapset.artist} · mapped by {mapset.mapper}
+                            </div>
                         </div>
 
                         <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:block">{mapset.mapset_id}</span>
@@ -220,7 +233,15 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
                                     <ExternalLink />
                                 </a>
                             </Button>
-                            <Button size="icon" variant="ghost" aria-label={`Remove ${mapset.title}`} title="Remove mapset" onClick={() => handleDelete(mapset.mapset_id)} disabled={isLoading} className="text-destructive hover:text-destructive">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Remove ${mapset.title}`}
+                                title="Remove mapset"
+                                onClick={() => handleDelete(mapset.mapset_id)}
+                                disabled={isLoading}
+                                className="text-destructive hover:text-destructive"
+                            >
                                 <Trash2 />
                             </Button>
                         </div>
@@ -228,15 +249,17 @@ export default function BeatmapsAdmin({ initialMapsets }: BeatmapsAdminProps) {
                 ))}
             </div>
 
-            {mapsets.length === 0 && !isLoading && (
-                <div className="py-16 text-center text-sm text-muted-foreground">{search ? `No mapsets found for “${search}”.` : "No mapsets found."}</div>
-            )}
+            {mapsets.length === 0 && !isLoading && <div className="py-16 text-center text-sm text-muted-foreground">{search ? `No mapsets found for “${search}”.` : "No mapsets found."}</div>}
 
             <footer className="flex items-center justify-between gap-4 py-5">
                 <span className="text-sm text-muted-foreground">Page {page}</span>
                 <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={isLoading || page === 1}>Previous</Button>
-                    <Button size="sm" variant="outline" onClick={() => setPage((current) => current + 1)} disabled={isLoading || mapsets.length < limit}>Next</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={isLoading || page === 1}>
+                        Previous
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPage((current) => current + 1)} disabled={isLoading || mapsets.length < limit}>
+                        Next
+                    </Button>
                 </div>
             </footer>
         </div>

@@ -54,7 +54,7 @@ function processTranslations(obj: any, fallback: any = messages.en): any {
                     configurable: true,
                 };
             },
-        }
+        },
     );
 }
 

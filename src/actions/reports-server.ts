@@ -41,7 +41,7 @@ export async function createReportAction(mapsetId: number, reportType: ReportTyp
                 query: (sql, values) => query(sql, values),
                 webhookUrl: env.DISCORD_WEBHOOK,
                 logError: (message) => console.error(message),
-            }
+            },
         );
     });
 }

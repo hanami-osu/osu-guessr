@@ -135,11 +135,16 @@ describe("Hanami authentication configuration", () => {
     test("maps Hanami claims to the existing user profile contract", async () => {
         const [provider] = authConfig.providers;
 
-        expect(provider.profile({
-            "https://hanami.yorunoken.com/claims/osu_id": "123",
-            "https://hanami.yorunoken.com/claims/osu_username": "player",
-            "https://hanami.yorunoken.com/claims/osu_avatar": "https://osu.ppy.sh/avatar/123",
-        }, {})).toEqual({
+        expect(
+            provider.profile(
+                {
+                    "https://hanami.yorunoken.com/claims/osu_id": "123",
+                    "https://hanami.yorunoken.com/claims/osu_username": "player",
+                    "https://hanami.yorunoken.com/claims/osu_avatar": "https://osu.ppy.sh/avatar/123",
+                },
+                {},
+            ),
+        ).toEqual({
             id: "123",
             name: "player",
             image: "https://osu.ppy.sh/avatar/123",
@@ -148,24 +153,36 @@ describe("Hanami authentication configuration", () => {
 
     test.each([
         ["missing osu id", { "https://hanami.yorunoken.com/claims/osu_username": "player" }],
-        ["non-canonical osu id", {
-            "https://hanami.yorunoken.com/claims/osu_id": "00123",
-            "https://hanami.yorunoken.com/claims/osu_username": "player",
-        }],
-        ["unsafe osu id", {
-            "https://hanami.yorunoken.com/claims/osu_id": "9007199254740992",
-            "https://hanami.yorunoken.com/claims/osu_username": "player",
-        }],
+        [
+            "non-canonical osu id",
+            {
+                "https://hanami.yorunoken.com/claims/osu_id": "00123",
+                "https://hanami.yorunoken.com/claims/osu_username": "player",
+            },
+        ],
+        [
+            "unsafe osu id",
+            {
+                "https://hanami.yorunoken.com/claims/osu_id": "9007199254740992",
+                "https://hanami.yorunoken.com/claims/osu_username": "player",
+            },
+        ],
         ["missing username", { "https://hanami.yorunoken.com/claims/osu_id": "123" }],
-        ["empty username", {
-            "https://hanami.yorunoken.com/claims/osu_id": "123",
-            "https://hanami.yorunoken.com/claims/osu_username": "",
-        }],
-        ["invalid avatar", {
-            "https://hanami.yorunoken.com/claims/osu_id": "123",
-            "https://hanami.yorunoken.com/claims/osu_username": "player",
-            "https://hanami.yorunoken.com/claims/osu_avatar": "javascript:alert(1)",
-        }],
+        [
+            "empty username",
+            {
+                "https://hanami.yorunoken.com/claims/osu_id": "123",
+                "https://hanami.yorunoken.com/claims/osu_username": "",
+            },
+        ],
+        [
+            "invalid avatar",
+            {
+                "https://hanami.yorunoken.com/claims/osu_id": "123",
+                "https://hanami.yorunoken.com/claims/osu_username": "player",
+                "https://hanami.yorunoken.com/claims/osu_avatar": "javascript:alert(1)",
+            },
+        ],
     ])("rejects %s Hanami claims", async (_reason, profile) => {
         const [provider] = authConfig.providers;
 
@@ -175,10 +192,15 @@ describe("Hanami authentication configuration", () => {
     test("uses the local avatar placeholder when Hanami omits the avatar claim", async () => {
         const [provider] = authConfig.providers;
 
-        expect(provider.profile({
-            "https://hanami.yorunoken.com/claims/osu_id": "123",
-            "https://hanami.yorunoken.com/claims/osu_username": "player",
-        }, {})).toEqual({
+        expect(
+            provider.profile(
+                {
+                    "https://hanami.yorunoken.com/claims/osu_id": "123",
+                    "https://hanami.yorunoken.com/claims/osu_username": "player",
+                },
+                {},
+            ),
+        ).toEqual({
             id: "123",
             name: "player",
             image: "/default-avatar.svg",

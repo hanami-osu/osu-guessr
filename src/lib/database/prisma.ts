@@ -20,13 +20,12 @@ function hasCurrentSchema(client: PrismaClient | undefined): client is PrismaCli
     return typeof (client as unknown as { scorePpBatch?: { findMany?: unknown } } | undefined)?.scorePpBatch?.findMany === "function";
 }
 
-export const prisma =
-    hasCurrentSchema(globalForPrisma.prisma)
-        ? globalForPrisma.prisma
-        : new PrismaClient({
-              adapter,
-              log: process.env.NODE_ENV === "production" ? ["error"] : ["warn", "error"],
-          });
+export const prisma = hasCurrentSchema(globalForPrisma.prisma)
+    ? globalForPrisma.prisma
+    : new PrismaClient({
+          adapter,
+          log: process.env.NODE_ENV === "production" ? ["error"] : ["warn", "error"],
+      });
 
 if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = prisma;

@@ -72,22 +72,10 @@ mock.module("@/lib/multiplayer-realtime", () => ({
     publishMultiplayerLobbyDeleted: publishMultiplayerLobbyDeletedMock,
 }));
 
-const {
-    joinMultiplayerLobbyAction,
-    resetMultiplayerLobbyAction,
-    setMultiplayerReadyAction,
-    startMultiplayerLobbyAction,
-    updateMultiplayerLobbyAction,
-    leaveMultiplayerLobbyAction,
-} = await import("./multiplayer-server");
-const {
-    addMultiplayerMessage,
-    cleanupDisconnectedMultiplayerPlayer,
-    disconnectMultiplayerPlayer,
-    finishMultiplayerCountdown,
-    readMultiplayerLobby,
-    updateMultiplayerProgress,
-} = await import("@/lib/multiplayer");
+const { joinMultiplayerLobbyAction, resetMultiplayerLobbyAction, setMultiplayerReadyAction, startMultiplayerLobbyAction, updateMultiplayerLobbyAction, leaveMultiplayerLobbyAction } =
+    await import("./multiplayer-server");
+const { addMultiplayerMessage, cleanupDisconnectedMultiplayerPlayer, disconnectMultiplayerPlayer, finishMultiplayerCountdown, readMultiplayerLobby, updateMultiplayerProgress } =
+    await import("@/lib/multiplayer");
 
 function sessionFor(userId: number): AuthSession {
     return {
@@ -219,13 +207,15 @@ describe("multiplayer pre-game lifecycle", () => {
         authSessionMock.mockRejectedValue(new Error("Unauthorized"));
 
         await expect(startMultiplayerLobbyAction(lobbyCode)).rejects.toThrow("Unauthorized");
-        await expect(updateMultiplayerLobbyAction(lobbyCode, {
-            name: "Changed",
-            maxPlayers: 4,
-            private: false,
-            gameMode: GameMode.Audio,
-            variant: "classic",
-        })).rejects.toThrow("Unauthorized");
+        await expect(
+            updateMultiplayerLobbyAction(lobbyCode, {
+                name: "Changed",
+                maxPlayers: 4,
+                private: false,
+                gameMode: GameMode.Audio,
+                variant: "classic",
+            }),
+        ).rejects.toThrow("Unauthorized");
         await expect(resetMultiplayerLobbyAction(lobbyCode)).rejects.toThrow("Unauthorized");
         expect(acquireRedisLockMock).not.toHaveBeenCalled();
     });
@@ -436,7 +426,11 @@ describe("multiplayer pre-game lifecycle", () => {
         expect(reset.players.map((item) => ({ userId: item.userId, username: item.username, joinedAt: item.joinedAt }))).toEqual(
             originalPlayers.map((item) => ({ userId: item.userId, username: item.username, joinedAt: item.joinedAt })),
         );
-        expect(reset.players.every((item) => item.points === 0 && item.round === 0 && item.submittedRound === 0 && item.readyRound === 0 && item.scoreSessionId === null && !item.finished && !item.completedMatch && !item.ready)).toBe(true);
+        expect(
+            reset.players.every(
+                (item) => item.points === 0 && item.round === 0 && item.submittedRound === 0 && item.readyRound === 0 && item.scoreSessionId === null && !item.finished && !item.completedMatch && !item.ready,
+            ),
+        ).toBe(true);
     });
 
     test("ignores progress submitted with an old matchId", async () => {
@@ -446,13 +440,18 @@ describe("multiplayer pre-game lifecycle", () => {
             players: [player(1), player(2, { points: 20, round: 2 })],
         });
 
-        await updateMultiplayerProgress(lobbyCode, 2, {
-            points: 999,
-            round: 15,
-            submittedRound: 15,
-            readyRound: 15,
-            finished: true,
-        }, "match-old");
+        await updateMultiplayerProgress(
+            lobbyCode,
+            2,
+            {
+                points: 999,
+                round: 15,
+                submittedRound: 15,
+                readyRound: 15,
+                finished: true,
+            },
+            "match-old",
+        );
 
         const lobby = await storedLobby();
         expect(lobby.status).toBe("playing");
@@ -466,14 +465,19 @@ describe("multiplayer pre-game lifecycle", () => {
             players: [player(1, { finished: true }), player(2, { finished: true })],
         });
 
-        await updateMultiplayerProgress(lobbyCode, 2, {
-            points: 80,
-            round: 15,
-            scoreSessionId: "score-guest",
-            results: { correct: 8, incorrect: 3, skipped: 2, timedOut: 2 },
-            finished: true,
-            completedMatch: true,
-        }, "match-current");
+        await updateMultiplayerProgress(
+            lobbyCode,
+            2,
+            {
+                points: 80,
+                round: 15,
+                scoreSessionId: "score-guest",
+                results: { correct: 8, incorrect: 3, skipped: 2, timedOut: 2 },
+                finished: true,
+                completedMatch: true,
+            },
+            "match-current",
+        );
 
         const lobby = await storedLobby();
         expect(lobby.players[1].results).toEqual({ correct: 8, incorrect: 3, skipped: 2, timedOut: 2 });

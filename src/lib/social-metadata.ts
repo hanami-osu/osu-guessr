@@ -13,16 +13,7 @@ interface PageMetadataOptions {
     largeImage?: boolean;
 }
 
-export function createPageMetadata({
-    title,
-    description,
-    path,
-    image = DEFAULT_SOCIAL_IMAGE,
-    imageAlt = "osu!guessr",
-    imageWidth,
-    imageHeight,
-    largeImage,
-}: PageMetadataOptions): Metadata {
+export function createPageMetadata({ title, description, path, image = DEFAULT_SOCIAL_IMAGE, imageAlt = "osu!guessr", imageWidth, imageHeight, largeImage }: PageMetadataOptions): Metadata {
     const socialTitle = title === "osu!guessr" ? title : `${title} | osu!guessr`;
     const usesDefaultImage = image === DEFAULT_SOCIAL_IMAGE;
     const width = imageWidth ?? (usesDefaultImage ? 1200 : undefined);
@@ -49,7 +40,7 @@ export function createPageMetadata({
             images: [openGraphImage],
         },
         twitter: {
-            card: largeImage ?? usesDefaultImage ? "summary_large_image" : "summary",
+            card: (largeImage ?? usesDefaultImage) ? "summary_large_image" : "summary",
             title: socialTitle,
             description,
             images: [{ url: image, alt: imageAlt }],

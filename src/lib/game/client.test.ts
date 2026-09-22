@@ -280,9 +280,11 @@ describe("GameClient", () => {
     test("does not persist a session when start resolves after the page is hidden", async () => {
         const client = new GameClient(events, GameMode.Audio, "classic");
         let resolveStart!: (state: typeof initialGameState) => void;
-        startGameActionMock.mockReturnValueOnce(new Promise((resolve) => {
-            resolveStart = resolve;
-        }));
+        startGameActionMock.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveStart = resolve;
+            }),
+        );
 
         const startCall = client.startGame();
         await Promise.resolve();
@@ -310,9 +312,11 @@ describe("GameClient", () => {
         const client = new GameClient(events, GameMode.Audio, "classic");
         await client.startGame();
         let resolveEnd!: () => void;
-        endGameActionMock.mockReturnValueOnce(new Promise<void>((resolve) => {
-            resolveEnd = resolve;
-        }));
+        endGameActionMock.mockReturnValueOnce(
+            new Promise<void>((resolve) => {
+                resolveEnd = resolve;
+            }),
+        );
 
         const firstCall = client.endGame();
         const secondCall = client.endGame();

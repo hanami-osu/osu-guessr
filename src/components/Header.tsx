@@ -108,7 +108,11 @@ export default function Header() {
                 </div>
 
                 {isMenuOpen && (
-                    <nav id={MOBILE_NAV_ID} aria-label={t.components.header.accessibility.mobileNavigation} className="absolute left-0 top-full w-full border-b border-border/60 bg-background shadow-lg lg:hidden">
+                    <nav
+                        id={MOBILE_NAV_ID}
+                        aria-label={t.components.header.accessibility.mobileNavigation}
+                        className="absolute left-0 top-full w-full border-b border-border/60 bg-background shadow-lg lg:hidden"
+                    >
                         <ul className="page-container flex flex-col gap-1 py-3">
                             <li className="w-full pb-2">
                                 <UserSearch />

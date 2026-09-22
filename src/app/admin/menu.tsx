@@ -89,14 +89,17 @@ export default function AdminMenu() {
     }, [output]);
 
     const loadAvailableBadges = useCallback(async () => {
-        await runAction(async () => {
-            const badges = (await getBadges()) as Array<{ name: string; color: string }>;
-            const badgeMap: Record<string, string> = {};
-            badges.forEach((badge: { name: string; color: string }) => {
-                badgeMap[badge.name] = badge.color;
-            });
-            setAvailableBadges(badgeMap);
-        }, { errorMessage: (error) => `Error loading badges: ${error}`, setLoading: false });
+        await runAction(
+            async () => {
+                const badges = (await getBadges()) as Array<{ name: string; color: string }>;
+                const badgeMap: Record<string, string> = {};
+                badges.forEach((badge: { name: string; color: string }) => {
+                    badgeMap[badge.name] = badge.color;
+                });
+                setAvailableBadges(badgeMap);
+            },
+            { errorMessage: (error) => `Error loading badges: ${error}`, setLoading: false },
+        );
     }, [runAction]);
 
     const loadAvailableLanguages = useCallback(async () => {
@@ -107,147 +110,186 @@ export default function AdminMenu() {
     const handleAddBadgeType = async () => {
         if (!newBadgeName || !newBadgeColor) return;
 
-        await runAction(async () => {
-            const result = await addBadge(newBadgeName, newBadgeColor);
-            appendOutput(result);
-            await loadAvailableBadges();
-            setNewBadgeName("");
-            setNewBadgeColor("#000000");
-        }, { startMessage: `Adding new badge type "${newBadgeName}"...` });
+        await runAction(
+            async () => {
+                const result = await addBadge(newBadgeName, newBadgeColor);
+                appendOutput(result);
+                await loadAvailableBadges();
+                setNewBadgeName("");
+                setNewBadgeColor("#000000");
+            },
+            { startMessage: `Adding new badge type "${newBadgeName}"...` },
+        );
     };
 
     const handleRemoveBadgeType = async (badgeName: string) => {
-        await runAction(async () => {
-            const result = await removeBadge(badgeName);
-            appendOutput(result);
-            await loadAvailableBadges();
-        }, { startMessage: `Removing badge type "${badgeName}"...` });
+        await runAction(
+            async () => {
+                const result = await removeBadge(badgeName);
+                appendOutput(result);
+                await loadAvailableBadges();
+            },
+            { startMessage: `Removing badge type "${badgeName}"...` },
+        );
     };
 
     const handleAddBadge = async () => {
         if (!badgeUserId || !badgeTitle) return;
 
-        await runAction(async () => {
-            const result = await assignBadgeToUser(parseInt(badgeUserId), badgeTitle);
-            appendOutput(result);
-        }, { startMessage: `Adding badge to user ${badgeUserId}...` });
+        await runAction(
+            async () => {
+                const result = await assignBadgeToUser(parseInt(badgeUserId), badgeTitle);
+                appendOutput(result);
+            },
+            { startMessage: `Adding badge to user ${badgeUserId}...` },
+        );
     };
 
     const handleRemoveBadge = async () => {
         if (!badgeUserId || !badgeTitle) return;
 
-        await runAction(async () => {
-            const result = await removeBadgeFromUser(parseInt(badgeUserId), badgeTitle);
-            appendOutput(result);
-        }, { startMessage: `Removing badge from user ${badgeUserId}...` });
+        await runAction(
+            async () => {
+                const result = await removeBadgeFromUser(parseInt(badgeUserId), badgeTitle);
+                appendOutput(result);
+            },
+            { startMessage: `Removing badge from user ${badgeUserId}...` },
+        );
     };
 
     const handleListBadges = async () => {
-        await runAction(async () => {
-            const badges = await listBadges();
-            if (badges.length > 0) {
-                appendOutput("Badges:");
-                badges.forEach((b: UserBadge) => {
-                    appendOutput(`${b.user_id} | ${b.username} | ${b.badge_name} | ${b.color} | ${b.assigned_at}`);
-                });
-            } else {
-                appendOutput("No badges found");
-            }
-        }, { startMessage: "Listing badges..." });
+        await runAction(
+            async () => {
+                const badges = await listBadges();
+                if (badges.length > 0) {
+                    appendOutput("Badges:");
+                    badges.forEach((b: UserBadge) => {
+                        appendOutput(`${b.user_id} | ${b.username} | ${b.badge_name} | ${b.color} | ${b.assigned_at}`);
+                    });
+                } else {
+                    appendOutput("No badges found");
+                }
+            },
+            { startMessage: "Listing badges..." },
+        );
     };
 
     const handleAddMapset = async () => {
         if (!mapsetId) return;
 
-        await runAction(async () => {
-            const res = await addMapset(parseInt(mapsetId));
-            if (res?.success && res?.note === "already_exists") {
-                appendOutput(`Mapset ${mapsetId}: already exists; skipped`);
-            } else if (res?.success) {
-                appendOutput("Mapset added");
-            } else {
-                appendOutput(`Error: ${res?.error ?? "Mapset import failed"}`);
-            }
-        }, { startMessage: `Adding mapset ${mapsetId}...` });
+        await runAction(
+            async () => {
+                const res = await addMapset(parseInt(mapsetId));
+                if (res?.success && res?.note === "already_exists") {
+                    appendOutput(`Mapset ${mapsetId}: already exists; skipped`);
+                } else if (res?.success) {
+                    appendOutput("Mapset added");
+                } else {
+                    appendOutput(`Error: ${res?.error ?? "Mapset import failed"}`);
+                }
+            },
+            { startMessage: `Adding mapset ${mapsetId}...` },
+        );
     };
 
     const handleRemoveMapset = async () => {
         if (!mapsetId) return;
 
-        await runAction(async () => {
-            await removeMapset(parseInt(mapsetId));
-            appendOutput("Mapset removed");
-        }, { startMessage: `Removing mapset ${mapsetId}...` });
+        await runAction(
+            async () => {
+                await removeMapset(parseInt(mapsetId));
+                appendOutput("Mapset removed");
+            },
+            { startMessage: `Removing mapset ${mapsetId}...` },
+        );
     };
 
     const handleListMapsets = async () => {
-        await runAction(async () => {
-            const mapsets = await listMapsets();
-            if (mapsets.length > 0) {
-                appendOutput("Mapsets:");
-                mapsets.forEach((m: Mapset) => {
-                    appendOutput(`${m.mapset_id} | ${m.title} | ${m.artist} | ${m.mapper} | ${m.image_filename} | ${m.audio_filename}`);
-                });
-            } else {
-                appendOutput("No mapsets found");
-            }
-        }, { startMessage: "Listing mapsets..." });
+        await runAction(
+            async () => {
+                const mapsets = await listMapsets();
+                if (mapsets.length > 0) {
+                    appendOutput("Mapsets:");
+                    mapsets.forEach((m: Mapset) => {
+                        appendOutput(`${m.mapset_id} | ${m.title} | ${m.artist} | ${m.mapper} | ${m.image_filename} | ${m.audio_filename}`);
+                    });
+                } else {
+                    appendOutput("No mapsets found");
+                }
+            },
+            { startMessage: "Listing mapsets..." },
+        );
     };
 
     const handleBulkUpload = async () => {
         if (!bulkFile) return;
 
         const file = bulkFile;
-        await runAction(async () => {
-            const content = await file.text();
-            const result = await addMapsetFromList(content);
+        await runAction(
+            async () => {
+                const content = await file.text();
+                const result = await addMapsetFromList(content);
 
-            appendOutput(`Bulk upload completed: Total ${result.total}, Successful ${result.successful}, Failed ${result.failed}`);
+                appendOutput(`Bulk upload completed: Total ${result.total}, Successful ${result.successful}, Failed ${result.failed}`);
 
-            if (result.results && result.results.length > 0) {
-                appendOutput("Details:");
-                result.results.forEach((r: { id: number; success: boolean; error?: string; note?: string }) => {
-                    if (r.success && r.note === "already_exists") {
-                        appendOutput(`Mapset ${r.id}: already exists; skipped`);
-                    } else if (r.success) {
-                        appendOutput(`Mapset ${r.id}: added`);
-                    } else {
-                        appendOutput(`Mapset ${r.id}: failed: ${r.error}`);
-                    }
-                });
-            }
-        }, { startMessage: "Importing mapsets...", errorMessage: (error) => `Error during bulk upload: ${error}`, onFinally: () => setBulkFile(null) });
+                if (result.results && result.results.length > 0) {
+                    appendOutput("Details:");
+                    result.results.forEach((r: { id: number; success: boolean; error?: string; note?: string }) => {
+                        if (r.success && r.note === "already_exists") {
+                            appendOutput(`Mapset ${r.id}: already exists; skipped`);
+                        } else if (r.success) {
+                            appendOutput(`Mapset ${r.id}: added`);
+                        } else {
+                            appendOutput(`Mapset ${r.id}: failed: ${r.error}`);
+                        }
+                    });
+                }
+            },
+            { startMessage: "Importing mapsets...", errorMessage: (error) => `Error during bulk upload: ${error}`, onFinally: () => setBulkFile(null) },
+        );
     };
 
     const handleSyncUsers = async () => {
-        await runAction(async () => {
-            await syncUserAchievements();
-            appendOutput("User stats synced");
-        }, { startMessage: "Syncing user stats..." });
+        await runAction(
+            async () => {
+                await syncUserAchievements();
+                appendOutput("User stats synced");
+            },
+            { startMessage: "Syncing user stats..." },
+        );
     };
 
     const loadAdmins = useCallback(async () => {
-        await runAction(async () => {
-            setAdmins(await listAdmins());
-        }, { errorMessage: (error) => `Error loading admins: ${error}`, setLoading: false });
+        await runAction(
+            async () => {
+                setAdmins(await listAdmins());
+            },
+            { errorMessage: (error) => `Error loading admins: ${error}`, setLoading: false },
+        );
     }, [runAction]);
 
     const handleGrantAdmin = async () => {
         if (!adminUserId) return;
 
         const userId = parseInt(adminUserId);
-        await runAction(async () => {
-            appendOutput(await setAdmin(userId, true));
-            setAdminUserId("");
-            await loadAdmins();
-        }, { startMessage: `Granting admin to user ${adminUserId}...` });
+        await runAction(
+            async () => {
+                appendOutput(await setAdmin(userId, true));
+                setAdminUserId("");
+                await loadAdmins();
+            },
+            { startMessage: `Granting admin to user ${adminUserId}...` },
+        );
     };
 
     const handleRemoveAdmin = async (user: AdminUser) => {
-        await runAction(async () => {
-            appendOutput(await setAdmin(user.banchoId, false));
-            await loadAdmins();
-        }, { startMessage: `Removing admin from ${user.username}...` });
+        await runAction(
+            async () => {
+                appendOutput(await setAdmin(user.banchoId, false));
+                await loadAdmins();
+            },
+            { startMessage: `Removing admin from ${user.username}...` },
+        );
     };
 
     const checkLanguage = async (language: string) => {
@@ -297,26 +339,32 @@ export default function AdminMenu() {
     };
 
     const handleCheckAllLanguages = async () => {
-        await runAction(async () => {
-            for (const language of availableLanguages) {
-                appendOutput(`\nChecking ${language}...`);
-                setLanguageCode(language);
-                await checkLanguage(language);
-            }
-        }, { startMessage: "Checking all translations...", onFinally: () => setLanguageCode("") });
+        await runAction(
+            async () => {
+                for (const language of availableLanguages) {
+                    appendOutput(`\nChecking ${language}...`);
+                    setLanguageCode(language);
+                    await checkLanguage(language);
+                }
+            },
+            { startMessage: "Checking all translations...", onFinally: () => setLanguageCode("") },
+        );
     };
 
     const handleAddSkinById = async () => {
         if (!skinSingleId) return appendOutput("Provide skin id");
 
-        await runAction(async () => {
-            const res = (await addSkinById(parseInt(skinSingleId))) as { success: boolean; skinId?: number; image?: string; error?: string };
-            if (res && res.success) {
-                appendOutput(`Added skin ${res.skinId} -> ${res.image}`);
-            } else {
-                appendOutput(`Add skin failed: ${res?.error || JSON.stringify(res)}`);
-            }
-        }, { startMessage: `Adding skin ${skinSingleId}...` });
+        await runAction(
+            async () => {
+                const res = (await addSkinById(parseInt(skinSingleId))) as { success: boolean; skinId?: number; image?: string; error?: string };
+                if (res && res.success) {
+                    appendOutput(`Added skin ${res.skinId} -> ${res.image}`);
+                } else {
+                    appendOutput(`Add skin failed: ${res?.error || JSON.stringify(res)}`);
+                }
+            },
+            { startMessage: `Adding skin ${skinSingleId}...` },
+        );
     };
 
     const handleAddSkinsFromFile = async () => {
@@ -324,85 +372,106 @@ export default function AdminMenu() {
 
         const file = skinListFile;
         let shouldClearFile = true;
-        await runAction(async () => {
-            const content = await file.text();
-            const ids = content
-                .split(/\r?\n/)
-                .map((l) => l.trim())
-                .filter(Boolean)
-                .map((v) => parseInt(v))
-                .filter((n) => !Number.isNaN(n));
+        await runAction(
+            async () => {
+                const content = await file.text();
+                const ids = content
+                    .split(/\r?\n/)
+                    .map((l) => l.trim())
+                    .filter(Boolean)
+                    .map((v) => parseInt(v))
+                    .filter((n) => !Number.isNaN(n));
 
-            if (ids.length === 0) {
-                appendOutput("No valid IDs found in file");
-                shouldClearFile = false;
-                return;
-            }
+                if (ids.length === 0) {
+                    appendOutput("No valid IDs found in file");
+                    shouldClearFile = false;
+                    return;
+                }
 
-            const results = await addSkinsFromList(ids);
-            appendOutput(`Processed ${results.length} skins:`);
-            results.forEach((r) => appendOutput(`${r.id} -> ${r.success ? `OK (${r.image})` : `FAILED (${r.error})`}`));
-        }, {
-            startMessage: "Adding skins from file...",
-            onFinally: () => {
-                if (shouldClearFile) setSkinListFile(null);
+                const results = await addSkinsFromList(ids);
+                appendOutput(`Processed ${results.length} skins:`);
+                results.forEach((r) => appendOutput(`${r.id} -> ${r.success ? `OK (${r.image})` : `FAILED (${r.error})`}`));
             },
-        });
+            {
+                startMessage: "Adding skins from file...",
+                onFinally: () => {
+                    if (shouldClearFile) setSkinListFile(null);
+                },
+            },
+        );
     };
 
     const handleListSkins = async () => {
-        await runAction(async () => {
-            const skins = await listSkins();
-            appendOutput(`Found ${skins.length} skins`);
-            skins.forEach((s) => appendOutput(`${s.id} | ${s.name} | ${s.image_filename}`));
-        }, { startMessage: "Listing skins..." });
+        await runAction(
+            async () => {
+                const skins = await listSkins();
+                appendOutput(`Found ${skins.length} skins`);
+                skins.forEach((s) => appendOutput(`${s.id} | ${s.name} | ${s.image_filename}`));
+            },
+            { startMessage: "Listing skins..." },
+        );
     };
 
     const handleSetLock = async () => {
-        await runAction(async () => {
-            const info = await adminSetLock(Number(lockMinutes));
-            appendOutput(`Lock set until ${new Date(info.until).toLocaleString()}`);
-            setLockInfo(`Locked until ${new Date(info.until).toLocaleString()}`);
-        }, { startMessage: `Setting lockdown for ${lockMinutes} minute(s)...`, errorMessage: (error) => `Error setting lock: ${error}` });
+        await runAction(
+            async () => {
+                const info = await adminSetLock(Number(lockMinutes));
+                appendOutput(`Lock set until ${new Date(info.until).toLocaleString()}`);
+                setLockInfo(`Locked until ${new Date(info.until).toLocaleString()}`);
+            },
+            { startMessage: `Setting lockdown for ${lockMinutes} minute(s)...`, errorMessage: (error) => `Error setting lock: ${error}` },
+        );
     };
 
     const handleUnlock = async () => {
-        await runAction(async () => {
-            await adminUnlock();
-            appendOutput(`Unlocked`);
-            setLockInfo(null);
-        }, { startMessage: "Unlocking server...", errorMessage: (error) => `Error unlocking: ${error}` });
+        await runAction(
+            async () => {
+                await adminUnlock();
+                appendOutput(`Unlocked`);
+                setLockInfo(null);
+            },
+            { startMessage: "Unlocking server...", errorMessage: (error) => `Error unlocking: ${error}` },
+        );
     };
 
     const handleGetLock = async () => {
-        await runAction(async () => {
-            const info = await adminGetLock();
-            if (info) {
-                appendOutput(`Locked until ${new Date(info.until).toLocaleString()} by ${info.ownerId}`);
-                setLockInfo(`Locked until ${new Date(info.until).toLocaleString()} by ${info.ownerId}`);
-            } else {
-                appendOutput(`Not locked`);
-                setLockInfo(null);
-            }
-        }, { startMessage: "Querying lock state...", errorMessage: (error) => `Error querying lock: ${error}` });
+        await runAction(
+            async () => {
+                const info = await adminGetLock();
+                if (info) {
+                    appendOutput(`Locked until ${new Date(info.until).toLocaleString()} by ${info.ownerId}`);
+                    setLockInfo(`Locked until ${new Date(info.until).toLocaleString()} by ${info.ownerId}`);
+                } else {
+                    appendOutput(`Not locked`);
+                    setLockInfo(null);
+                }
+            },
+            { startMessage: "Querying lock state...", errorMessage: (error) => `Error querying lock: ${error}` },
+        );
     };
 
     const handleRemoveSkin = async () => {
         if (!skinRemoveId) return;
 
-        await runAction(async () => {
-            const res = await removeSkin(parseInt(skinRemoveId));
-            appendOutput(JSON.stringify(res));
-            await handleListSkins();
-        }, { startMessage: `Removing skin ${skinRemoveId}...` });
+        await runAction(
+            async () => {
+                const res = await removeSkin(parseInt(skinRemoveId));
+                appendOutput(JSON.stringify(res));
+                await handleListSkins();
+            },
+            { startMessage: `Removing skin ${skinRemoveId}...` },
+        );
     };
 
     const loadAnnouncements = useCallback(async () => {
-        await runAction(async () => {
-            const res = (await listAnnouncements()) as Array<{ id: number; title: string; created_at: string }>;
-            setAnnouncementsList(res);
-            appendOutput(`Found ${res.length} announcements`);
-        }, { startMessage: "Loading announcements..." });
+        await runAction(
+            async () => {
+                const res = (await listAnnouncements()) as Array<{ id: number; title: string; created_at: string }>;
+                setAnnouncementsList(res);
+                appendOutput(`Found ${res.length} announcements`);
+            },
+            { startMessage: "Loading announcements..." },
+        );
     }, [appendOutput, runAction]);
 
     useEffect(() => {
@@ -415,44 +484,56 @@ export default function AdminMenu() {
     const handleAddAnnouncement = async () => {
         if (!announcementTitle || !announcementContent) return;
 
-        await runAction(async () => {
-            await addAnnouncement(announcementTitle, announcementContent);
-            appendOutput("Announcement added");
-            setAnnouncementTitle("");
-            setAnnouncementContent("");
-            await loadAnnouncements();
-        }, { startMessage: `Adding announcement \"${announcementTitle}\"...` });
+        await runAction(
+            async () => {
+                await addAnnouncement(announcementTitle, announcementContent);
+                appendOutput("Announcement added");
+                setAnnouncementTitle("");
+                setAnnouncementContent("");
+                await loadAnnouncements();
+            },
+            { startMessage: `Adding announcement \"${announcementTitle}\"...` },
+        );
     };
 
     const handleRemoveAnnouncement = async (id: number) => {
-        await runAction(async () => {
-            await removeAnnouncement(id);
-            appendOutput("Announcement removed");
-            await loadAnnouncements();
-        }, { startMessage: `Removing announcement ${id}...` });
+        await runAction(
+            async () => {
+                await removeAnnouncement(id);
+                appendOutput("Announcement removed");
+                await loadAnnouncements();
+            },
+            { startMessage: `Removing announcement ${id}...` },
+        );
     };
 
     const handleListReports = async () => {
-        await runAction(async () => {
-            const reports = await listReports();
-            if (reports.length > 0) {
-                appendOutput("Reports:");
-                reports.forEach((report) => {
-                    appendOutput(`${report.id} | ${report.user_id} | ${report.mapset_id} | ${report.report_type} | ${report.status} | ${new Date(report.created_at).toLocaleString()}`);
-                });
-            } else {
-                appendOutput("No reports found");
-            }
-        }, { startMessage: "Listing reports..." });
+        await runAction(
+            async () => {
+                const reports = await listReports();
+                if (reports.length > 0) {
+                    appendOutput("Reports:");
+                    reports.forEach((report) => {
+                        appendOutput(`${report.id} | ${report.user_id} | ${report.mapset_id} | ${report.report_type} | ${report.status} | ${new Date(report.created_at).toLocaleString()}`);
+                    });
+                } else {
+                    appendOutput("No reports found");
+                }
+            },
+            { startMessage: "Listing reports..." },
+        );
     };
 
     const handleUpdateReportStatus = async () => {
         if (!reportId) return;
 
-        await runAction(async () => {
-            await updateReportStatus(parseInt(reportId), reportStatus);
-            appendOutput(`Report ${reportId} updated`);
-        }, { startMessage: `Updating report ${reportId} to ${reportStatus}...` });
+        await runAction(
+            async () => {
+                await updateReportStatus(parseInt(reportId), reportStatus);
+                appendOutput(`Report ${reportId} updated`);
+            },
+            { startMessage: `Updating report ${reportId} to ${reportStatus}...` },
+        );
     };
 
     return (
@@ -791,16 +872,13 @@ export default function AdminMenu() {
                                     {admins.map((admin) => (
                                         <div key={admin.banchoId} className="flex items-center justify-between gap-4 py-3">
                                             <div className="min-w-0">
-                                                <div className="truncate text-sm font-medium">{admin.username}{admin.isOwner ? " · Owner" : ""}</div>
+                                                <div className="truncate text-sm font-medium">
+                                                    {admin.username}
+                                                    {admin.isOwner ? " · Owner" : ""}
+                                                </div>
                                                 <div className="mt-1 text-xs text-muted-foreground">{admin.banchoId}</div>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleRemoveAdmin(admin)}
-                                                disabled={isLoading || admin.isOwner}
-                                                className="text-destructive hover:text-destructive"
-                                            >
+                                            <Button variant="ghost" size="sm" onClick={() => handleRemoveAdmin(admin)} disabled={isLoading || admin.isOwner} className="text-destructive hover:text-destructive">
                                                 Remove
                                             </Button>
                                         </div>

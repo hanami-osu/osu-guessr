@@ -413,15 +413,19 @@ async function addMapsetById(mapsetId: number): Promise<AddMapsetResult> {
 
 export async function addMapsetFromList(fileContent: string) {
     await requireAdmin();
-    const mapsetIds = [...new Set(fileContent
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-            const match = line.match(/beatmapsets\/(\d+)/);
-            return match ? parseInt(match[1]) : null;
-        })
-        .filter((id): id is number => id !== null))];
+    const mapsetIds = [
+        ...new Set(
+            fileContent
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const match = line.match(/beatmapsets\/(\d+)/);
+                    return match ? parseInt(match[1]) : null;
+                })
+                .filter((id): id is number => id !== null),
+        ),
+    ];
 
     if (mapsetIds.length > MAX_BULK_MAPSETS) {
         throw new Error(`Too many mapsets. Maximum is ${MAX_BULK_MAPSETS}.`);

@@ -50,10 +50,7 @@ function scorePp(resolution: ScorePpResolution | null, score: ScorePpPublicScore
 export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gameVariant: GameVariant; multiplayerLobbyCode?: string }) {
     const router = useRouter();
     const { t } = useTranslationsContext();
-    const scoreUrl = useCallback(
-        (runSessionId: string) => multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${runSessionId}`,
-        [multiplayerLobbyCode],
-    );
+    const scoreUrl = useCallback((runSessionId: string) => (multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${runSessionId}`), [multiplayerLobbyCode]);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [pair, setPair] = useState<ScorePpPublicPair | null>(null);
     const [resolution, setResolution] = useState<ScorePpResolution | null>(null);
@@ -109,87 +106,94 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         setTerminalRound(result.terminal);
     }, []);
 
-    const applyRunState = useCallback((state: ScorePpRunState, runSessionId: string) => {
-        setRound(state.round);
-        setRequestedRound(state.round);
-        setPoints(state.points);
-        setStreak(state.streak);
-        setMaxStreak(state.maxStreak);
-        setMistakes(state.mistakes);
+    const applyRunState = useCallback(
+        (state: ScorePpRunState, runSessionId: string) => {
+            setRound(state.round);
+            setRequestedRound(state.round);
+            setPoints(state.points);
+            setStreak(state.streak);
+            setMaxStreak(state.maxStreak);
+            setMistakes(state.mistakes);
 
-        if (state.terminal) {
-            setTerminalRound(true);
-            router.replace(state.saved ? scoreUrl(runSessionId) : "/");
-            return;
-        }
-
-        setTerminalRound(false);
-        setPair(state.pair);
-        if (state.resolution) {
-            applyResolution(state.resolution);
-            return;
-        }
-
-        setResolution(null);
-        setSelectedScoreId(null);
-        if (state.deadlineAt !== null) {
-            deadline.current = state.deadlineAt;
-            setTimeLeft(Math.max(0, Math.ceil((state.deadlineAt - Date.now()) / 1000)));
-        }
-    }, [applyResolution, router, scoreUrl]);
-
-    const recoverRun = useCallback(async (runSessionId: string): Promise<ScorePpRunState | null> => {
-        try {
-            const state = multiplayerLobbyCode
-                ? await multiplayerRequest<ScorePpRunState>("score_pp.state", { sessionId: runSessionId })
-                : await getScorePpRunStateAction(runSessionId);
-            applyRunState(state, runSessionId);
-            return state;
-        } catch {
-            return null;
-        }
-    }, [applyRunState, multiplayerLobbyCode, multiplayerRequest]);
-
-    const loadRound = useCallback(async (runSessionId: string, roundNumber: number) => {
-        if (loadingRound.current) return;
-        loadingRound.current = true;
-        setRequestedRound(roundNumber);
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const loaded = multiplayerLobbyCode
-                ? await multiplayerRequest<ScorePpRoundLoad>("score_pp.round", {
-                      sessionId: runSessionId,
-                      round: roundNumber,
-                      exclusions: exclusions.current,
-                  })
-                : await getScorePpRoundAction(runSessionId, roundNumber, exclusions.current);
-            if (loaded.terminal) {
+            if (state.terminal) {
                 setTerminalRound(true);
-                router.replace(loaded.saved ? scoreUrl(runSessionId) : "/");
+                router.replace(state.saved ? scoreUrl(runSessionId) : "/");
                 return;
             }
-            if (!loaded.pair || loaded.deadlineAt === null) {
-                setError("unavailable");
+
+            setTerminalRound(false);
+            setPair(state.pair);
+            if (state.resolution) {
+                applyResolution(state.resolution);
                 return;
             }
+
             setResolution(null);
             setSelectedScoreId(null);
-            setRevealCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
-            setPair(loaded.pair);
-            setRound(roundNumber);
-            deadline.current = loaded.deadlineAt;
-            setTimeLeft(Math.max(0, Math.ceil((loaded.deadlineAt - Date.now()) / 1000)));
-        } catch {
-            const recovered = await recoverRun(runSessionId);
+            if (state.deadlineAt !== null) {
+                deadline.current = state.deadlineAt;
+                setTimeLeft(Math.max(0, Math.ceil((state.deadlineAt - Date.now()) / 1000)));
+            }
+        },
+        [applyResolution, router, scoreUrl],
+    );
+
+    const recoverRun = useCallback(
+        async (runSessionId: string): Promise<ScorePpRunState | null> => {
+            try {
+                const state = multiplayerLobbyCode ? await multiplayerRequest<ScorePpRunState>("score_pp.state", { sessionId: runSessionId }) : await getScorePpRunStateAction(runSessionId);
+                applyRunState(state, runSessionId);
+                return state;
+            } catch {
+                return null;
+            }
+        },
+        [applyRunState, multiplayerLobbyCode, multiplayerRequest],
+    );
+
+    const loadRound = useCallback(
+        async (runSessionId: string, roundNumber: number) => {
+            if (loadingRound.current) return;
+            loadingRound.current = true;
             setRequestedRound(roundNumber);
-            if (!recovered?.terminal && !(recovered?.round === roundNumber && recovered.pair && !recovered.resolution)) setError("load");
-        } finally {
-            loadingRound.current = false;
-            setIsLoading(false);
-        }
-    }, [multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl]);
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const loaded = multiplayerLobbyCode
+                    ? await multiplayerRequest<ScorePpRoundLoad>("score_pp.round", {
+                          sessionId: runSessionId,
+                          round: roundNumber,
+                          exclusions: exclusions.current,
+                      })
+                    : await getScorePpRoundAction(runSessionId, roundNumber, exclusions.current);
+                if (loaded.terminal) {
+                    setTerminalRound(true);
+                    router.replace(loaded.saved ? scoreUrl(runSessionId) : "/");
+                    return;
+                }
+                if (!loaded.pair || loaded.deadlineAt === null) {
+                    setError("unavailable");
+                    return;
+                }
+                setResolution(null);
+                setSelectedScoreId(null);
+                setRevealCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
+                setPair(loaded.pair);
+                setRound(roundNumber);
+                deadline.current = loaded.deadlineAt;
+                setTimeLeft(Math.max(0, Math.ceil((loaded.deadlineAt - Date.now()) / 1000)));
+            } catch {
+                const recovered = await recoverRun(runSessionId);
+                setRequestedRound(roundNumber);
+                if (!recovered?.terminal && !(recovered?.round === roundNumber && recovered.pair && !recovered.resolution)) setError("load");
+            } finally {
+                loadingRound.current = false;
+                setIsLoading(false);
+            }
+        },
+        [multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl],
+    );
 
     const startRun = useCallback(async () => {
         if (starting.current) return;
@@ -201,15 +205,13 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         setMaxStreak(0);
         setMistakes(0);
         setTerminalRound(false);
-            setPair(null);
-            setError(null);
-            setIsLoading(true);
-            resolving.current = false;
+        setPair(null);
+        setError(null);
+        setIsLoading(true);
+        resolving.current = false;
 
         try {
-            const nextSessionId = multiplayerLobbyCode
-                ? await multiplayerRequest<string>("score_pp.start", { variant: gameVariant })
-                : await startScorePpRunAction(gameVariant);
+            const nextSessionId = multiplayerLobbyCode ? await multiplayerRequest<string>("score_pp.start", { variant: gameVariant }) : await startScorePpRunAction(gameVariant);
             setSessionId(nextSessionId);
             const recovered = await recoverRun(nextSessionId);
             if (!recovered) throw new Error("Could not restore Score PP session");
@@ -227,34 +229,37 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         void startRun();
     }, [startRun]);
 
-    const resolveGuess = useCallback(async (scoreId: string | null, submissionType: "guess" | "skip" | "timeout") => {
-        if (!sessionId || !pair || resolution || resolving.current) return;
-        resolving.current = true;
-        setIsSubmitting(true);
-        setSelectedScoreId(scoreId);
-        setError(null);
+    const resolveGuess = useCallback(
+        async (scoreId: string | null, submissionType: "guess" | "skip" | "timeout") => {
+            if (!sessionId || !pair || resolution || resolving.current) return;
+            resolving.current = true;
+            setIsSubmitting(true);
+            setSelectedScoreId(scoreId);
+            setError(null);
 
-        try {
-            const result = multiplayerLobbyCode
-                ? await multiplayerRequest<ScorePpResolution>("score_pp.submit", {
-                      sessionId,
-                      pairId: pair.id,
-                      selectedScoreId: scoreId,
-                      submissionType,
-                  })
-                : await submitScorePpGuessAction(sessionId, pair.id, scoreId, submissionType);
-            applyResolution(result);
-        } catch {
-            const recovered = await recoverRun(sessionId);
-            if (!recovered?.terminal && !recovered?.resolution) {
-                setSelectedScoreId(null);
-                setError("submit");
+            try {
+                const result = multiplayerLobbyCode
+                    ? await multiplayerRequest<ScorePpResolution>("score_pp.submit", {
+                          sessionId,
+                          pairId: pair.id,
+                          selectedScoreId: scoreId,
+                          submissionType,
+                      })
+                    : await submitScorePpGuessAction(sessionId, pair.id, scoreId, submissionType);
+                applyResolution(result);
+            } catch {
+                const recovered = await recoverRun(sessionId);
+                if (!recovered?.terminal && !recovered?.resolution) {
+                    setSelectedScoreId(null);
+                    setError("submit");
+                }
+            } finally {
+                resolving.current = false;
+                setIsSubmitting(false);
             }
-        } finally {
-            resolving.current = false;
-            setIsSubmitting(false);
-        }
-    }, [applyResolution, multiplayerLobbyCode, multiplayerRequest, pair, recoverRun, resolution, sessionId]);
+        },
+        [applyResolution, multiplayerLobbyCode, multiplayerRequest, pair, recoverRun, resolution, sessionId],
+    );
 
     useEffect(() => {
         if (!pair || !resolution) return;
@@ -302,19 +307,11 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
     const canAdvanceRound = !multiplayerLobbyCode || Boolean(multiplayerRoundState?.allSubmitted);
     const showAdvanceCountdown = Boolean(resolution && canAdvanceRound);
     const participantCount = multiplayerRoundState?.participantCount ?? multiplayerLobby?.players.length ?? 0;
-    const waitingLabel = t.game.status.waitingForPlayers
-        .replace("{submitted}", String(multiplayerRoundState?.submittedCount ?? 0))
-        .replace("{total}", String(participantCount));
-    const readyLabel = t.game.status.readyPlayers
-        .replace("{ready}", String(multiplayerRoundState?.readyCount ?? 0))
-        .replace("{total}", String(participantCount));
+    const waitingLabel = t.game.status.waitingForPlayers.replace("{submitted}", String(multiplayerRoundState?.submittedCount ?? 0)).replace("{total}", String(participantCount));
+    const readyLabel = t.game.status.readyPlayers.replace("{ready}", String(multiplayerRoundState?.readyCount ?? 0)).replace("{total}", String(participantCount));
     const baseNextRoundLabel = terminalRound ? t.game.actions.viewResults : t.game.actions.nextRoundTime.replace("{seconds}", String(revealCountdown));
     const multiplayerNextRoundLabel = terminalRound ? t.game.actions.viewResults : t.game.actions.nextRound;
-    const nextRoundLabel = waitingForGuesses
-        ? waitingLabel
-        : multiplayerLobbyCode && resolution
-          ? `${multiplayerNextRoundLabel} · ${readyLabel}`
-          : baseNextRoundLabel;
+    const nextRoundLabel = waitingForGuesses ? waitingLabel : multiplayerLobbyCode && resolution ? `${multiplayerNextRoundLabel} · ${readyLabel}` : baseNextRoundLabel;
 
     useEffect(() => {
         if (!resolution || terminalRound || !multiplayerRoundState?.ready || !multiplayerRoundState.allReady || isLoading || isSubmitting) return;
@@ -379,27 +376,30 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
 
     const exitConfirmation = gameVariant === "survival" ? t.confirmations.exitGame.death : t.confirmations.exitGame.classic;
 
-    const runExit = useCallback(async (href?: string) => {
-        if (!sessionId || isLoading || isSubmitting) return;
-        if (terminalRound) {
-            if (href) router.push(href);
-            else router.replace(scoreUrl(sessionId));
-            return;
-        }
+    const runExit = useCallback(
+        async (href?: string) => {
+            if (!sessionId || isLoading || isSubmitting) return;
+            if (terminalRound) {
+                if (href) router.push(href);
+                else router.replace(scoreUrl(sessionId));
+                return;
+            }
 
-        setIsLoading(true);
-        setError(null);
-        try {
-            const runPp = multiplayerLobbyCode ? await multiplayerRequest("score_pp.end", { sessionId }) : await endScorePpRunAction(sessionId);
-            if (href) router.push(href);
-            else router.replace(runPp === null ? "/" : scoreUrl(sessionId));
-        } catch {
-            const recovered = await recoverRun(sessionId);
-            if (!recovered?.terminal) setError("end");
-        } finally {
-            setIsLoading(false);
-        }
-    }, [isLoading, isSubmitting, multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl, sessionId, terminalRound]);
+            setIsLoading(true);
+            setError(null);
+            try {
+                const runPp = multiplayerLobbyCode ? await multiplayerRequest("score_pp.end", { sessionId }) : await endScorePpRunAction(sessionId);
+                if (href) router.push(href);
+                else router.replace(runPp === null ? "/" : scoreUrl(sessionId));
+            } catch {
+                const recovered = await recoverRun(sessionId);
+                if (!recovered?.terminal) setError("end");
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [isLoading, isSubmitting, multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl, sessionId, terminalRound],
+    );
 
     const requestExit = useCallback(() => {
         if (terminalRound && sessionId) {
@@ -434,12 +434,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
             {multiplayerLobby && (
                 <div className="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
                     <MultiplayerChat lobby={multiplayerLobby} sendMessage={sendChat} />
-                    <MultiplayerStandings
-                        lobby={multiplayerLobby}
-                        presenceUserIds={presenceUserIds}
-                        currentUserId={multiplayerUserId}
-                        currentRound={round}
-                    />
+                    <MultiplayerStandings lobby={multiplayerLobby} presenceUserIds={presenceUserIds} currentUserId={multiplayerUserId} currentRound={round} />
                 </div>
             )}
 
@@ -449,7 +444,11 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                     <AlertTitle>{t.game.scorePp.unavailable}</AlertTitle>
                     <AlertDescription className="mt-2 flex flex-wrap items-center gap-3">
                         <span>{t.game.scorePp.errors[error]}</span>
-                        {sessionId && <Button size="sm" variant="outline" onClick={() => void loadRound(sessionId, requestedRound)}>{t.game.actions.retry}</Button>}
+                        {sessionId && (
+                            <Button size="sm" variant="outline" onClick={() => void loadRound(sessionId, requestedRound)}>
+                                {t.game.actions.retry}
+                            </Button>
+                        )}
                     </AlertDescription>
                 </Alert>
             )}
@@ -466,7 +465,21 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
             </div>
 
             {pair ? (
-                <div className="grid items-stretch lg:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)]" onMouseEnter={() => { advancePausedRef.current = true; }} onMouseLeave={() => { advancePausedRef.current = false; }} onFocusCapture={() => { advancePausedRef.current = true; }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false; }}>
+                <div
+                    className="grid items-stretch lg:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)]"
+                    onMouseEnter={() => {
+                        advancePausedRef.current = true;
+                    }}
+                    onMouseLeave={() => {
+                        advancePausedRef.current = false;
+                    }}
+                    onFocusCapture={() => {
+                        advancePausedRef.current = true;
+                    }}
+                    onBlurCapture={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false;
+                    }}
+                >
                     <ScorePpCard
                         key={`${pair.id}-${pair.left.sourceScoreId}`}
                         score={pair.left}
@@ -504,7 +517,11 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                     {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
                 </GameActionButton>
                 {visibleResolution ? (
-                    <div className={`col-span-2 row-start-1 text-center text-sm sm:col-span-1 sm:col-start-2 ${visibleResolution.resultType === "skip" ? "text-warning" : "text-muted-foreground"}`} role="status" aria-live="polite">
+                    <div
+                        className={`col-span-2 row-start-1 text-center text-sm sm:col-span-1 sm:col-start-2 ${visibleResolution.resultType === "skip" ? "text-warning" : "text-muted-foreground"}`}
+                        role="status"
+                        aria-live="polite"
+                    >
                         {visibleResolution.resultType === "skip"
                             ? t.game.result.skipped
                             : visibleResolution.resultType === "timeout"
@@ -517,7 +534,12 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                     <span className="hidden sm:block" aria-hidden="true" />
                 )}
                 {resolution && (
-                    <GameActionButton loadingLabel={isLoading ? t.game.status.loading : undefined} className="w-full sm:col-start-3 sm:row-start-1 sm:w-auto sm:min-w-44 sm:justify-self-end" onClick={() => void nextRound()} disabled={isLoading || isSubmitting || waitingForGuesses || waitingForReady}>
+                    <GameActionButton
+                        loadingLabel={isLoading ? t.game.status.loading : undefined}
+                        className="w-full sm:col-start-3 sm:row-start-1 sm:w-auto sm:min-w-44 sm:justify-self-end"
+                        onClick={() => void nextRound()}
+                        disabled={isLoading || isSubmitting || waitingForGuesses || waitingForReady}
+                    >
                         {nextRoundLabel}
                     </GameActionButton>
                 )}
@@ -532,17 +554,17 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                 <GameShortcuts />
                 {visibleResolution && pair && (
                     <div className="pt-3">
-                    <ReportDialog
-                        mapsetId={pair.left.beatmap.beatmapsetId}
-                        mapsetTitle={`${pair.left.beatmap.artist} - ${pair.left.beatmap.title}`}
-                        alternatives={[
-                            {
-                                mapsetId: pair.right.beatmap.beatmapsetId,
-                                mapsetTitle: `${pair.right.beatmap.artist} - ${pair.right.beatmap.title}`,
-                            },
-                        ]}
-                        onOpenChange={setIsReportDialogOpen}
-                    />
+                        <ReportDialog
+                            mapsetId={pair.left.beatmap.beatmapsetId}
+                            mapsetTitle={`${pair.left.beatmap.artist} - ${pair.left.beatmap.title}`}
+                            alternatives={[
+                                {
+                                    mapsetId: pair.right.beatmap.beatmapsetId,
+                                    mapsetTitle: `${pair.right.beatmap.artist} - ${pair.right.beatmap.title}`,
+                                },
+                            ]}
+                            onOpenChange={setIsReportDialogOpen}
+                        />
                     </div>
                 )}
             </div>

@@ -54,10 +54,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
     const navigatingToResults = useRef(false);
     const multiplayerAdvanceDeadline = useRef<{ key: string; at: number } | null>(null);
     const publicStatsRef = useRef<{ points: number; streak: number; highestStreak: number; mistakes: number } | null>(null);
-    const scoreUrl = useCallback(
-        (sessionId: string) => multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${sessionId}`,
-        [multiplayerLobbyCode],
-    );
+    const scoreUrl = useCallback((sessionId: string) => (multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${sessionId}`), [multiplayerLobbyCode]);
     const currentRound = gameState?.rounds.current;
     const roundRevealed = gameState?.currentBeatmap.revealed;
     const {
@@ -214,22 +211,12 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
     const canAdvanceRound = !multiplayerLobbyCode || Boolean(multiplayerRoundState?.allSubmitted);
     const showAdvanceCountdown = revealed && canAdvanceRound;
     const participantCount = multiplayerRoundState?.participantCount ?? multiplayerLobby?.players.length ?? 0;
-    const waitingLabel = t.game.status.waitingForPlayers
-        .replace("{submitted}", String(multiplayerRoundState?.submittedCount ?? 0))
-        .replace("{total}", String(participantCount));
-    const readyLabel = t.game.status.readyPlayers
-        .replace("{ready}", String(multiplayerRoundState?.readyCount ?? 0))
-        .replace("{total}", String(participantCount));
+    const waitingLabel = t.game.status.waitingForPlayers.replace("{submitted}", String(multiplayerRoundState?.submittedCount ?? 0)).replace("{total}", String(participantCount));
+    const readyLabel = t.game.status.readyPlayers.replace("{ready}", String(multiplayerRoundState?.readyCount ?? 0)).replace("{total}", String(participantCount));
     const isFinalRound = Boolean(gameState && (gameState.gameStatus === "finished" || gameState.rounds.current >= gameState.rounds.total));
-    const baseNextRoundLabel = isFinalRound
-        ? t.game.actions.viewResults
-        : t.game.actions.nextRoundTime.replace("{seconds}", String(countdown));
+    const baseNextRoundLabel = isFinalRound ? t.game.actions.viewResults : t.game.actions.nextRoundTime.replace("{seconds}", String(countdown));
     const multiplayerNextRoundLabel = isFinalRound ? t.game.actions.viewResults : t.game.actions.nextRound;
-    const nextRoundLabel = waitingForGuesses
-        ? waitingLabel
-        : multiplayerLobbyCode && revealed
-          ? `${multiplayerNextRoundLabel} · ${readyLabel}`
-          : baseNextRoundLabel;
+    const nextRoundLabel = waitingForGuesses ? waitingLabel : multiplayerLobbyCode && revealed ? `${multiplayerNextRoundLabel} · ${readyLabel}` : baseNextRoundLabel;
 
     useEffect(() => {
         if (!revealed || !multiplayerRoundState?.ready || !multiplayerRoundState.allReady || isLoading) return;
@@ -246,37 +233,40 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 : null
         : null;
 
-    const runExit = useCallback(async (href?: string): Promise<boolean> => {
-        if (!gameClient.current || !gameState) return false;
+    const runExit = useCallback(
+        async (href?: string): Promise<boolean> => {
+            if (!gameClient.current || !gameState) return false;
 
-        setIsLoading(true);
-        setActionError(null);
-        try {
-            await gameClient.current.endGame();
-            const hasSavedScore = canPersistGameResult(
-                {
-                    variant: gameVariant,
-                    currentRound: gameState.rounds.current,
-                    hasGuessedCurrentRound: gameState.currentBeatmap.revealed,
-                },
-                MAX_ROUNDS,
-            );
-            if (href) {
-                router.push(href);
-            } else if (hasSavedScore) {
-                router.replace(scoreUrl(gameState.sessionId));
-            } else {
-                onExit();
+            setIsLoading(true);
+            setActionError(null);
+            try {
+                await gameClient.current.endGame();
+                const hasSavedScore = canPersistGameResult(
+                    {
+                        variant: gameVariant,
+                        currentRound: gameState.rounds.current,
+                        hasGuessedCurrentRound: gameState.currentBeatmap.revealed,
+                    },
+                    MAX_ROUNDS,
+                );
+                if (href) {
+                    router.push(href);
+                } else if (hasSavedScore) {
+                    router.replace(scoreUrl(gameState.sessionId));
+                } else {
+                    onExit();
+                }
+                return true;
+            } catch (error) {
+                console.error("Failed to end game:", error);
+                setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
+                return false;
+            } finally {
+                setIsLoading(false);
             }
-            return true;
-        } catch (error) {
-            console.error("Failed to end game:", error);
-            setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
-            return false;
-        } finally {
-            setIsLoading(false);
-        }
-    }, [gameState, onExit, gameVariant, router, scoreUrl, t.errors.game.unknown]);
+        },
+        [gameState, onExit, gameVariant, router, scoreUrl, t.errors.game.unknown],
+    );
 
     const requestExit = useCallback(() => {
         if (exitConfirmation) {
@@ -311,9 +301,12 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 updateCountdown();
 
                 const countdownInterval = window.setInterval(updateCountdown, 250);
-                const advanceTimer = window.setTimeout(() => {
-                    void handleNextRound();
-                }, Math.max(0, multiplayerAdvanceDeadline.current.at - Date.now()));
+                const advanceTimer = window.setTimeout(
+                    () => {
+                        void handleNextRound();
+                    },
+                    Math.max(0, multiplayerAdvanceDeadline.current.at - Date.now()),
+                );
 
                 return () => {
                     window.clearInterval(countdownInterval);
@@ -347,7 +340,12 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
         return <GameStartError message={startupError} onRetry={handleStartGame} />;
     }
 
-    if (!gameState) return <div className="page-container relative min-h-[420px]"><LoadingScreen /></div>;
+    if (!gameState)
+        return (
+            <div className="page-container relative min-h-[420px]">
+                <LoadingScreen />
+            </div>
+        );
 
     return (
         <div className={`page-container py-4 md:py-6 ${multiplayerLobby ? "max-w-[88rem]" : ""}`}>
@@ -367,15 +365,24 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
             <div className={`grid items-start gap-5 md:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:gap-8 ${multiplayerLobby ? "lg:grid-cols-[13rem_minmax(0,1.6fr)_minmax(320px,1fr)]" : ""}`}>
                 {multiplayerLobby && (
                     <div className="md:col-span-2 lg:col-span-1 lg:sticky lg:top-6">
-                        <MultiplayerStandings
-                            lobby={multiplayerLobby}
-                            presenceUserIds={presenceUserIds}
-                            currentUserId={multiplayerUserId}
-                            currentRound={currentRound}
-                        />
+                        <MultiplayerStandings lobby={multiplayerLobby} presenceUserIds={presenceUserIds} currentUserId={multiplayerUserId} currentRound={currentRound} />
                     </div>
                 )}
-                <div className="relative min-w-0 bg-muted/30" onMouseEnter={() => { advancePausedRef.current = true; }} onMouseLeave={() => { advancePausedRef.current = false; }} onFocusCapture={() => { advancePausedRef.current = true; }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false; }}>
+                <div
+                    className="relative min-w-0 bg-muted/30"
+                    onMouseEnter={() => {
+                        advancePausedRef.current = true;
+                    }}
+                    onMouseLeave={() => {
+                        advancePausedRef.current = false;
+                    }}
+                    onFocusCapture={() => {
+                        advancePausedRef.current = true;
+                    }}
+                    onBlurCapture={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false;
+                    }}
+                >
                     <GameMedia
                         mediaUrl={gameMode === "audio" ? gameState.currentBeatmap.audioUrl! : gameState.currentBeatmap.imageUrl!}
                         isRevealed={revealed}
@@ -384,7 +391,21 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                     />
                     {isLoading && !revealed && <LoadingScreen />}
                 </div>
-                <div className="flex min-w-0 flex-col gap-4" onMouseEnter={() => { advancePausedRef.current = true; }} onMouseLeave={() => { advancePausedRef.current = false; }} onFocusCapture={() => { advancePausedRef.current = true; }} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false; }}>
+                <div
+                    className="flex min-w-0 flex-col gap-4"
+                    onMouseEnter={() => {
+                        advancePausedRef.current = true;
+                    }}
+                    onMouseLeave={() => {
+                        advancePausedRef.current = false;
+                    }}
+                    onFocusCapture={() => {
+                        advancePausedRef.current = true;
+                    }}
+                    onBlurCapture={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget)) advancePausedRef.current = false;
+                    }}
+                >
                     {actionError && (
                         <Alert variant="destructive" role="alert">
                             <AlertCircle className="h-4 w-4" />

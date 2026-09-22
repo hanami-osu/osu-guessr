@@ -91,7 +91,7 @@ async function saveSkinToDatabase(skinData: SkinImportData, imageFilename: strin
     await query(
         `INSERT INTO skins (id, name, image_filename)
      VALUES (?, ?, ?)`,
-        [skinData.id, skinData.name, imageFilename]
+        [skinData.id, skinData.name, imageFilename],
     );
 }
 

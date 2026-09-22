@@ -1,14 +1,4 @@
-export type MultiplayerRpcAction =
-    | "game.start"
-    | "game.submit"
-    | "game.state"
-    | "game.end"
-    | "game.suggestions"
-    | "score_pp.start"
-    | "score_pp.round"
-    | "score_pp.state"
-    | "score_pp.submit"
-    | "score_pp.end";
+export type MultiplayerRpcAction = "game.start" | "game.submit" | "game.state" | "game.end" | "game.suggestions" | "score_pp.start" | "score_pp.round" | "score_pp.state" | "score_pp.submit" | "score_pp.end";
 
 export type MultiplayerRpcRequest = {
     type: "rpc";
@@ -27,7 +17,5 @@ export function stringifyMultiplayerMessage(value: unknown): string {
 }
 
 export function parseMultiplayerMessage<T>(value: string): T {
-    return JSON.parse(value, (_key, item) =>
-        item && typeof item === "object" && item[NUMBER_TAG] === "Infinity" ? Infinity : item,
-    ) as T;
+    return JSON.parse(value, (_key, item) => (item && typeof item === "object" && item[NUMBER_TAG] === "Infinity" ? Infinity : item)) as T;
 }

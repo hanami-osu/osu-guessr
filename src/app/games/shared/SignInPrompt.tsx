@@ -23,9 +23,7 @@ export default function SignInPrompt() {
                             {t.home.hero.signIn}
                         </Button>
                         <Button asChild variant="outline" className="w-full sm:w-auto">
-                            <Link href="/">
-                                {t.user.notFound.actions.home}
-                            </Link>
+                            <Link href="/">{t.user.notFound.actions.home}</Link>
                         </Button>
                     </div>
 

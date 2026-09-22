@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 export class ApiError extends Error {
     constructor(
         message: string,
-        readonly status: number
+        readonly status: number,
     ) {
         super(message);
         this.name = new.target.name;

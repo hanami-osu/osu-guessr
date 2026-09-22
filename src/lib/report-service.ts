@@ -41,7 +41,7 @@ export async function createReportRecord(input: unknown, dependencies: ReportDep
         `INSERT INTO reports (
             user_id, mapset_id, report_type, description
         ) VALUES (?, ?, ?, ?)`,
-        [report.userId, report.mapsetId, report.reportType, report.description]
+        [report.userId, report.mapsetId, report.reportType, report.description],
     );
 
     if (!dependencies.webhookUrl) {

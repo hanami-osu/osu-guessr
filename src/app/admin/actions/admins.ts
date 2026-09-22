@@ -15,10 +15,7 @@ export interface AdminUser {
 
 export async function listAdmins(): Promise<AdminUser[]> {
     await requireAdmin();
-    const rows = await query<{ bancho_id: number; username: string }>(
-        "SELECT bancho_id, username FROM users WHERE is_admin = TRUE OR bancho_id = ? ORDER BY username",
-        [OWNER_ID],
-    );
+    const rows = await query<{ bancho_id: number; username: string }>("SELECT bancho_id, username FROM users WHERE is_admin = TRUE OR bancho_id = ? ORDER BY username", [OWNER_ID]);
 
     return rows.map((user) => ({
         banchoId: user.bancho_id,
@@ -33,10 +30,7 @@ export async function setAdmin(rawUserId: number, isAdmin: boolean): Promise<str
 
     if (userId === OWNER_ID && !isAdmin) throw new Error("The owner cannot be removed as an admin");
 
-    const [user] = await query<{ username: string; is_admin: number | boolean }>(
-        "SELECT username, is_admin FROM users WHERE bancho_id = ? LIMIT 1",
-        [userId],
-    );
+    const [user] = await query<{ username: string; is_admin: number | boolean }>("SELECT username, is_admin FROM users WHERE bancho_id = ? LIMIT 1", [userId]);
     if (!user) throw new Error(`User ${userId} not found`);
 
     if (userId === OWNER_ID || Boolean(user.is_admin) === isAdmin) {

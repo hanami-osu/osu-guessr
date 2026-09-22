@@ -28,7 +28,12 @@ export default function GameShortcuts({ hasSuggestions = false }: { hasSuggestio
             <div className="mt-2 space-y-2 leading-relaxed">
                 <p>{t.game.shortcuts.items.enter}</p>
                 <p>{t.game.shortcuts.items.ctrlS}</p>
-                {hasSuggestions && <><p>{t.game.shortcuts.items.arrows}</p><p>{t.game.shortcuts.items.esc}</p></>}
+                {hasSuggestions && (
+                    <>
+                        <p>{t.game.shortcuts.items.arrows}</p>
+                        <p>{t.game.shortcuts.items.esc}</p>
+                    </>
+                )}
             </div>
         </details>
     );

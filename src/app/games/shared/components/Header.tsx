@@ -17,7 +17,19 @@ interface GameHeaderProps {
     timerDuration?: number;
 }
 
-export default function GameHeader({ streak, points, timeLeft, currentRound, totalRounds, mode, gameVariant, maxStreak = 0, mistakes = 0, lifeCount = SURVIVAL_LIVES, timerDuration = ROUND_TIME }: GameHeaderProps) {
+export default function GameHeader({
+    streak,
+    points,
+    timeLeft,
+    currentRound,
+    totalRounds,
+    mode,
+    gameVariant,
+    maxStreak = 0,
+    mistakes = 0,
+    lifeCount = SURVIVAL_LIVES,
+    timerDuration = ROUND_TIME,
+}: GameHeaderProps) {
     const { t, locale } = useTranslationsContext();
     const statClass = "min-w-0 border-l border-border/60 pl-4 first:border-l-0 first:pl-0 sm:pl-6 pr-4 sm:pr-6";
     const livesRemaining = Math.max(0, lifeCount - mistakes);
@@ -54,10 +66,7 @@ export default function GameHeader({ streak, points, timeLeft, currentRound, tot
                 ) : gameVariant === "survival" ? (
                     <>
                         <div className={statClass}>
-                            <div
-                                className="flex items-center gap-1.5"
-                                aria-label={t.game.header.death.lives.remaining.replace("{current}", livesRemaining.toString()).replace("{total}", lifeCount.toString())}
-                            >
+                            <div className="flex items-center gap-1.5" aria-label={t.game.header.death.lives.remaining.replace("{current}", livesRemaining.toString()).replace("{total}", lifeCount.toString())}>
                                 <span className="font-semibold">{t.game.header.death.lives.label}:</span>
                                 {Array.from({ length: lifeCount }, (_, index) => {
                                     const lost = index < mistakes;
@@ -101,7 +110,10 @@ export default function GameHeader({ streak, points, timeLeft, currentRound, tot
                 )}
             </div>
             <div aria-hidden="true" className="mt-4 h-1 overflow-hidden bg-muted">
-                <div className={`h-full transition-[width] duration-500 motion-reduce:transition-none ${timeLeft < 10 ? "bg-destructive" : "bg-primary"}`} style={{ width: `${Math.max(0, Math.min(100, (timeLeft / timerDuration) * 100))}%` }} />
+                <div
+                    className={`h-full transition-[width] duration-500 motion-reduce:transition-none ${timeLeft < 10 ? "bg-destructive" : "bg-primary"}`}
+                    style={{ width: `${Math.max(0, Math.min(100, (timeLeft / timerDuration) * 100))}%` }}
+                />
             </div>
         </header>
     );

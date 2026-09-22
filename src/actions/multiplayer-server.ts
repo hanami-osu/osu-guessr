@@ -24,7 +24,12 @@ import { createMultiplayerSocketToken, getPresentMultiplayerUsers } from "@/lib/
 
 const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp]);
 const variantSchema = z.enum(["classic", "survival"]);
-const lobbyCodeSchema = z.string().trim().min(6).max(8).regex(/^[A-Z0-9]+$/);
+const lobbyCodeSchema = z
+    .string()
+    .trim()
+    .min(6)
+    .max(8)
+    .regex(/^[A-Z0-9]+$/);
 const lobbySettingsSchema = z.object({
     name: z.string().trim().min(1).max(40),
     maxPlayers: z.number().int().min(2).max(16),
@@ -150,10 +155,7 @@ export async function joinMultiplayerLobbyAction(code: string): Promise<Multipla
     });
 }
 
-export async function updateMultiplayerLobbyAction(
-    code: string,
-    settings: { name: string; maxPlayers: number; private: boolean; gameMode: GameMode; variant: GameVariant },
-): Promise<MultiplayerLobby> {
+export async function updateMultiplayerLobbyAction(code: string, settings: { name: string; maxPlayers: number; private: boolean; gameMode: GameMode; variant: GameVariant }): Promise<MultiplayerLobby> {
     const normalizedCode = lobbyCodeSchema.parse(normalizeLobbyCode(code));
     const parsedSettings = lobbySettingsSchema.parse(settings);
     const session = await getAuthSession();
@@ -304,7 +306,22 @@ export async function resetMultiplayerLobbyAction(code: string): Promise<Multipl
         lobby.matchId = crypto.randomUUID();
         lobby.setupVersion += 1;
         lobby.notice = "Ready for another game? Review the setup and ready up.";
-        lobby.players = lobby.players.map((player) => ({ ...player, ready: false, points: 0, round: 0, submittedRound: 0, readyRound: 0, resultRound: 0, resultCorrect: null, resultSkipped: false, resultPoints: 0, scoreSessionId: null, results: null, finished: false, completedMatch: false }));
+        lobby.players = lobby.players.map((player) => ({
+            ...player,
+            ready: false,
+            points: 0,
+            round: 0,
+            submittedRound: 0,
+            readyRound: 0,
+            resultRound: 0,
+            resultCorrect: null,
+            resultSkipped: false,
+            resultPoints: 0,
+            scoreSessionId: null,
+            results: null,
+            finished: false,
+            completedMatch: false,
+        }));
         await writeMultiplayerLobby(lobby);
         return lobby;
     });
