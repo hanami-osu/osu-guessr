@@ -1,6 +1,3 @@
-export const SCORE_PP_TOP_SCORE_LIMIT = 200;
-export const SCORE_PP_MAX_GLOBAL_RANK = 10_000;
-
 export function getScorePpMaxRelativeGap(round: number): number {
     if (round <= 3) return 0.25;
     if (round <= 6) return 0.18;
