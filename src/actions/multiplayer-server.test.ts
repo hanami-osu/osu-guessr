@@ -82,6 +82,7 @@ const {
 } = await import("./multiplayer-server");
 const {
     addMultiplayerMessage,
+    cleanupDisconnectedMultiplayerPlayer,
     disconnectMultiplayerPlayer,
     finishMultiplayerCountdown,
     readMultiplayerLobby,
@@ -113,6 +114,7 @@ function player(userId: number, overrides: Partial<MultiplayerPlayer> = {}): Mul
         resultCorrect: null,
         resultSkipped: false,
         resultPoints: 0,
+        scoreSessionId: null,
         finished: false,
         completedMatch: false,
         ready: false,
@@ -375,10 +377,31 @@ describe("multiplayer pre-game lifecycle", () => {
         expect(lobby.players.map((item) => item.userId)).toEqual([2]);
     });
 
+    test("preserves a completed host result while transferring host to a connected player", async () => {
+        seedLobby({
+            status: "finished",
+            players: [
+                player(1, { points: 500, scoreSessionId: "score-host", finished: true, completedMatch: true }),
+                player(2, { points: 300, scoreSessionId: "score-guest", finished: true, completedMatch: true }),
+            ],
+        });
+        setPresent([2]);
+
+        await cleanupDisconnectedMultiplayerPlayer(lobbyCode, 1);
+
+        const lobby = await storedLobby();
+        expect(lobby.hostId).toBe(2);
+        expect(lobby.players.find((item) => item.userId === 1)).toMatchObject({
+            points: 500,
+            scoreSessionId: "score-host",
+            completedMatch: true,
+        });
+    });
+
     test("resets a finished match while preserving lobby identity and messages", async () => {
         const originalPlayers = [
-            player(1, { points: 120, round: 15, submittedRound: 15, readyRound: 15, finished: true, completedMatch: true, ready: true }),
-            player(2, { points: 80, round: 15, submittedRound: 15, readyRound: 15, finished: true, completedMatch: true, ready: true }),
+            player(1, { points: 120, round: 15, submittedRound: 15, readyRound: 15, scoreSessionId: "score-host", finished: true, completedMatch: true, ready: true }),
+            player(2, { points: 80, round: 15, submittedRound: 15, readyRound: 15, scoreSessionId: "score-guest", finished: true, completedMatch: true, ready: true }),
         ];
         const messages = [{ id: "message-1", userId: 2, username: "Player 2", message: "Good game", sentAt: now.toISOString() }];
         seedLobby({
@@ -413,7 +436,7 @@ describe("multiplayer pre-game lifecycle", () => {
         expect(reset.players.map((item) => ({ userId: item.userId, username: item.username, joinedAt: item.joinedAt }))).toEqual(
             originalPlayers.map((item) => ({ userId: item.userId, username: item.username, joinedAt: item.joinedAt })),
         );
-        expect(reset.players.every((item) => item.points === 0 && item.round === 0 && item.submittedRound === 0 && item.readyRound === 0 && !item.finished && !item.completedMatch && !item.ready)).toBe(true);
+        expect(reset.players.every((item) => item.points === 0 && item.round === 0 && item.submittedRound === 0 && item.readyRound === 0 && item.scoreSessionId === null && !item.finished && !item.completedMatch && !item.ready)).toBe(true);
     });
 
     test("ignores progress submitted with an old matchId", async () => {
@@ -446,11 +469,14 @@ describe("multiplayer pre-game lifecycle", () => {
         await updateMultiplayerProgress(lobbyCode, 2, {
             points: 80,
             round: 15,
+            scoreSessionId: "score-guest",
+            results: { correct: 8, incorrect: 3, skipped: 2, timedOut: 2 },
             finished: true,
             completedMatch: true,
         }, "match-current");
 
         const lobby = await storedLobby();
-        expect(lobby.players[1]).toMatchObject({ points: 80, round: 15, finished: true, completedMatch: true });
+        expect(lobby.players[1].results).toEqual({ correct: 8, incorrect: 3, skipped: 2, timedOut: 2 });
+        expect(lobby.players[1]).toMatchObject({ points: 80, round: 15, scoreSessionId: "score-guest", finished: true, completedMatch: true });
     });
 });

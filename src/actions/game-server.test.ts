@@ -82,6 +82,7 @@ const authSessionMock = mock(async () => ({ user: { banchoId: userId } }));
 const multiplayerLobby = {
     matchId: "match-1",
     startAt: Date.parse("2026-01-01T00:00:05.000Z"),
+    players: [{ userId, finished: false, scoreSessionId: null as string | null }],
 };
 const requireActiveMultiplayerLobbyMock = mock(async () => multiplayerLobby);
 const readMultiplayerLobbyMock = mock(async () => multiplayerLobby);
@@ -99,13 +100,12 @@ const updateMultiplayerProgressMock = mock(
     async (
         _code: string,
         _userId: number,
-        _progress: { points: number; round: number; submittedRound?: number; readyRound?: number; finished?: boolean },
+        _progress: { points: number; round: number; submittedRound?: number; readyRound?: number; scoreSessionId?: string | null; finished?: boolean },
         _matchId?: string,
     ) => {
-        void _code;
-        void _userId;
-        void _progress;
         void _matchId;
+        if (_progress.scoreSessionId !== undefined) multiplayerLobby.players[0].scoreSessionId = _progress.scoreSessionId;
+        if (_progress.finished !== undefined) multiplayerLobby.players[0].finished = _progress.finished;
     },
 );
 
@@ -126,11 +126,6 @@ const redisClientMock = {
 };
 
 mock.module("./server", () => ({ getAuthSession: authSessionMock }));
-mock.module("./mapsets-server", () => ({
-    getRandomAudioAction: getRandomActionMock,
-    getRandomBackgroundAction: getRandomActionMock,
-    getRandomSkinAction: getRandomActionMock,
-}));
 mock.module("@/lib/game/mapsets", () => ({
     getRandomAudio: getRandomActionMock,
     getRandomBackground: getRandomActionMock,
@@ -234,6 +229,8 @@ beforeEach(() => {
     authSessionMock.mockReset().mockResolvedValue({ user: { banchoId: userId } });
     multiplayerLobby.matchId = "match-1";
     multiplayerLobby.startAt = Date.parse("2026-01-01T00:00:05.000Z");
+    multiplayerLobby.players[0].finished = false;
+    multiplayerLobby.players[0].scoreSessionId = null;
     requireActiveMultiplayerLobbyMock.mockClear();
     readMultiplayerLobbyMock.mockClear();
     getMultiplayerRoundStateMock.mockClear();
@@ -252,7 +249,7 @@ describe("game server lifecycle", () => {
         expect(getRandomActionMock).not.toHaveBeenCalled();
     });
 
-    test("shares multiplayer first-round start time while returning the current countdown", async () => {
+    test("shares multiplayer first-round start time and reuses the active session", async () => {
         setSystemTime(new Date("2026-01-01T00:00:10.000Z"));
 
         const first = await startGameAction(GameMode.Background, "classic", "room123");
@@ -260,20 +257,18 @@ describe("game server lifecycle", () => {
         const second = await startGameAction(GameMode.Background, "classic", "room123");
 
         const firstSession = JSON.parse(redisValues.get(`game_session:${first.sessionId}`)!);
-        const secondSession = JSON.parse(redisValues.get(`game_session:${second.sessionId}`)!);
         const sharedStartedAt = new Date("2026-01-01T00:00:05.000Z").toISOString();
 
+        expect(second.sessionId).toBe(first.sessionId);
         expect(first.timeLeft).toBe(25);
         expect(second.timeLeft).toBe(20);
         expect(firstSession.started_at).toBe(sharedStartedAt);
         expect(firstSession.last_action_at).toBe(sharedStartedAt);
-        expect(secondSession.started_at).toBe(sharedStartedAt);
-        expect(secondSession.last_action_at).toBe(sharedStartedAt);
         expect(firstSession.ranked).toBe(true);
-        expect(secondSession.ranked).toBe(true);
         expect(firstSession.multiplayer_match_id).toBe("match-1");
-        expect(getOrCreateMultiplayerRoundMock.mock.calls.map(([code]) => code)).toEqual(["ROOM123:match-1", "ROOM123:match-1"]);
-        expect(updateMultiplayerProgressMock.mock.calls.map(([, , , matchId]) => matchId)).toEqual(["match-1", "match-1"]);
+        expect(getOrCreateMultiplayerRoundMock.mock.calls.map(([code]) => code)).toEqual(["ROOM123:match-1"]);
+        expect(updateMultiplayerProgressMock.mock.calls.map(([, , , matchId]) => matchId)).toEqual(["match-1"]);
+        expect(multiplayerLobby.players[0].scoreSessionId).toBe(first.sessionId);
     });
 
     test("rejects a game session from a previous multiplayer match", async () => {

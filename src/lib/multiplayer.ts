@@ -30,6 +30,8 @@ export interface MultiplayerPlayer {
     resultCorrect: boolean | null;
     resultSkipped: boolean;
     resultPoints: number;
+    scoreSessionId: string | null;
+    results?: { correct: number; incorrect: number; skipped: number; timedOut: number } | null;
     finished: boolean;
     completedMatch: boolean;
     ready: boolean;
@@ -133,6 +135,7 @@ export async function readMultiplayerLobby(code: string): Promise<MultiplayerLob
             resultCorrect: player.resultCorrect ?? null,
             resultSkipped: player.resultSkipped ?? false,
             resultPoints: player.resultPoints ?? 0,
+            scoreSessionId: player.scoreSessionId ?? null,
             completedMatch: player.completedMatch ?? false,
             ready: player.ready ?? false,
         })),
@@ -161,7 +164,7 @@ export async function finishMultiplayerCountdown(code: string): Promise<void> {
         } else {
             lobby.status = "playing";
             lobby.notice = null;
-            lobby.players = lobby.players.map((player) => ({ ...player, points: 0, round: 1, submittedRound: 0, readyRound: 0, resultRound: 0, resultCorrect: null, resultSkipped: false, resultPoints: 0, finished: false, completedMatch: false }));
+            lobby.players = lobby.players.map((player) => ({ ...player, points: 0, round: 1, submittedRound: 0, readyRound: 0, resultRound: 0, resultCorrect: null, resultSkipped: false, resultPoints: 0, scoreSessionId: null, results: null, finished: false, completedMatch: false }));
         }
         await writeMultiplayerLobby(lobby);
     });
@@ -170,8 +173,7 @@ export async function finishMultiplayerCountdown(code: string): Promise<void> {
 export async function disconnectMultiplayerPlayer(code: string, userId: number): Promise<void> {
     const lobby = await readMultiplayerLobby(code);
     if (!lobby || lobby.status === "playing") return;
-    if ((await getPresentMultiplayerUsers(code)).includes(userId)) return;
-    await removeMultiplayerUserFromLobby(code, userId);
+    await cleanupDisconnectedMultiplayerPlayer(code, userId);
 }
 
 export async function createMultiplayerLobby(lobby: MultiplayerLobby): Promise<boolean> {
@@ -298,6 +300,56 @@ export async function removeMultiplayerUserFromLobby(code: string, userId: numbe
         } else {
             if (lobby.hostId === userId) lobby.hostId = lobby.players[0].userId;
             if (lobby.status === "playing" && lobby.players.every((player) => player.finished)) lobby.status = "finished";
+            await writeMultiplayerLobby(lobby);
+        }
+        await clearMultiplayerUserLobby(userId, normalizedCode);
+    });
+}
+
+export async function cleanupDisconnectedMultiplayerPlayer(code: string, userId: number): Promise<void> {
+    const normalizedCode = normalizeLobbyCode(code);
+    await withMultiplayerLobbyLock(normalizedCode, async () => {
+        const lobby = await readMultiplayerLobby(normalizedCode);
+        const player = lobby?.players.find((item) => item.userId === userId);
+        if (!lobby || !player) return;
+
+        const present = new Set(await getPresentMultiplayerUsers(normalizedCode));
+        if (present.has(userId)) return;
+
+        if (player.completedMatch) {
+            if (lobby.hostId !== userId) return;
+            const nextHost = lobby.players.find((item) => item.userId !== userId && present.has(item.userId));
+            if (!nextHost) return;
+            lobby.hostId = nextHost.userId;
+            lobby.messages.push({
+                id: crypto.randomUUID(),
+                userId: nextHost.userId,
+                username: nextHost.username,
+                message: `${nextHost.username} is now host because the previous host disconnected.`,
+                sentAt: new Date().toISOString(),
+                kind: "system",
+            });
+            lobby.messages = lobby.messages.slice(-100);
+            await writeMultiplayerLobby(lobby);
+            return;
+        }
+
+        cancelMultiplayerCountdown(lobby, `${player.username} left. Start cancelled.`);
+        lobby.messages.push({
+            id: crypto.randomUUID(),
+            userId: player.userId,
+            username: player.username,
+            message: "left the lobby.",
+            sentAt: new Date().toISOString(),
+            kind: "leave",
+        });
+        lobby.messages = lobby.messages.slice(-100);
+        lobby.players = lobby.players.filter((item) => item.userId !== userId);
+        if (lobby.players.length === 0) {
+            await deleteMultiplayerLobby(normalizedCode);
+        } else {
+            if (lobby.hostId === userId) lobby.hostId = lobby.players.find((item) => present.has(item.userId))?.userId ?? lobby.players[0].userId;
+            if (lobby.status === "playing" && lobby.players.every((item) => item.finished)) lobby.status = "finished";
             await writeMultiplayerLobby(lobby);
         }
         await clearMultiplayerUserLobby(userId, normalizedCode);
@@ -442,13 +494,13 @@ export async function addMultiplayerMessage(code: string, userId: number, messag
 export async function updateMultiplayerProgress(
     code: string,
     userId: number,
-    progress: { points: number; round: number; submittedRound?: number; readyRound?: number; resultRound?: number; resultCorrect?: boolean; resultSkipped?: boolean; resultPoints?: number; finished?: boolean; completedMatch?: boolean },
+    progress: { points: number; round: number; submittedRound?: number; readyRound?: number; resultRound?: number; resultCorrect?: boolean; resultSkipped?: boolean; resultPoints?: number; scoreSessionId?: string | null; results?: MultiplayerPlayer["results"]; finished?: boolean; completedMatch?: boolean },
     matchId?: string,
 ): Promise<void> {
     await withMultiplayerLobbyLock(code, async () => {
         const lobby = await readMultiplayerLobby(code);
         if (!lobby) return;
-        if ((lobby.status !== "playing" && !(lobby.status === "finished" && progress.completedMatch === true)) || (matchId && lobby.matchId !== matchId)) return;
+        if ((lobby.status !== "playing" && !(lobby.status === "finished" && (progress.completedMatch === true || progress.scoreSessionId !== undefined))) || (matchId && lobby.matchId !== matchId)) return;
         const player = lobby.players.find((item) => item.userId === userId);
         if (!player) return;
         player.points = progress.points;
@@ -461,6 +513,8 @@ export async function updateMultiplayerProgress(
             player.resultSkipped = progress.resultSkipped ?? false;
             player.resultPoints = progress.resultPoints ?? 0;
         }
+        if (progress.scoreSessionId !== undefined) player.scoreSessionId = progress.scoreSessionId;
+        if (progress.results !== undefined) player.results = progress.results;
         if (progress.finished !== undefined) player.finished = progress.finished;
         if (progress.completedMatch !== undefined) player.completedMatch = progress.completedMatch;
         if (lobby.status === "playing" && lobby.players.length > 0 && lobby.players.every((item) => item.finished)) {

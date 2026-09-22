@@ -148,6 +148,29 @@ describe("GameClient", () => {
         }
     });
 
+    test("accepts recovered state when a mutation succeeded but its response was lost", async () => {
+        const client = new GameClient(events, GameMode.Audio, "classic", { maxRetries: 1 });
+        const recoveredState = {
+            ...initialGameState,
+            currentBeatmap: { revealed: true },
+            score: { total: 100, current: 100, streak: 1, highestStreak: 1 },
+            lastGuess: { correct: true, answer: "correct answer", type: "guess" as const },
+        } satisfies GameState;
+        await client.startGame();
+        submitGuessActionMock.mockRejectedValueOnce(new Error("connection closed"));
+        getGameStateActionMock.mockResolvedValueOnce(recoveredState);
+        const consoleError = spyOn(console, "error").mockImplementation(() => {});
+
+        try {
+            await expect(client.submitGuess("correct answer")).resolves.toBeUndefined();
+            expect(events.onStateUpdate).toHaveBeenLastCalledWith(recoveredState);
+            expect(events.onError).not.toHaveBeenCalled();
+        } finally {
+            client.dispose();
+            consoleError.mockRestore();
+        }
+    });
+
     test("restarts the round timer after recovering from a failed mutation", async () => {
         const activeState = { ...initialGameState, timeLeft: 1 };
         const client = new GameClient(events, GameMode.Audio, "classic", { maxRetries: 1 });

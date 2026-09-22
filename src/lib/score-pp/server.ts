@@ -179,6 +179,13 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
 
         const lobbyCode = multiplayerLobbyCode ? normalizeLobbyCode(multiplayerLobbyCode) : undefined;
         const lobby = lobbyCode ? await requireActiveMultiplayerLobby(lobbyCode, userId, GameMode.ScorePp, parsedVariant) : null;
+        const existingSessionId = lobby?.players.find((player) => player.userId === userId && !player.finished)?.scoreSessionId;
+        if (existingSessionId) {
+        try {
+            const existingState = await getScorePpRunStateForUser(userId, existingSessionId);
+            if (existingState.active) return existingSessionId;
+        } catch {}
+        }
         const sessionId = crypto.randomUUID();
         const startedAt = new Date(lobby?.startAt ?? Date.now()).toISOString();
         const run: DatabaseGameSession = {
@@ -222,7 +229,7 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
         };
         await writeGameSession(run);
         if (lobbyCode) {
-            await updateMultiplayerProgress(lobbyCode, userId, { points: 0, round: 1, finished: false }, lobby!.matchId).catch((error) =>
+            await updateMultiplayerProgress(lobbyCode, userId, { points: 0, round: 1, scoreSessionId: sessionId, finished: false }, lobby!.matchId).catch((error) =>
                 console.error("Failed to update multiplayer progress:", error),
             );
         }

@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     Check,
@@ -119,18 +120,18 @@ export default function LobbyClient({
     code,
     userId,
     initialLobby,
-    returningFromResults = false,
 }: {
     code: string;
     userId: number;
     initialLobby?: MultiplayerLobby | null;
-    returningFromResults?: boolean;
 }) {
     const router = useRouter();
     const [localLobby, setLocalLobby] = useState<MultiplayerLobby | null>(initialLobby ?? null);
     const [socketEnabled, setSocketEnabled] = useState(Boolean(initialLobby));
     const [message, setMessage] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [joinAttempt, setJoinAttempt] = useState(0);
+    const [exitReason, setExitReason] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [pendingAction, setPendingAction] = useState<LobbyAction | null>(null);
     const [roomSettingsOpen, setRoomSettingsOpen] = useState(false);
@@ -141,7 +142,7 @@ export default function LobbyClient({
     const [setupVariant, setSetupVariant] = useState<GameVariant>("classic");
     const [countdownNow, setCountdownNow] = useState<number | null>(null);
     const chatScrollRef = useRef<HTMLDivElement>(null);
-    const handledResultsReturn = useRef(false);
+    const chatStickToBottomRef = useRef(true);
     const {
         lobby: realtimeLobby,
         connected: socketConnected,
@@ -181,9 +182,14 @@ export default function LobbyClient({
     );
 
     useEffect(() => {
-        if (initialLobby?.players.some((player) => player.userId === userId)) return;
+        if (initialLobby?.players.some((player) => player.userId === userId)) {
+            setLocalLobby(initialLobby);
+            setSocketEnabled(true);
+            return;
+        }
 
         let active = true;
+        setError(null);
         void joinMultiplayerLobbyAction(code)
             .then((joinedLobby) => {
                 if (!active) return;
@@ -197,47 +203,29 @@ export default function LobbyClient({
         return () => {
             active = false;
         };
-    }, [code, initialLobby, userId]);
+    }, [code, initialLobby, joinAttempt, userId]);
 
     useEffect(() => {
         if (!realtimeLobby) return;
         setError(null);
         if (!realtimeLobby.players.some((player) => player.userId === userId)) {
-            router.replace("/multiplayer");
+            setExitReason("You were removed from this lobby.");
+            setSocketEnabled(false);
             return;
         }
         if (shouldEnterGame(realtimeLobby)) enterGame(realtimeLobby);
-    }, [enterGame, realtimeLobby, router, shouldEnterGame, userId]);
+    }, [enterGame, realtimeLobby, shouldEnterGame, userId]);
 
     useEffect(() => {
-        if (unavailable) router.replace("/multiplayer");
-    }, [router, unavailable]);
+        if (!unavailable) return;
+        setExitReason("This lobby is no longer available.");
+        setSocketEnabled(false);
+    }, [unavailable]);
 
-    useEffect(() => {
-        if (!lobby) return;
-        setRoomName(lobby.name);
-        setRoomMaxPlayers(lobby.maxPlayers);
-        setRoomPrivate(lobby.private);
-        setSetupGameMode(lobby.gameMode);
-        setSetupVariant(lobby.variant);
-    }, [lobby]);
-
-    useEffect(() => {
-        if (!returningFromResults || handledResultsReturn.current || !lobby || !isHost || lobby.status !== "finished") return;
-        handledResultsReturn.current = true;
-        setPendingAction("reset");
-        setError(null);
-        void resetMultiplayerLobbyAction(code)
-            .then((resetLobby) => {
-                setLocalLobby(resetLobby);
-                router.replace(`/multiplayer/${code}`);
-            })
-            .catch((cause) => {
-                handledResultsReturn.current = false;
-                setError(cause instanceof Error ? cause.message : "Could not return to lobby");
-            })
-            .finally(() => setPendingAction(null));
-    }, [code, isHost, lobby, returningFromResults, router]);
+    useLayoutEffect(() => {
+        const container = chatScrollRef.current;
+        if (container && chatStickToBottomRef.current) container.scrollTop = container.scrollHeight;
+    }, [lobby?.messages.length, lobby?.notice]);
 
     useEffect(() => {
         if (lobby?.status !== "starting" || lobby.startAt === null) {
@@ -252,6 +240,10 @@ export default function LobbyClient({
 
     const sortedPlayers = useMemo(
         () => [...(lobby?.players ?? [])].sort((a, b) => Number(b.userId === lobby?.hostId) - Number(a.userId === lobby?.hostId) || a.joinedAt.localeCompare(b.joinedAt)),
+        [lobby],
+    );
+    const finalStandings = useMemo(
+        () => [...(lobby?.players ?? [])].sort((a, b) => b.points - a.points || a.joinedAt.localeCompare(b.joinedAt)),
         [lobby],
     );
 
@@ -363,6 +355,7 @@ export default function LobbyClient({
         event.preventDefault();
         const nextMessage = message.trim();
         if (!nextMessage || !sendChat(nextMessage)) return;
+        chatStickToBottomRef.current = true;
         setMessage("");
         requestAnimationFrame(() => {
             if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
@@ -384,6 +377,17 @@ export default function LobbyClient({
         }
     };
 
+    const handleRoomSettingsOpenChange = (open: boolean) => {
+        if (open && lobby) {
+            setRoomName(lobby.name);
+            setRoomMaxPlayers(lobby.maxPlayers);
+            setRoomPrivate(lobby.private);
+            setSetupGameMode(lobby.gameMode);
+            setSetupVariant(lobby.variant);
+        }
+        setRoomSettingsOpen(open);
+    };
+
     const roomSettingsPayload = {
         name: roomName.trim(),
         maxPlayers: roomMaxPlayers,
@@ -392,11 +396,28 @@ export default function LobbyClient({
         variant: setupVariant,
     };
 
+    if (exitReason) {
+        return (
+            <div className="page-container py-16">
+                <div className="mx-auto max-w-2xl space-y-4 border-t border-border/60 pt-5">
+                    <p className="text-sm text-muted-foreground">{exitReason}</p>
+                    <Button variant="outline" onClick={() => router.replace("/multiplayer")}>Back to lobbies</Button>
+                </div>
+            </div>
+        );
+    }
+
     if (!lobby) {
         return (
             <div className="page-container py-16">
-                <div className="mx-auto max-w-2xl border-t border-border/60 pt-5 text-sm text-muted-foreground">
-                    {error ?? socketError ?? (socketEnabled ? "Connecting to lobby..." : "Joining lobby...")}
+                <div className="mx-auto max-w-2xl space-y-4 border-t border-border/60 pt-5">
+                    <p className="text-sm text-muted-foreground">{error ?? socketError ?? (socketEnabled ? "Connecting to lobby..." : "Joining lobby...")}</p>
+                    {(error || socketError) && (
+                        <div className="flex flex-wrap gap-2">
+                            <Button onClick={() => setJoinAttempt((attempt) => attempt + 1)}>Try again</Button>
+                            <Button variant="outline" onClick={() => router.replace("/multiplayer")}>Back to lobbies</Button>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -429,13 +450,13 @@ export default function LobbyClient({
                     <div className="flex flex-wrap items-center gap-2">
                         <Button variant="outline" onClick={() => void copyInvite()} disabled={pendingAction !== null}>
                             <Copy className="size-4" />
-                            <span className="font-mono text-xs">{copied ? "Copied" : lobby.code}</span>
+                            <span>{copied ? "Copied" : "Copy invite"}</span>
                         </Button>
                         {isHost && (
                             <div className="ml-2 border-l border-border/60 pl-4">
-                                <Dialog open={roomSettingsOpen} onOpenChange={setRoomSettingsOpen}>
+                                <Dialog open={roomSettingsOpen} onOpenChange={handleRoomSettingsOpenChange}>
                                     <DialogTrigger asChild>
-                                        <Button variant="ghost" disabled={!isWaiting || pendingAction !== null}>
+                                        <Button variant="ghost" aria-label="Room settings" disabled={!isWaiting || pendingAction !== null}>
                                             <Settings className="size-4" />
                                             <span className="hidden sm:inline">Room settings</span>
                                         </Button>
@@ -492,8 +513,66 @@ export default function LobbyClient({
                 </header>
 
                 <div className="grid lg:grid-cols-[minmax(0,1fr)_20rem]">
-                    <section className="min-w-0 lg:pr-10">
-                    <div className="border-b border-border/60 pb-6">
+                    <section className="contents lg:block lg:min-w-0 lg:pr-10">
+                    <div className="order-1 border-b border-border/60 pb-6 lg:order-none">
+                        {isFinished ? (
+                            <div className="space-y-5">
+                                <div className="flex items-end justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-2xl font-semibold tracking-tight">Final standings</h2>
+                                        <p className="mt-1 text-sm text-muted-foreground">Here&apos;s how everyone scored.</p>
+                                    </div>
+                                    <span className="shrink-0 text-xs text-muted-foreground">{finalStandings.length} players</span>
+                                </div>
+                                <div className="space-y-3">
+                                    {finalStandings.map((player, index) => (
+                                        <div
+                                            key={player.userId}
+                                            className={`grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-4 rounded-xl px-3 py-4 sm:px-4 ${player.userId === userId ? "bg-primary/10" : "bg-muted/20"}`}
+                                        >
+                                            <span className="w-7 shrink-0 text-center text-sm font-semibold tabular-nums text-muted-foreground">{index + 1}</span>
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-muted">
+                                                    <Image src={player.avatarUrl || "/default-avatar.svg"} alt="" fill unoptimized sizes="40px" className="object-cover" />
+                                                </div>
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <span className="truncate font-semibold">{player.username}</span>
+                                                    {player.userId === userId && <span className="text-[11px] font-medium text-primary">You</span>}
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0 text-right">
+                                                <div className="text-xl font-semibold tabular-nums">{player.points.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">pts</span></div>
+                                                {player.scoreSessionId && (
+                                                    <Link
+                                                        href={`/scores/${player.scoreSessionId}?lobby=${encodeURIComponent(code)}`}
+                                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                                    >
+                                                        View score
+                                                    </Link>
+                                                )}
+                                            </div>
+                                            {player.results ? (
+                                                <dl className="col-span-3 grid grid-cols-4 gap-2 sm:col-start-2 sm:col-span-2">
+                                                    {[
+                                                        { label: "Correct", count: player.results.correct, color: "text-green-400" },
+                                                        { label: "Wrong", count: player.results.incorrect, color: "text-red-400" },
+                                                        { label: "Skipped", count: player.results.skipped, color: "text-amber-400" },
+                                                        { label: "Timed out", count: player.results.timedOut, color: "text-muted-foreground" },
+                                                    ].map(({ label, count, color }) => (
+                                                        <div key={label} className="flex flex-col gap-1">
+                                                            <dt className="text-xs text-muted-foreground">{label}</dt>
+                                                            <dd className={`text-lg font-semibold tabular-nums ${color}`}>{count}</dd>
+                                                        </div>
+                                                    ))}
+                                                </dl>
+                                            ) : (
+                                                <p className="col-span-3 text-xs text-muted-foreground sm:col-start-2 sm:col-span-2">Round breakdown unavailable</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
                         <div className="flex flex-wrap gap-x-6 gap-y-5">
                             {sortedPlayers.map((player) => {
                                 const present = playerIsPresent(player, userId, presenceUserIds, socketConnected);
@@ -531,25 +610,45 @@ export default function LobbyClient({
                                 );
                             })}
                         </div>
+                        )}
                     </div>
 
-                    <div className="flex h-[27rem] flex-col pt-6">
-                        <div ref={chatScrollRef} className="scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent min-h-0 flex-1 space-y-5 overflow-y-auto pr-2">
+                    <div className="order-3 flex h-[27rem] flex-col pt-6 lg:order-none">
+                        <div
+                            ref={chatScrollRef}
+                            className="scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent min-h-0 flex-1 overflow-y-auto pr-2"
+                            onScroll={(event) => {
+                                const container = event.currentTarget;
+                                chatStickToBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 24;
+                            }}
+                        >
                             {lobby.messages.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">No messages yet. Say hello.</p>
                             ) : (
-                                lobby.messages.map((item) => {
+                                lobby.messages.map((item, index) => {
                                     if (item.kind === "join" || item.kind === "leave" || item.kind === "system") {
                                         return (
-                                            <div key={item.id} className="flex items-center gap-3 text-sm text-muted-foreground">
+                                            <div key={item.id} className={`${index === 0 ? "" : "mt-5"} flex items-center gap-3 text-sm text-muted-foreground`}>
                                                 <span className="flex size-9 shrink-0 items-center justify-center"><Users className="size-4" /></span>
                                                 <span>{item.kind === "system" ? item.message : `${item.username} ${item.message}`}</span>
                                             </div>
                                         );
                                     }
+
+                                    const previous = lobby.messages[index - 1];
+                                    const previousIsChat = previous && previous.kind !== "join" && previous.kind !== "leave" && previous.kind !== "system";
+                                    const groupedWithPrevious = Boolean(previousIsChat && previous.userId === item.userId);
+                                    if (groupedWithPrevious) {
+                                        return (
+                                            <div key={item.id} className="mt-1 pl-12 text-sm text-foreground/85">
+                                                <p className="break-words">{item.message}</p>
+                                            </div>
+                                        );
+                                    }
+
                                     const sender = lobby.players.find((player) => player.userId === item.userId);
                                     return (
-                                        <div key={item.id} className="flex items-start gap-3">
+                                        <div key={item.id} className={`${index === 0 ? "" : "mt-5"} flex items-start gap-3`}>
                                             <div className="relative size-9 shrink-0 overflow-hidden rounded-full bg-muted">
                                                 <Image src={sender?.avatarUrl || "/default-avatar.svg"} alt="" fill unoptimized sizes="36px" className="object-cover" />
                                             </div>
@@ -565,7 +664,7 @@ export default function LobbyClient({
                                 })
                             )}
                             {lobby.notice && (
-                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                <div className={`${lobby.messages.length === 0 ? "" : "mt-5"} flex items-center gap-3 text-sm text-muted-foreground`}>
                                     <span className="flex size-9 shrink-0 items-center justify-center"><Users className="size-4" /></span>
                                     <span>{lobby.notice}</span>
                                 </div>
@@ -576,6 +675,7 @@ export default function LobbyClient({
                                 value={message}
                                 onChange={(event) => {
                                     setMessage(event.target.value);
+                                    chatStickToBottomRef.current = true;
                                     if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
                                 }}
                                 maxLength={300}
@@ -587,9 +687,9 @@ export default function LobbyClient({
                     </div>
                 </section>
 
-                <aside className="mt-10 self-start border-t border-border/60 pt-8 lg:sticky lg:top-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-5">
+                <aside className="order-2 mt-10 self-start border-t border-border/60 pt-8 lg:order-none lg:sticky lg:top-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-5">
                     <div className="border-b border-border/60 pb-8">
-                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Next match</div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{isFinished ? "Match complete" : "Next match"}</div>
                         <h2 className="mt-3 text-3xl font-semibold tracking-tight">{gameModeLabel(lobby.gameMode)}</h2>
                         <p className="mt-2 text-lg text-muted-foreground">{variantLabel(lobby.variant)}</p>
                     </div>
@@ -648,18 +748,10 @@ export default function LobbyClient({
                         {isFinished && (
                             <div className="space-y-5">
                                 <div>
-                                    <h3 className="font-semibold">Match results</h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">Everyone has finished this match.</p>
+                                    <h3 className="font-semibold">Results are ready</h3>
+                                    <p className="mt-1 text-sm text-muted-foreground">The full standings are shown on the left.</p>
                                 </div>
-                                <div className="space-y-3">
-                                    {[...lobby.players].sort((a, b) => b.points - a.points).map((player, index) => (
-                                        <div key={player.userId} className="flex items-center justify-between gap-3 text-sm">
-                                            <div className="flex min-w-0 items-center gap-2.5"><span className="w-4 text-xs text-muted-foreground">{index + 1}</span><span className="truncate font-medium">{player.username}</span></div>
-                                            <span className="shrink-0 font-mono text-xs text-muted-foreground">{player.points.toLocaleString()} pts</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                {isHost ? <Button className="w-full" onClick={() => void resetLobby()} disabled={pendingAction !== null}><RotateCcw className="size-4" />{pendingAction === "reset" ? "Returning..." : "Back to lobby"}</Button> : <p className="text-sm text-muted-foreground">Waiting for the host to start another match.</p>}
+                                {isHost ? <Button className="w-full" onClick={() => void resetLobby()} disabled={pendingAction !== null}><RotateCcw className="size-4" />{pendingAction === "reset" ? "Preparing..." : "Prepare next match"}</Button> : <p className="text-sm text-muted-foreground">Waiting for the host to prepare the next match.</p>}
                             </div>
                         )}
                     </div>

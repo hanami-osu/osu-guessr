@@ -111,8 +111,8 @@ export default function MultiplayerBrowser() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
-                <div className="space-y-5">
-                    <form onSubmit={(event) => void createLobby(event)} className="rounded-xl border border-border/60 bg-card p-5">
+                <div className="flex flex-col gap-5">
+                    <form onSubmit={(event) => void createLobby(event)} className="order-2 rounded-xl border border-border/60 bg-card p-5">
                         <div className="mb-4 flex items-center gap-2 text-sm font-semibold"><Plus className="size-4 text-primary" />Create room</div>
                         <div className="space-y-4">
                             <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
@@ -157,7 +157,7 @@ export default function MultiplayerBrowser() {
                         </div>
                     </form>
 
-                    <form onSubmit={joinLobby} className="rounded-xl border border-border/60 bg-card p-5">
+                    <form onSubmit={joinLobby} className="order-1 rounded-xl border border-border/60 bg-card p-5">
                         <div className="mb-3 text-sm font-semibold">Join by code</div>
                         <div className="flex gap-2">
                             <Input value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} maxLength={8} placeholder="ABCD1234" className="font-mono uppercase" />

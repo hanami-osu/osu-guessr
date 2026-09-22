@@ -424,6 +424,13 @@ export async function finishGameSession(sessionId: string, userId: number, reque
         await updateMultiplayerProgress(gameState.multiplayer_lobby_id, userId, {
             points,
             round: gameState.current_round,
+            scoreSessionId: sessionId,
+            results: {
+                correct: roundHistory.filter((round) => round.correct).length,
+                incorrect: roundHistory.filter((round) => !round.correct && round.result_type === "guess").length,
+                skipped: skipCount,
+                timedOut: timeoutCount,
+            },
             finished: true,
             completedMatch: endReason !== "quit",
         }, gameState.multiplayer_match_id ?? undefined).catch((error) => console.error("Failed to update multiplayer progress:", error));
@@ -436,6 +443,13 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
     variant = gameVariantSchema.parse(variant);
     const lobbyCode = multiplayerLobbyCode ? normalizeLobbyCode(multiplayerLobbyCode) : undefined;
     const lobby = lobbyCode ? await requireActiveMultiplayerLobby(lobbyCode, userId, gameMode, variant) : null;
+    const existingSessionId = lobby?.players.find((player) => player.userId === userId && !player.finished)?.scoreSessionId;
+    if (existingSessionId) {
+        try {
+            const existingState = await getGameStateForUser(userId, existingSessionId);
+            if (existingState.gameStatus === "active") return existingState;
+        } catch {}
+    }
     const sessionId = crypto.randomUUID();
 
     const item = await getGuessRoundItem(gameMode, sessionId, lobbyCode, 1, lobby?.matchId);
@@ -491,7 +505,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
     });
 
     if (lobbyCode) {
-        await updateMultiplayerProgress(lobbyCode, userId, { points: 0, round: 1, finished: false }, lobby!.matchId).catch((error) =>
+        await updateMultiplayerProgress(lobbyCode, userId, { points: 0, round: 1, scoreSessionId: sessionId, finished: false }, lobby!.matchId).catch((error) =>
             console.error("Failed to update multiplayer progress:", error),
         );
     }

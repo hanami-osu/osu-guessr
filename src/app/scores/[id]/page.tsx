@@ -236,12 +236,12 @@ export default async function ScorePage({ params, searchParams }: Props) {
     const mistakes = Math.max(0, roundsPlayed - game.correctCount);
 
     return (
-        <main className="page-container py-6 md:py-10">
+        <div className="page-container py-6 md:py-10">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                     {lobbyCode && (
                         <Button asChild size="sm">
-                            <Link href={`/multiplayer/${lobbyCode}?fromResults=1`}>
+                            <Link href={`/multiplayer/${lobbyCode}`}>
                                 <ArrowLeft className="mr-2 size-4" />
                                 Back to lobby
                             </Link>
@@ -400,7 +400,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
                     </div>
                 )}
             </section>
-        </main>
+        </div>
     );
 }
 

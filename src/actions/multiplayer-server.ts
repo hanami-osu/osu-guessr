@@ -52,6 +52,7 @@ function playerFromSession(session: Awaited<ReturnType<typeof getAuthSession>>) 
         resultCorrect: null,
         resultSkipped: false,
         resultPoints: 0,
+        scoreSessionId: null,
         finished: false,
         completedMatch: false,
         ready: false,
@@ -108,33 +109,23 @@ export async function createMultiplayerSocketTokenAction(): Promise<{ token: str
 }
 
 export async function joinMultiplayerLobbyAction(code: string): Promise<MultiplayerLobby> {
-    const normalizedCode = lobbyCodeSchema.parse(normalizeLobbyCode(code));
+    const parsedCode = lobbyCodeSchema.safeParse(normalizeLobbyCode(code));
+    if (!parsedCode.success) throw new Error("Invalid lobby code");
+    const normalizedCode = parsedCode.data;
     const session = await getAuthSession();
     const userId = session.user.banchoId;
 
     return withMultiplayerUserLock(userId, async () => {
-        const lobby = await readMultiplayerLobby(normalizedCode);
-        if (!lobby) throw new Error("Lobby not found");
-        if (lobby.players.some((player) => player.userId === userId)) {
-            await leaveCurrentMultiplayerLobby(userId, normalizedCode);
-            await setMultiplayerUserLobby(userId, normalizedCode);
-            return lobby;
-        }
-        if (lobby.status !== "waiting") throw new Error("This lobby has already started");
-        if (lobby.players.length >= lobby.maxPlayers) throw new Error("This lobby is full");
-
-        await leaveCurrentMultiplayerLobby(userId, normalizedCode);
-        return withMultiplayerLobbyLock(normalizedCode, async () => {
+        let addedToTarget = false;
+        const joinedLobby = await withMultiplayerLobbyLock(normalizedCode, async () => {
             const currentLobby = await readMultiplayerLobby(normalizedCode);
             if (!currentLobby) throw new Error("Lobby not found");
-            if (currentLobby.players.some((player) => player.userId === userId)) {
-                await setMultiplayerUserLobby(userId, normalizedCode);
-                return currentLobby;
-            }
+            if (currentLobby.players.some((player) => player.userId === userId)) return currentLobby;
             if (currentLobby.status !== "waiting") throw new Error("This lobby has already started");
             if (currentLobby.players.length >= currentLobby.maxPlayers) throw new Error("This lobby is full");
             const joinedPlayer = playerFromSession(session);
             currentLobby.players.push(joinedPlayer);
+            addedToTarget = true;
             currentLobby.messages.push({
                 id: crypto.randomUUID(),
                 userId: joinedPlayer.userId,
@@ -145,9 +136,17 @@ export async function joinMultiplayerLobbyAction(code: string): Promise<Multipla
             });
             currentLobby.messages = currentLobby.messages.slice(-100);
             await writeMultiplayerLobby(currentLobby);
-            await setMultiplayerUserLobby(userId, normalizedCode);
             return currentLobby;
         });
+
+        try {
+            await leaveCurrentMultiplayerLobby(userId, normalizedCode);
+        } catch (error) {
+            if (addedToTarget) await removeMultiplayerUserFromLobby(normalizedCode, userId).catch(() => undefined);
+            throw error;
+        }
+        await setMultiplayerUserLobby(userId, normalizedCode);
+        return joinedLobby;
     });
 }
 
@@ -305,7 +304,7 @@ export async function resetMultiplayerLobbyAction(code: string): Promise<Multipl
         lobby.matchId = crypto.randomUUID();
         lobby.setupVersion += 1;
         lobby.notice = "Ready for another game? Review the setup and ready up.";
-        lobby.players = lobby.players.map((player) => ({ ...player, ready: false, points: 0, round: 0, submittedRound: 0, readyRound: 0, resultRound: 0, resultCorrect: null, resultSkipped: false, resultPoints: 0, finished: false, completedMatch: false }));
+        lobby.players = lobby.players.map((player) => ({ ...player, ready: false, points: 0, round: 0, submittedRound: 0, readyRound: 0, resultRound: 0, resultCorrect: null, resultSkipped: false, resultPoints: 0, scoreSessionId: null, results: null, finished: false, completedMatch: false }));
         await writeMultiplayerLobby(lobby);
         return lobby;
     });

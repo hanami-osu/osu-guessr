@@ -81,7 +81,7 @@ export class GameClient {
         return this.multiplayerRequest<T>(action, payload);
     }
 
-    private async execute<T>(operation: () => Promise<T>, operationName: string, retryable = true): Promise<T> {
+    private async execute<T>(operation: () => Promise<T>, operationName: string, retryable = true, reportError = true): Promise<T> {
         const maxAttempts = retryable ? this.config.maxRetries : 1;
         let lastError: Error | null = null;
 
@@ -93,7 +93,7 @@ export class GameClient {
                 lastError = gameError;
 
                 if (this.reloadForServerActionMismatch(gameError)) throw gameError;
-                this.events.onError?.(gameError);
+                if (reportError) this.events.onError?.(gameError);
                 if (!gameError.recoverable || attempt === maxAttempts) throw gameError;
 
                 console.warn(`${operationName} failed (attempt ${attempt}/${maxAttempts}):`, gameError.message);
@@ -174,17 +174,30 @@ export class GameClient {
 
         const mutationPromise = (async () => {
             this.stopTimer();
+            const previousState = this.session!.state;
             try {
                 const sessionId = this.session!.id;
                 const state = await this.execute(
                     () => this.request("game.submit", { sessionId, guess }, () => submitGuessAction(sessionId, guess)),
                     operationName,
                     false,
+                    false,
                 );
                 this.updateState(state);
                 if (restartTimer && state.gameStatus === "active") this.startTimer();
             } catch (error) {
-                await this.recoverState();
+                const recovered = await this.recoverState();
+                const mutationCommitted = Boolean(
+                    recovered && (
+                        guess === undefined
+                            ? recovered.rounds.current > previousState.rounds.current || recovered.gameStatus === "finished"
+                            : recovered.rounds.current > previousState.rounds.current || recovered.currentBeatmap.revealed
+                    ),
+                );
+                if (mutationCommitted) {
+                    if (restartTimer && recovered?.gameStatus === "active" && !recovered.currentBeatmap.revealed) this.startTimer();
+                    return;
+                }
                 if (this.session?.isActive && this.session.state.gameStatus === "active" && !this.session.state.currentBeatmap.revealed) {
                     this.startTimer();
                 }
@@ -218,16 +231,17 @@ export class GameClient {
         await this.runMutation("goNextRound", undefined, true);
     }
 
-    private async recoverState(): Promise<void> {
-        if (!this.session?.id) return;
+    private async recoverState(): Promise<GameState | null> {
+        if (!this.session?.id) return null;
 
         try {
             const sessionId = this.session.id;
-            this.updateState(
-                await this.execute(() => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)), "recoverState"),
-            );
+            const state = await this.execute(() => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)), "recoverState", true, false);
+            this.updateState(state);
+            return state;
         } catch (error) {
             console.error("Failed to recover state:", error);
+            return null;
         }
     }
 

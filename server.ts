@@ -15,12 +15,11 @@ import {
 import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcRequest } from "@/lib/multiplayer-protocol";
 import {
     addMultiplayerMessage,
-    disconnectMultiplayerPlayer,
+    cleanupDisconnectedMultiplayerPlayer,
     finishMultiplayerCountdown,
     markMultiplayerRoundReady,
     normalizeLobbyCode,
     readMultiplayerLobby,
-    removeMultiplayerUserFromLobby,
     type MultiplayerLobby,
 } from "@/lib/multiplayer";
 import {
@@ -38,7 +37,7 @@ const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
 const SOCKET_PATH = "/multiplayer-ws";
 const HEARTBEAT_MS = 10_000;
-const DISCONNECT_GRACE_MS = 1_500;
+const DISCONNECT_GRACE_MS = 15_000;
 
 type SocketContext = {
     code: string;
@@ -112,20 +111,9 @@ async function publishPresence(code: string): Promise<void> {
     await publishMultiplayerRealtimeEvent(code, { type: "presence", code, userIds });
 }
 
-function scheduleDisconnectedPlayerCleanup(context: SocketContext): void {
+function scheduleDisconnectedPlayerCleanup(context: Pick<SocketContext, "code" | "userId">): void {
     const timer = setTimeout(() => {
-        void getPresentMultiplayerUsers(context.code)
-            .then(async (userIds) => {
-                if (userIds.includes(context.userId)) return;
-                const lobby = await readMultiplayerLobby(context.code);
-                const player = lobby?.players.find((item) => item.userId === context.userId);
-                if (player?.completedMatch) return;
-                if (lobby && lobby.status !== "playing") {
-                    await disconnectMultiplayerPlayer(context.code, context.userId);
-                    return;
-                }
-                await removeMultiplayerUserFromLobby(context.code, context.userId);
-            })
+        void cleanupDisconnectedMultiplayerPlayer(context.code, context.userId)
             .catch((error) => console.error("Failed to clean up disconnected multiplayer player:", error));
     }, DISCONNECT_GRACE_MS);
     timer.unref();
@@ -275,6 +263,8 @@ async function registerSocket(socket: WebSocket, requestUrl: URL): Promise<void>
         return;
     }
 
+    if (socket.readyState !== WebSocket.OPEN) return;
+
     const context: SocketContext = {
         code,
         userId,
@@ -285,18 +275,6 @@ async function registerSocket(socket: WebSocket, requestUrl: URL): Promise<void>
     const room = socketsByLobby.get(code) ?? new Set<WebSocket>();
     room.add(socket);
     socketsByLobby.set(code, room);
-
-    while (pendingMessages.length > 0) {
-        const message = pendingMessages.shift();
-        if (message) await handleSocketMessage(socket, message);
-    }
-    messageHandlerReady = true;
-
-    await touchPresence(context);
-    scheduleCountdown(lobby);
-    socket.send(JSON.stringify({ type: "lobby", lobby } satisfies MultiplayerRealtimeEvent));
-    socket.send(JSON.stringify({ type: "presence", code, userIds: await getPresentMultiplayerUsers(code) } satisfies MultiplayerRealtimeEvent));
-    await publishPresence(code);
 
     socket.on("pong", () => {
         const current = socketContexts.get(socket);
@@ -315,6 +293,27 @@ async function registerSocket(socket: WebSocket, requestUrl: URL): Promise<void>
             })
             .catch(console.error);
     });
+
+    while (pendingMessages.length > 0) {
+        const message = pendingMessages.shift();
+        if (message) await handleSocketMessage(socket, message);
+    }
+    messageHandlerReady = true;
+
+    await touchPresence(context);
+    if (socket.readyState !== WebSocket.OPEN) {
+        await removePresence(context);
+        return;
+    }
+    const currentLobby = await readMultiplayerLobby(code);
+    if (!currentLobby || !currentLobby.players.some((player) => player.userId === userId)) {
+        socket.close(1008, "Multiplayer lobby unavailable");
+        return;
+    }
+    scheduleCountdown(currentLobby);
+    socket.send(JSON.stringify({ type: "lobby", lobby: currentLobby } satisfies MultiplayerRealtimeEvent));
+    socket.send(JSON.stringify({ type: "presence", code, userIds: await getPresentMultiplayerUsers(code) } satisfies MultiplayerRealtimeEvent));
+    await publishPresence(code);
 }
 
 async function main(): Promise<void> {
@@ -380,7 +379,9 @@ async function main(): Promise<void> {
                     if (lobby?.status === "starting") scheduleCountdown(lobby);
                     if (lobby && lobby.status !== "playing") {
                         for (const player of lobby.players) {
-                            if (!userIds.includes(player.userId)) await disconnectMultiplayerPlayer(code, player.userId);
+                            if (!userIds.includes(player.userId) && (!player.completedMatch || lobby.hostId === player.userId) && Date.now() - Date.parse(player.joinedAt) >= HEARTBEAT_MS) {
+                                scheduleDisconnectedPlayerCleanup({ code, userId: player.userId });
+                            }
                         }
                     }
                 })
