@@ -348,22 +348,25 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
 function RankHistory({ title, peakTemplate, points, locale }: { title: string; peakTemplate: string; points: UserRankHistoryPoint[]; locale: string }) {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+    if (points.length === 0) return null;
+
     const ranks = points.map((point) => point.rank);
     const bestRank = Math.min(...ranks);
     const worstRank = Math.max(...ranks);
-    // A flat line says nothing the rank above doesn't already.
-    if (points.length < 2 || bestRank === worstRank) return null;
-
-    const range = Math.max(1, worstRank - bestRank);
+    const range = worstRank - bestRank;
+    // An unchanged rank sits mid-height so it reads as a steady line rather than a filled block.
     const coordinates = points.map((point, index) => ({
-        x: (index / (points.length - 1)) * 100,
-        y: 5 + ((point.rank - bestRank) / range) * 30,
+        x: points.length === 1 ? 50 : (index / (points.length - 1)) * 100,
+        y: range === 0 ? 20 : 5 + ((point.rank - bestRank) / range) * 30,
     }));
-    const linePath = coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
+    const linePath = points.length === 1 ? "M 0 20 L 100 20" : coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
     const areaPath = `${linePath} L 100 40 L 0 40 Z`;
     const firstDate = new Date(points[0].recorded_at);
     const lastDate = new Date(points[points.length - 1].recorded_at);
-    const dateLabel = `${firstDate.toLocaleDateString(locale, { month: "short", day: "numeric" })} – ${lastDate.toLocaleDateString(locale, { month: "short", day: "numeric" })}`;
+    const dateLabel =
+        points.length === 1
+            ? firstDate.toLocaleDateString(locale, { month: "short", day: "numeric" })
+            : `${firstDate.toLocaleDateString(locale, { month: "short", day: "numeric" })} – ${lastDate.toLocaleDateString(locale, { month: "short", day: "numeric" })}`;
     const hoveredPoint = hoveredIndex === null ? null : points[hoveredIndex];
     const hoveredCoordinate = hoveredIndex === null ? null : coordinates[hoveredIndex];
 
@@ -380,7 +383,7 @@ function RankHistory({ title, peakTemplate, points, locale }: { title: string; p
                 onPointerMove={(event) => {
                     const bounds = event.currentTarget.getBoundingClientRect();
                     const position = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
-                    setHoveredIndex(Math.round(position * (points.length - 1)));
+                    setHoveredIndex(points.length === 1 ? 0 : Math.round(position * (points.length - 1)));
                 }}
                 onPointerLeave={() => setHoveredIndex(null)}
             >
