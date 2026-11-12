@@ -173,7 +173,7 @@ export default function UserProfileClient({
 
                         <div aria-hidden="true" className="hidden bg-border/70 lg:block" />
 
-                        <section aria-label={t.user.profile.gameStats.title} className="lg:mt-4 lg:self-start">
+                        <section aria-label={t.user.profile.gameStats.title} className="lg:self-center">
                             <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 rounded-xl bg-muted/45 p-4 text-sm sm:p-5">
                                 <DetailMetric label={t.user.profile.gameStats.gamesPlayed} value={lifetime.games_played.toLocaleString(locale)} />
                                 <DetailMetric label={t.user.profile.gameStats.roundsPlayed} value={roundsPlayed.toLocaleString(locale)} />
