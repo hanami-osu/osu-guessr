@@ -93,6 +93,8 @@ Query parameters:
         ruleset_version: number;
         pp_version: number;
         pp: number;
+        rounds_played: number;
+        correct_count: number;
         ended_at: string;
     }>;
     meta: {

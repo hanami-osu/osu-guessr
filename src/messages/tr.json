@@ -497,15 +497,15 @@
             "allModes": "Tüm modlar",
             "modeLabel": "Oyun modu",
             "runsLabel": "Oyunlar",
-            "recentScope": "Son 24 saat",
             "showMore": "Daha fazla göster",
             "stats": {
                 "hiScore": "En Yüksek Skor",
                 "totalGames": "Toplam Oyun",
                 "globalRank": "Mod Sıralaması",
                 "profilePp": "Genel pp",
-                "playtime": "Toplam Yanıt Süresi",
-                "rankHistory": "Sıralama geçmişi"
+                "playtime": "Yanıt Süresi",
+                "rankHistory": "Sıralama geçmişi",
+                "peakRank": "En iyi {rank}"
             },
             "noPlays": "Henüz oyun yok",
             "gameStats": {
@@ -518,20 +518,22 @@
                 "modeRank": "Mode Rank",
                 "profilePp": "pp",
                 "bestRunPp": "En İyi pp Oyunu",
-                "guessAccuracy": "Tahmin doğruluğu",
-                "totalGuesses": "Toplam tahmin",
-                "averageCombo": "Ortalama En İyi Seri"
+                "accuracy": "Doğruluk",
+                "roundsPlayed": "Oynanan Tur",
+                "averageStreak": "Ort. Seri"
             },
             "topGames": {
                 "title": "En İyi pp Koşuları",
                 "points": "{points} puan",
                 "streak": "{count}x seri",
                 "pp": "{pp} pp",
-                "empty": "Henüz pp koşusu yok"
+                "empty": "Henüz pp koşusu yok",
+                "correctOf": "{correct}/{total} doğru",
+                "correct": "{count} doğru"
             },
             "recentGames": {
-                "title": "Son Skorlar",
-                "noGames": "Yakın zamanda skor yok"
+                "title": "Son Oyunlar",
+                "noGames": "Henüz oyun yok"
             }
         },
         "notFound": {

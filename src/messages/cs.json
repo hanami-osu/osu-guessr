@@ -497,15 +497,15 @@
             "allModes": "Všechny režimy",
             "modeLabel": "Herní režim",
             "runsLabel": "Hry",
-            "recentScope": "Posledních 24 hodin",
             "showMore": "Zobrazit další",
             "stats": {
                 "hiScore": "Nejvyšší skóre",
                 "totalGames": "Počet her",
                 "globalRank": "Pořadí v režimu",
                 "profilePp": "Celkové pp",
-                "playtime": "Celková doba odpovědí",
-                "rankHistory": "Historie umístění"
+                "playtime": "Čas odpovídání",
+                "rankHistory": "Historie umístění",
+                "peakRank": "Nejlépe {rank}"
             },
             "noPlays": "Zatím žádné hry",
             "gameStats": {
@@ -518,20 +518,22 @@
                 "modeRank": "Mode Rank",
                 "profilePp": "pp",
                 "bestRunPp": "Nejlepší pp hra",
-                "guessAccuracy": "Přesnost tipů",
-                "totalGuesses": "Celkem tipů",
-                "averageCombo": "Průměrná nejlepší série"
+                "accuracy": "Přesnost",
+                "roundsPlayed": "Odehraná kola",
+                "averageStreak": "Průměrná série"
             },
             "topGames": {
                 "title": "Nejlepší pp běhy",
                 "points": "{points} bodů",
                 "streak": "{count}x série",
                 "pp": "{pp} pp",
-                "empty": "Zatím žádné pp pokusy"
+                "empty": "Zatím žádné pp pokusy",
+                "correctOf": "{correct}/{total} správně",
+                "correct": "{count} správně"
             },
             "recentGames": {
-                "title": "Nedávná skóre",
-                "noGames": "Žádná nedávná skóre"
+                "title": "Nedávné hry",
+                "noGames": "Zatím žádné hry"
             }
         },
         "notFound": {

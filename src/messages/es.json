@@ -497,15 +497,15 @@
             "allModes": "Todos los modos",
             "modeLabel": "Modo de juego",
             "runsLabel": "Partidas",
-            "recentScope": "Últimas 24 horas",
             "showMore": "Mostrar más",
             "stats": {
                 "hiScore": "Puntuación más alta",
                 "totalGames": "Partidas totales",
                 "globalRank": "Posición del modo",
                 "profilePp": "pp totales",
-                "playtime": "Tiempo total de respuesta",
-                "rankHistory": "Historial de clasificación"
+                "playtime": "Tiempo respondiendo",
+                "rankHistory": "Historial de clasificación",
+                "peakRank": "Mejor {rank}"
             },
             "noPlays": "Aún no hay jugadas",
             "gameStats": {
@@ -518,20 +518,22 @@
                 "modeRank": "Clasificación de modo",
                 "profilePp": "pp",
                 "bestRunPp": "Mejor partida de pp",
-                "guessAccuracy": "Precisión de respuestas",
-                "totalGuesses": "Respuestas totales",
-                "averageCombo": "Media de mejor racha"
+                "accuracy": "Precisión",
+                "roundsPlayed": "Rondas jugadas",
+                "averageStreak": "Racha media"
             },
             "topGames": {
                 "title": "Mejores jugadas por pp",
                 "points": "{points} puntos",
                 "streak": "{count}x racha",
                 "pp": "{pp} pp",
-                "empty": "Aún no hay partidas con pp"
+                "empty": "Aún no hay partidas con pp",
+                "correctOf": "{correct}/{total} correctas",
+                "correct": "{count} correctas"
             },
             "recentGames": {
-                "title": "Puntuaciones recientes",
-                "noGames": "No hay puntuaciones recientes"
+                "title": "Partidas recientes",
+                "noGames": "Aún no hay partidas"
             }
         },
         "notFound": {

@@ -1,7 +1,7 @@
 "use client";
 
 import { Game, GameMode, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "@/actions/types";
-import { GAME_VARIANTS, GameVariant } from "@/app/games/config";
+import { GAME_VARIANTS, GameVariant, isContinuousVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { ArrowUpRight, ChevronDown, ChevronRight, Clock3 } from "lucide-react";
 import Image from "next/image";
@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 import UserNotFound from "./NotFound";
 import { SectionLabel } from "@/components/page-heading";
+import type { Translations } from "@/lib/translations";
 
 const gamemodes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp];
 
@@ -53,12 +54,12 @@ export default function UserProfileClient({
 
     if (!user) return <UserNotFound />;
 
-    const achievements = (user.achievements ?? []).filter((stat) => stat.variant === currentVariant);
-    const modeStats = achievements.find((stat) => stat.game_mode === currentMode);
+    const findStats = (mode: GameMode, variant: GameVariant) => user.achievements?.find((stat) => stat.game_mode === mode && stat.variant === variant);
+    const modeStats = findStats(currentMode, currentVariant);
     const modePp = Number(modeStats?.profile_pp ?? 0);
     const activeTimeMs = modeStats?.total_response_time_ms ?? 0n;
-    const totalGuesses = Math.max(0, (modeStats?.rounds_played ?? 0) - (modeStats?.total_skips ?? 0) - (modeStats?.total_timeouts ?? 0));
-    const guessAccuracy = totalGuesses > 0 ? ((modeStats?.total_correct ?? 0) / totalGuesses) * 100 : 0;
+    const roundsPlayed = modeStats?.rounds_played ?? 0;
+    const accuracy = roundsPlayed > 0 ? ((modeStats?.total_correct ?? 0) / roundsPlayed) * 100 : 0;
     const lifetime = lifetimeModeStats ?? {
         games_played: modeStats?.games_played ?? 0,
         total_score: modeStats?.total_score ?? 0n,
@@ -68,43 +69,49 @@ export default function UserProfileClient({
         last_played: modeStats?.last_played ?? null,
     };
     const formatRank = (rank?: number) => (rank ? `#${rank.toLocaleString(locale)}` : "-");
+    const tabPp = (mode: GameMode, variant: GameVariant) => {
+        const pp = Number(findStats(mode, variant)?.profile_pp ?? 0);
+        return pp > 0 ? `${pp.toLocaleString(locale, { maximumFractionDigits: 0 })}pp` : null;
+    };
 
     return (
         <div className="page-container pb-5 pt-3 md:pb-8 md:pt-4">
             <div className="overflow-hidden rounded-lg border border-border bg-card/60">
-                <div className="flex flex-wrap items-center gap-2 bg-muted/35 p-2.5 sm:gap-3 sm:px-4">
-                    <nav aria-label={t.user.profile.modeLabel} className="flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-col gap-1.5 bg-muted/35 p-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-4">
+                    <nav aria-label={t.user.profile.modeLabel} className="-mx-2.5 flex items-center gap-1.5 overflow-x-auto px-2.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
                         {gamemodes.map((mode) => (
                             <Link
                                 key={mode}
                                 href={`/user/${banchoId}?mode=${mode}&variant=${currentVariant}`}
                                 scroll={false}
                                 aria-current={currentMode === mode ? "page" : undefined}
-                                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${currentMode === mode ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${currentMode === mode ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             >
                                 {t.leaderboard.filters.mode[mode]}
+                                <TabPp value={tabPp(mode, currentVariant)} />
                             </Link>
                         ))}
                     </nav>
 
                     <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-border sm:block" />
 
-                    <nav aria-label={t.user.profile.variantLabel} className="flex flex-wrap items-center gap-1.5">
+                    <nav aria-label={t.user.profile.variantLabel} className="-mx-2.5 flex items-center gap-1.5 overflow-x-auto px-2.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
                         {GAME_VARIANTS.map((variant) => (
                             <Link
                                 key={variant}
                                 href={`/user/${banchoId}?mode=${currentMode}&variant=${variant}`}
                                 scroll={false}
                                 aria-current={currentVariant === variant ? "page" : undefined}
-                                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${currentVariant === variant ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${currentVariant === variant ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             >
                                 {t.leaderboard.filters.variant[variant]}
+                                <TabPp value={tabPp(currentMode, variant)} />
                             </Link>
                         ))}
                     </nav>
                 </div>
 
-                <div className="relative h-40 overflow-hidden sm:h-48 md:h-56">
+                <div className="relative h-28 overflow-hidden sm:h-48 md:h-56">
                     <Image
                         src={user.banner_url || "/main_bg.webp"}
                         alt=""
@@ -122,9 +129,9 @@ export default function UserProfileClient({
                 <div className="relative px-5 pb-5 sm:px-7 sm:pb-6 md:px-9">
                     <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_1px_minmax(320px,0.9fr)] lg:gap-9">
                         <section className="min-w-0">
-                            <div className="-mt-12 translate-y-2 flex min-w-0 items-end gap-4 sm:-mt-14 sm:gap-5">
-                                <div className="relative size-24 shrink-0 overflow-hidden rounded-lg border-4 border-card bg-muted sm:size-28">
-                                    <Image src={user.avatar_url} alt="" fill sizes="(min-width: 640px) 112px, 96px" priority unoptimized className="object-cover" />
+                            <div className="-mt-10 translate-y-2 flex min-w-0 items-end gap-4 sm:-mt-14 sm:gap-5">
+                                <div className="relative size-20 shrink-0 overflow-hidden rounded-lg border-4 border-card bg-muted sm:size-28">
+                                    <Image src={user.avatar_url} alt="" fill sizes="(min-width: 640px) 112px, 80px" priority unoptimized className="object-cover" />
                                 </div>
 
                                 <div className="min-w-0 pb-1.5">
@@ -153,30 +160,28 @@ export default function UserProfileClient({
                                 </div>
                             </div>
 
-                            <div className="mt-8">
-                                <dl className="grid grid-cols-2 gap-y-4 sm:grid-cols-3 sm:divide-x sm:divide-border/60">
+                            <div className="mt-6 sm:mt-8">
+                                <dl className="grid grid-cols-3 divide-x divide-border/60">
                                     <SummaryMetric label={t.user.profile.stats.globalRank} value={formatRank(user.ranks?.modeRanks[currentMode]?.[currentVariant])} />
                                     <SummaryMetric label={t.user.profile.gameStats.profilePp} value={`${modePp.toLocaleString(locale, { maximumFractionDigits: 1 })} pp`} />
-                                    <SummaryMetric label={t.user.profile.stats.playtime} value={formatDuration(activeTimeMs, locale)} />
+                                    <SummaryMetric label={t.user.profile.gameStats.accuracy} value={`${accuracy.toLocaleString(locale, { maximumFractionDigits: 1 })}%`} />
                                 </dl>
                             </div>
 
-                            <RankHistory title={t.user.profile.stats.rankHistory} points={rankHistory} locale={locale} />
+                            <RankHistory title={t.user.profile.stats.rankHistory} peakTemplate={t.user.profile.stats.peakRank} points={rankHistory} locale={locale} />
                         </section>
 
                         <div aria-hidden="true" className="hidden bg-border/70 lg:block" />
 
-                        <section aria-label={t.user.profile.gameStats.title} className="mt-4">
-                            <div className="flex h-full items-center rounded-xl bg-muted/45 p-4 sm:p-5">
-                                <dl className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 text-sm">
-                                    <DetailMetric label={t.user.profile.gameStats.guessAccuracy} value={`${guessAccuracy.toLocaleString(locale, { maximumFractionDigits: 1 })}%`} />
-                                    <DetailMetric label={t.user.profile.gameStats.gamesPlayed} value={lifetime.games_played.toLocaleString(locale)} />
-                                    <DetailMetric label={t.user.profile.gameStats.totalScore} value={lifetime.total_score.toLocaleString(locale)} />
-                                    <DetailMetric label={t.user.profile.gameStats.totalGuesses} value={totalGuesses.toLocaleString(locale)} />
-                                    <DetailMetric label={t.user.profile.gameStats.bestStreak} value={lifetime.highest_streak.toLocaleString(locale)} />
-                                    <DetailMetric label={t.user.profile.gameStats.averageCombo} value={lifetime.average_streak.toLocaleString(locale, { maximumFractionDigits: 1 })} />
-                                </dl>
-                            </div>
+                        <section aria-label={t.user.profile.gameStats.title} className="lg:mt-4 lg:self-start">
+                            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 rounded-xl bg-muted/45 p-4 text-sm sm:p-5">
+                                <DetailMetric label={t.user.profile.gameStats.gamesPlayed} value={lifetime.games_played.toLocaleString(locale)} />
+                                <DetailMetric label={t.user.profile.gameStats.roundsPlayed} value={roundsPlayed.toLocaleString(locale)} />
+                                <DetailMetric label={t.user.profile.gameStats.totalScore} value={lifetime.total_score.toLocaleString(locale)} />
+                                <DetailMetric label={t.user.profile.gameStats.bestStreak} value={lifetime.highest_streak.toLocaleString(locale)} />
+                                <DetailMetric label={t.user.profile.gameStats.averageStreak} value={lifetime.average_streak.toLocaleString(locale, { maximumFractionDigits: 1 })} />
+                                <DetailMetric label={t.user.profile.stats.playtime} value={formatDuration(activeTimeMs, locale)} />
+                            </dl>
                         </section>
                     </div>
                 </div>
@@ -189,21 +194,17 @@ export default function UserProfileClient({
                     games={bestScores}
                     kind="top"
                     locale={locale}
-                    pointsTemplate={t.user.profile.topGames.points}
-                    streakTemplate={t.user.profile.topGames.streak}
-                    ppTemplate={t.user.profile.topGames.pp}
+                    templates={t.user.profile.topGames}
                     showMoreText={t.user.profile.showMore}
                 />
                 <div aria-hidden="true" className="my-6 h-px bg-border/60" />
                 <ScoreSection
-                    title={`${t.user.profile.recentGames.title} (24h)`}
+                    title={t.user.profile.recentGames.title}
                     emptyText={t.user.profile.recentGames.noGames}
                     games={recentScores}
                     kind="recent"
                     locale={locale}
-                    pointsTemplate={t.user.profile.topGames.points}
-                    streakTemplate={t.user.profile.topGames.streak}
-                    ppTemplate={t.user.profile.topGames.pp}
+                    templates={t.user.profile.topGames}
                     showMoreText={t.user.profile.showMore}
                     relativeDates
                     generatedAt={generatedAt}
@@ -219,15 +220,13 @@ interface ScoreSectionProps {
     games: Game[];
     kind: "top" | "recent";
     locale: string;
-    pointsTemplate: string;
-    streakTemplate: string;
-    ppTemplate: string;
+    templates: Translations["user"]["profile"]["topGames"];
     showMoreText: string;
     relativeDates?: boolean;
     generatedAt?: string;
 }
 
-function ScoreSection({ title, emptyText, games, kind, locale, pointsTemplate, streakTemplate, ppTemplate, showMoreText, relativeDates = false, generatedAt }: ScoreSectionProps) {
+function ScoreSection({ title, emptyText, games, kind, locale, templates, showMoreText, relativeDates = false, generatedAt }: ScoreSectionProps) {
     const [expanded, setExpanded] = useState(false);
     const visibleGames = expanded ? games : games.slice(0, 5);
     const isTopSection = kind === "top";
@@ -236,7 +235,7 @@ function ScoreSection({ title, emptyText, games, kind, locale, pointsTemplate, s
         <section aria-label={title}>
             <div className="mb-3 flex items-center gap-2 px-1">
                 <SectionLabel className="shrink-0">{title}</SectionLabel>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[0.7rem] font-medium tabular-nums text-muted-foreground">{games.length.toLocaleString(locale)}</span>
+                {isTopSection && <span className="rounded-full bg-muted px-2 py-0.5 text-[0.7rem] font-medium tabular-nums text-muted-foreground">{games.length.toLocaleString(locale)}</span>}
             </div>
 
             {games.length > 0 ? (
@@ -244,19 +243,23 @@ function ScoreSection({ title, emptyText, games, kind, locale, pointsTemplate, s
                     <div className="space-y-1.5">
                         {visibleGames.map((game, index) => {
                             const endedAt = new Date(game.ended_at);
-                            const isLegacyDeath = game.variant === "death" && game.ruleset_version === 0 && game.pp_version === 0;
-                            const scoreText = isLegacyDeath ? streakTemplate.replace("{count}", game.streak.toLocaleString(locale)) : pointsTemplate.replace("{points}", game.points.toLocaleString(locale));
-                            const detailText = streakTemplate.replace("{count}", game.streak.toLocaleString(locale));
-                            const dateText = relativeDates && generatedAt ? formatHoursAgo(endedAt, new Date(generatedAt)) : endedAt.toLocaleDateString(locale, { dateStyle: "medium" });
+                            const isLegacy = game.pp_version === 0;
+                            const isLegacyDeath = isLegacy && game.variant === "death";
+                            const pointsText = templates.points.replace("{points}", game.points.toLocaleString(locale));
+                            const streakText = templates.streak.replace("{count}", game.streak.toLocaleString(locale));
+                            const correctText = isContinuousVariant(game.variant)
+                                ? templates.correct.replace("{count}", game.correct_count.toLocaleString(locale))
+                                : templates.correctOf.replace("{correct}", game.correct_count.toLocaleString(locale)).replace("{total}", game.rounds_played.toLocaleString(locale));
+                            const mainText = isLegacyDeath ? streakText : isLegacy ? pointsText : correctText;
+                            const dateText = relativeDates && generatedAt ? formatRelativeTime(endedAt, new Date(generatedAt), locale) : endedAt.toLocaleDateString(locale, { dateStyle: "medium" });
                             const fullDateText = endedAt.toLocaleString(locale, { dateStyle: "full", timeStyle: "long" });
-                            const hasPp = game.pp_version > 0;
-                            const ppText = hasPp ? ppTemplate.replace("{pp}", Number(game.pp).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })) : "Legacy";
+                            const ppText = isLegacy ? "Legacy" : templates.pp.replace("{pp}", Number(game.pp).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 
                             return (
                                 <Link
-                                    key={`${game.ended_at.toString()}-${index}`}
+                                    key={game.id}
                                     href={`/scores/${game.id}`}
-                                    className="group grid min-h-14 grid-cols-[3.25rem_minmax(0,1fr)_6.75rem] items-stretch overflow-hidden rounded-xl bg-muted/55 ring-1 ring-inset ring-border/35 transition-colors hover:bg-muted/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_6rem_6.75rem]"
+                                    className="group grid min-h-14 grid-cols-[3.25rem_minmax(0,1fr)_6.75rem] items-stretch overflow-hidden rounded-xl bg-muted/55 ring-1 ring-inset ring-border/35 transition-colors hover:bg-muted/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_7rem_6.75rem]"
                                 >
                                     <div
                                         className={`flex items-center justify-center border-r border-border/35 ${isTopSection && index < 3 ? "bg-primary/15 text-primary" : "bg-background/15 text-muted-foreground"}`}
@@ -265,33 +268,23 @@ function ScoreSection({ title, emptyText, games, kind, locale, pointsTemplate, s
                                     </div>
 
                                     <div className="min-w-0 self-center px-3 py-2 sm:px-4">
-                                        <div className={`truncate text-sm font-semibold ${!isLegacyDeath && game.points < 0 ? "text-destructive" : "text-foreground"}`}>{scoreText}</div>
-                                        <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                                            <span className="truncate sm:hidden">{!isLegacyDeath ? detailText : ppText}</span>
-                                            {!isLegacyDeath && (
-                                                <span aria-hidden="true" className="sm:hidden">
-                                                    ·
-                                                </span>
-                                            )}
-                                            <time dateTime={endedAt.toISOString()} title={fullDateText} className="shrink-0 cursor-help">
+                                        <div className={`truncate text-sm font-semibold ${isLegacy && !isLegacyDeath && game.points < 0 ? "text-destructive" : "text-foreground"}`}>{mainText}</div>
+                                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                                            {!isLegacy && <span className="hidden sm:inline">{pointsText} · </span>}
+                                            <time dateTime={endedAt.toISOString()} title={fullDateText} className="cursor-help">
                                                 {dateText}
                                             </time>
                                         </div>
                                     </div>
 
-                                    <div className="hidden items-center justify-center border-l border-border/35 bg-background/10 px-2 text-center sm:flex">
-                                        {!isLegacyDeath && (
-                                            <div>
-                                                <div className="text-xs font-semibold tabular-nums text-foreground">{game.streak.toLocaleString(locale)}x</div>
-                                                <div className="text-[0.7rem] text-muted-foreground">streak</div>
-                                            </div>
-                                        )}
+                                    <div className="hidden items-center justify-center border-l border-border/35 bg-background/10 px-2 text-center text-xs font-medium tabular-nums text-muted-foreground sm:flex">
+                                        {!isLegacyDeath && streakText}
                                     </div>
 
                                     <div className="relative flex items-center justify-center border-l border-primary/10 bg-primary/[0.08] px-2 text-center">
                                         <div
-                                            title={hasPp ? undefined : "pp was not recorded for this legacy score"}
-                                            className={`font-mono text-sm font-bold tabular-nums ${hasPp ? "text-primary" : "text-muted-foreground"}`}
+                                            title={isLegacy ? "pp was not recorded for this legacy score" : undefined}
+                                            className={`font-mono text-sm font-bold tabular-nums ${isLegacy ? "text-muted-foreground" : "text-primary"}`}
                                         >
                                             {ppText}
                                         </div>
@@ -320,10 +313,18 @@ function ScoreSection({ title, emptyText, games, kind, locale, pointsTemplate, s
     );
 }
 
-function formatHoursAgo(date: Date, now: Date): string {
-    const elapsedMs = Math.max(0, now.getTime() - date.getTime());
-    const hours = Math.floor(elapsedMs / 3_600_000);
-    return hours === 0 ? "<1h ago" : `${hours}h ago`;
+function formatRelativeTime(date: Date, now: Date, locale: string): string {
+    const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    const minutes = Math.min(0, Math.round((date.getTime() - now.getTime()) / 60_000));
+    if (minutes > -60) return formatter.format(minutes, "minute");
+    const hours = Math.round(minutes / 60);
+    if (hours > -24) return formatter.format(hours, "hour");
+    return formatter.format(Math.round(hours / 24), "day");
+}
+
+function TabPp({ value }: { value: string | null }) {
+    if (!value) return null;
+    return <span className="ml-1.5 text-xs tabular-nums opacity-60">{value}</span>;
 }
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
@@ -344,42 +345,42 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
     );
 }
 
-function RankHistory({ title, points, locale }: { title: string; points: UserRankHistoryPoint[]; locale: string }) {
+function RankHistory({ title, peakTemplate, points, locale }: { title: string; peakTemplate: string; points: UserRankHistoryPoint[]; locale: string }) {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-
-    if (points.length === 0) return null;
 
     const ranks = points.map((point) => point.rank);
     const bestRank = Math.min(...ranks);
     const worstRank = Math.max(...ranks);
+    // A flat line says nothing the rank above doesn't already.
+    if (points.length < 2 || bestRank === worstRank) return null;
+
     const range = Math.max(1, worstRank - bestRank);
     const coordinates = points.map((point, index) => ({
-        x: points.length === 1 ? 50 : (index / (points.length - 1)) * 100,
+        x: (index / (points.length - 1)) * 100,
         y: 5 + ((point.rank - bestRank) / range) * 30,
     }));
     const linePath = coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
     const areaPath = `${linePath} L 100 40 L 0 40 Z`;
     const firstDate = new Date(points[0].recorded_at);
     const lastDate = new Date(points[points.length - 1].recorded_at);
-    const dateLabel =
-        points.length === 1
-            ? firstDate.toLocaleDateString(locale, { month: "short", day: "numeric" })
-            : `${firstDate.toLocaleDateString(locale, { month: "short", day: "numeric" })} – ${lastDate.toLocaleDateString(locale, { month: "short", day: "numeric" })}`;
+    const dateLabel = `${firstDate.toLocaleDateString(locale, { month: "short", day: "numeric" })} – ${lastDate.toLocaleDateString(locale, { month: "short", day: "numeric" })}`;
     const hoveredPoint = hoveredIndex === null ? null : points[hoveredIndex];
     const hoveredCoordinate = hoveredIndex === null ? null : coordinates[hoveredIndex];
 
     return (
         <div className="mt-5">
             <div className="mb-1.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                <span className="font-medium">{title}</span>
+                <span className="font-medium">
+                    {title} <span className="text-primary">· {peakTemplate.replace("{rank}", `#${bestRank.toLocaleString(locale)}`)}</span>
+                </span>
                 <span className="shrink-0 tabular-nums">{dateLabel}</span>
             </div>
             <div
-                className="relative h-24 cursor-crosshair text-primary"
+                className="relative h-16 cursor-crosshair text-primary sm:h-24"
                 onPointerMove={(event) => {
                     const bounds = event.currentTarget.getBoundingClientRect();
                     const position = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
-                    setHoveredIndex(points.length === 1 ? 0 : Math.round(position * (points.length - 1)));
+                    setHoveredIndex(Math.round(position * (points.length - 1)));
                 }}
                 onPointerLeave={() => setHoveredIndex(null)}
             >

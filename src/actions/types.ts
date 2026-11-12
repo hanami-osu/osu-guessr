@@ -140,6 +140,8 @@ export interface Game {
     ruleset_version: number;
     pp_version: number;
     pp: string | number;
+    rounds_played: number;
+    correct_count: number;
     ended_at: Date;
 }
 

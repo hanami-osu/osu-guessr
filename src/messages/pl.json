@@ -563,15 +563,15 @@
             "allModes": "Wszystkie tryby",
             "modeLabel": "Tryb gry",
             "runsLabel": "Gry",
-            "recentScope": "Ostatnie 24 godziny",
             "showMore": "Pokaż więcej",
             "stats": {
                 "hiScore": "Najwyższy Wynik",
                 "totalGames": "Ilość Ukończonych Gier",
                 "globalRank": "Ranking trybu",
                 "profilePp": "Łączne pp",
-                "playtime": "Łączny czas odpowiedzi",
-                "rankHistory": "Historia rankingu"
+                "playtime": "Czas odpowiadania",
+                "rankHistory": "Historia rankingu",
+                "peakRank": "Najlepiej {rank}"
             },
             "noPlays": "Brak wyników",
             "gameStats": {
@@ -584,20 +584,22 @@
                 "modeRank": "Ranking Trybu",
                 "profilePp": "pp",
                 "bestRunPp": "Najlepsza gra pp",
-                "guessAccuracy": "Celność odpowiedzi",
-                "totalGuesses": "Łącznie odpowiedzi",
-                "averageCombo": "Średnia najlepsza seria"
+                "accuracy": "Celność",
+                "roundsPlayed": "Rozegrane rundy",
+                "averageStreak": "Średnia seria"
             },
             "topGames": {
                 "title": "Najlepsze gry pp",
                 "points": "{points} punktów",
                 "streak": "{count}x seria",
                 "pp": "{pp} pp",
-                "empty": "Brak jeszcze rozgrywek z pp"
+                "empty": "Brak jeszcze rozgrywek z pp",
+                "correctOf": "{correct}/{total} trafnych",
+                "correct": "{count} trafnych"
             },
             "recentGames": {
-                "title": "Ostatnie wyniki",
-                "noGames": "Brak ostatnich wyników"
+                "title": "Ostatnie gry",
+                "noGames": "Brak gier"
             }
         },
         "notFound": {

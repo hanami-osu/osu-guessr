@@ -105,6 +105,8 @@ function mapGame(game: GameRow): Game {
         ruleset_version: game.rulesetVersion,
         pp_version: game.ppVersion,
         pp: Number(game.pp),
+        rounds_played: game.roundsPlayed,
+        correct_count: game.correctCount,
         ended_at: game.endedAt,
     };
 }
@@ -220,7 +222,7 @@ export async function getUserStatsAction(banchoId: number, variant?: GameVariant
     return rows.map(mapAchievement);
 }
 
-export async function getUserLatestGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit?: number, offset: number = 0, endedAfter?: Date): Promise<Array<Game>> {
+export async function getUserLatestGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit?: number, offset: number = 0): Promise<Array<Game>> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validatedVariant = gameVariantSchema.parse(variant);
     const pagination = z
@@ -234,7 +236,6 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
             userId: banchoId,
             variant: validatedVariant,
             ranked: true,
-            ...(endedAfter ? { endedAt: { gte: endedAfter } } : {}),
             ...(validatedMode ? { gameMode: validatedMode } : {}),
         },
         orderBy: { endedAt: "desc" },

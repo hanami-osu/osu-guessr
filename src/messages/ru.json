@@ -497,15 +497,15 @@
             "allModes": "Все режимы",
             "modeLabel": "Режим игры",
             "runsLabel": "Игры",
-            "recentScope": "Последние 24 часа",
             "showMore": "Показать ещё",
             "stats": {
                 "hiScore": "Высший балл",
                 "totalGames": "Всего игр",
                 "globalRank": "Рейтинг в режиме",
                 "profilePp": "Общие pp",
-                "playtime": "Общее время ответа",
-                "rankHistory": "История рейтинга"
+                "playtime": "Время ответов",
+                "rankHistory": "История рейтинга",
+                "peakRank": "Лучший {rank}"
             },
             "noPlays": "Ничего не сыграно",
             "gameStats": {
@@ -518,20 +518,22 @@
                 "modeRank": "Mode Rank",
                 "profilePp": "pp",
                 "bestRunPp": "Лучшая pp-игра",
-                "guessAccuracy": "Точность ответов",
-                "totalGuesses": "Всего ответов",
-                "averageCombo": "Средняя лучшая серия"
+                "accuracy": "Точность",
+                "roundsPlayed": "Сыграно раундов",
+                "averageStreak": "Средняя серия"
             },
             "topGames": {
                 "title": "Лучшие игры по pp",
                 "points": "{points} очков",
                 "streak": "{count}x комбо",
                 "pp": "{pp} pp",
-                "empty": "Пока нет игр с pp"
+                "empty": "Пока нет игр с pp",
+                "correctOf": "{correct}/{total} верно",
+                "correct": "{count} верно"
             },
             "recentGames": {
-                "title": "Недавние результаты",
-                "noGames": "Нет недавних результатов"
+                "title": "Последние игры",
+                "noGames": "Игр пока нет"
             }
         },
         "notFound": {

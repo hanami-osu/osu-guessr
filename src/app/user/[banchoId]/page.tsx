@@ -72,7 +72,6 @@ export default async function UserProfile({ params, searchParams }: Props) {
     const { mode: currentMode, variant: currentVariant } = parseProfileFilters(mode, variant);
     const numericBanchoId = Number(banchoId);
     const generatedAt = new Date();
-    const twentyFourHoursAgo = new Date(generatedAt.getTime() - 24 * 60 * 60 * 1000);
 
     try {
         const user = await getUserById(numericBanchoId);
@@ -84,7 +83,7 @@ export default async function UserProfile({ params, searchParams }: Props) {
         const [lifetimeModeStats, bestScores, recentScores, rankHistory] = await Promise.all([
             getUserLifetimeModeStatsAction(numericBanchoId, currentMode, currentVariant),
             getUserTopGamesAction(numericBanchoId, currentMode, currentVariant, 100),
-            getUserLatestGamesAction(numericBanchoId, currentMode, currentVariant, 100, 0, twentyFourHoursAgo),
+            getUserLatestGamesAction(numericBanchoId, currentMode, currentVariant, 10),
             getUserRankHistoryAction(numericBanchoId, currentMode, currentVariant),
         ]);
 

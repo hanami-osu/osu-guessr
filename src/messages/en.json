@@ -621,15 +621,15 @@
             "allModes": "All modes",
             "modeLabel": "Game mode",
             "runsLabel": "Runs",
-            "recentScope": "Last 24 hours",
             "showMore": "Show more",
             "stats": {
                 "hiScore": "Hi-Score",
                 "totalGames": "Total Games",
                 "globalRank": "Mode Rank",
                 "profilePp": "Overall pp",
-                "playtime": "Total answering time",
-                "rankHistory": "Rank history"
+                "playtime": "Time Answering",
+                "rankHistory": "Rank history",
+                "peakRank": "Peak {rank}"
             },
             "noPlays": "No plays yet",
             "gameStats": {
@@ -642,20 +642,22 @@
                 "modeRank": "Mode Rank",
                 "profilePp": "pp",
                 "bestRunPp": "Top pp Play",
-                "guessAccuracy": "Guess Accuracy",
-                "totalGuesses": "Total Guesses",
-                "averageCombo": "Avg. Best Streak"
+                "accuracy": "Accuracy",
+                "roundsPlayed": "Rounds Played",
+                "averageStreak": "Avg. Streak"
             },
             "topGames": {
                 "title": "Top pp Plays",
                 "points": "{points} points",
                 "streak": "{count}x streak",
                 "pp": "{pp} pp",
-                "empty": "No pp runs yet"
+                "empty": "No pp runs yet",
+                "correctOf": "{correct}/{total} correct",
+                "correct": "{count} correct"
             },
             "recentGames": {
-                "title": "Recent Scores",
-                "noGames": "No recent scores"
+                "title": "Recent Plays",
+                "noGames": "No plays yet"
             }
         },
         "notFound": {
