@@ -11,21 +11,36 @@ function round(overrides: Partial<PerformanceRound> = {}): PerformanceRound {
     };
 }
 
+const easyItem = { appearances: 200, correct_count: 190, total_response_time_ms: 800_000 };
+const hardItem = { appearances: 200, correct_count: 20, total_response_time_ms: 4_800_000 };
+
 describe("performance points", () => {
-    test("rewards accuracy, speed, difficulty, consistency, and longer survival runs", () => {
+    test("rewards accuracy, speed, and item difficulty in classic", () => {
         const baseline = Array.from({ length: 10 }, () => round());
         const faster = baseline.map(() => round({ response_time_ms: 3_000 }));
-        const harder = baseline.map(() => round({ difficulty_snapshot: 1.3 }));
-        const inconsistent = baseline.map((_, index) => round({ response_time_ms: index % 2 === 0 ? 1_000 : 25_000 }));
+        const harder = baseline.map(() => round({ item_stats: hardItem }));
         const miss = baseline.map((value, index) => (index === 0 ? round({ correct: false, response_time_ms: 30_000 }) : value));
+
+        expect(calculateRunPp(baseline, "classic")).toBe(100);
+        expect(calculateRunPp(faster, "classic")).toBeGreaterThan(calculateRunPp(baseline, "classic"));
+        expect(calculateRunPp(harder, "classic")).toBeGreaterThan(calculateRunPp(baseline, "classic"));
+        expect(calculateRunPp(miss, "classic")).toBeLessThan(calculateRunPp(baseline, "classic"));
+    });
+
+    test("keeps separating classic players past a perfect run on easy content", () => {
+        const perfectEasy = Array.from({ length: 15 }, () => round({ response_time_ms: 1_000, item_stats: easyItem }));
+        const perfectHard = Array.from({ length: 15 }, () => round({ response_time_ms: 5_000, item_stats: hardItem }));
+        const oneHardCorrect = [round({ item_stats: hardItem }), ...Array.from({ length: 14 }, () => round({ item_stats: easyItem }))];
+        const allEasyCorrect = Array.from({ length: 15 }, () => round({ item_stats: easyItem }));
+
+        expect(calculateRunPp(perfectHard, "classic")).toBeGreaterThan(2 * calculateRunPp(perfectEasy, "classic"));
+        expect(calculateRunPp(oneHardCorrect, "classic")).toBeGreaterThan(calculateRunPp(allEasyCorrect, "classic"));
+    });
+
+    test("rewards longer survival runs", () => {
         const shortSurvival = [...Array.from({ length: 5 }, () => round()), round({ correct: false })];
         const longSurvival = [...Array.from({ length: 20 }, () => round()), round({ correct: false })];
 
-        expect(calculateRunPp(baseline, "classic")).toBe(100.518);
-        expect(calculateRunPp(faster, "classic")).toBeGreaterThan(calculateRunPp(baseline, "classic"));
-        expect(calculateRunPp(harder, "classic")).toBeGreaterThan(calculateRunPp(baseline, "classic"));
-        expect(calculateRunPp(inconsistent, "classic")).toBeLessThan(calculateRunPp(baseline, "classic"));
-        expect(calculateRunPp(miss, "classic")).toBeLessThan(calculateRunPp(baseline, "classic"));
         expect(calculateRunPp(longSurvival, "survival")).toBeGreaterThan(calculateRunPp(shortSurvival, "survival"));
     });
 

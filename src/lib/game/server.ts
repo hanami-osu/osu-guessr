@@ -10,7 +10,7 @@ import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { isNoGameContentError } from "@/lib/game/content-errors";
 import { canPersistGameResult } from "@/lib/game/completion";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
-import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp } from "@/lib/game/performance-points";
+import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp, type ContentPerformanceStats } from "@/lib/game/performance-points";
 import { Prisma } from "@/generated/prisma/client";
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer";
@@ -160,6 +160,21 @@ export async function getRoundDifficultySnapshot(
     return calculateEmpiricalDifficulty(stats ? { appearances: Number(stats.appearances), correct_count: Number(stats.correctCount), total_response_time_ms: Number(stats.totalResponseTimeMs) } : undefined);
 }
 
+/** Attaches each round's current content stats, which classic pp weighs items by. */
+async function withItemStats(gameMode: GameMode, rounds: PersistedGameRound[], rulesetVersion: number, ppVersion: number): Promise<Array<PersistedGameRound & { item_stats?: ContentPerformanceStats }>> {
+    if (rounds.length === 0) return rounds;
+
+    const stats = await prisma.contentStat.findMany({
+        where: { gameMode, rulesetVersion, ppVersion, itemId: { in: [...new Set(rounds.map((round) => round.item_id))] } },
+        select: { itemType: true, itemId: true, appearances: true, correctCount: true, totalResponseTimeMs: true },
+    });
+    const statsByItem = new Map(
+        stats.map((stat) => [`${stat.itemType}:${stat.itemId}`, { appearances: Number(stat.appearances), correct_count: Number(stat.correctCount), total_response_time_ms: Number(stat.totalResponseTimeMs) }]),
+    );
+
+    return rounds.map((round) => ({ ...round, item_stats: statsByItem.get(`${round.item_type}:${round.item_id}`) }));
+}
+
 export async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<number | null> {
     const gameState = await getGameSession(sessionId, userId);
     if (!gameState.is_active && !gameState.end_pending) return gameState.pp ?? null;
@@ -202,7 +217,7 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     const rulesetVersion = gameState.ruleset_version ?? 0;
     const ppVersion = gameState.pp_version ?? 0;
     const ranked = gameState.ranked ?? true;
-    const runPp = calculateRunPp(roundHistory, gameState.variant);
+    const runPp = calculateRunPp(gameState.variant === "classic" ? await withItemStats(gameState.game_mode, roundHistory, rulesetVersion, ppVersion) : roundHistory, gameState.variant);
     const finalizingState = { ...pendingState, round_history: roundHistory, pp: runPp };
     await writeGameSession(finalizingState);
 

@@ -7,12 +7,19 @@ const EMPIRICAL_PRIOR_ACCURACY = 0.65;
 const EMPIRICAL_PRIOR_RESPONSE_MS = 10_000;
 const DEFAULT_ROUND_TIME_MS = 30_000;
 const DEATH_PP_PER_STREAK = 10;
+const CLASSIC_ITEM_WEIGHT_STEEPNESS = 0.6;
+const CLASSIC_ITEM_WEIGHT_MIN = 0.25;
+const CLASSIC_ITEM_WEIGHT_MAX = 6;
+const CLASSIC_MIN_RESPONSE_MS = 500;
+const CLASSIC_ACCURACY_EXPONENT = 1.4;
 
 export interface PerformanceRound {
     correct: boolean;
     response_time_ms: number;
     time_limit_ms: number | null;
     difficulty_snapshot: number | null;
+    /** Population stats for the round's item, used by classic. */
+    item_stats?: ContentPerformanceStats;
 }
 
 export interface ContentPerformanceStats {
@@ -29,16 +36,57 @@ function roundPp(value: number): number {
     return Math.round(value * 1000) / 1000;
 }
 
+function logit(probability: number): number {
+    return Math.log(probability / (1 - probability));
+}
+
+function smoothedItemStats(stats?: ContentPerformanceStats): { accuracy: number; averageResponseMs: number } {
+    const appearances = stats?.appearances ?? 0;
+    const sampleSize = appearances + EMPIRICAL_PRIOR_APPEARANCES;
+    return {
+        accuracy: ((stats?.correct_count ?? 0) + EMPIRICAL_PRIOR_APPEARANCES * EMPIRICAL_PRIOR_ACCURACY) / sampleSize,
+        averageResponseMs: ((stats?.total_response_time_ms ?? 0) + EMPIRICAL_PRIOR_APPEARANCES * EMPIRICAL_PRIOR_RESPONSE_MS) / sampleSize,
+    };
+}
+
 export function calculateEmpiricalDifficulty(stats?: ContentPerformanceStats): number {
     if (!stats || stats.appearances <= 0) return 1;
 
-    const sampleSize = stats.appearances + EMPIRICAL_PRIOR_APPEARANCES;
-    const accuracy = (stats.correct_count + EMPIRICAL_PRIOR_APPEARANCES * EMPIRICAL_PRIOR_ACCURACY) / sampleSize;
-    const averageResponseMs = (stats.total_response_time_ms + EMPIRICAL_PRIOR_APPEARANCES * EMPIRICAL_PRIOR_RESPONSE_MS) / sampleSize;
+    const { accuracy, averageResponseMs } = smoothedItemStats(stats);
     const responseRatio = clamp(averageResponseMs / DEFAULT_ROUND_TIME_MS, 0, 1);
     const priorResponseRatio = EMPIRICAL_PRIOR_RESPONSE_MS / DEFAULT_ROUND_TIME_MS;
 
     return roundPp(clamp(1 + 0.8 * (EMPIRICAL_PRIOR_ACCURACY - accuracy) + 0.4 * (responseRatio - priorResponseRatio), 0.75, 1.5));
+}
+
+/**
+ * How much a correct classic answer on this item is worth, on a log-odds scale so items most
+ * players miss are worth several times items everyone gets. 1 at the prior accuracy.
+ */
+function calculateClassicItemWeight(stats?: ContentPerformanceStats): number {
+    const { accuracy } = smoothedItemStats(stats);
+    return clamp(Math.exp(CLASSIC_ITEM_WEIGHT_STEEPNESS * (logit(EMPIRICAL_PRIOR_ACCURACY) - logit(accuracy))), CLASSIC_ITEM_WEIGHT_MIN, CLASSIC_ITEM_WEIGHT_MAX);
+}
+
+/** Speed compared with how long players usually take on this item, 1 when matching the average. */
+function calculateClassicSpeedFactor(responseTimeMs: number, stats?: ContentPerformanceStats): number {
+    const { averageResponseMs } = smoothedItemStats(stats);
+    return clamp(Math.pow(averageResponseMs / Math.max(CLASSIC_MIN_RESPONSE_MS, responseTimeMs), 0.25), 0.75, 1.5);
+}
+
+/**
+ * Classic has a fixed round count, so the open-ended axis is what you know: each correct round
+ * adds its item weight times speed, so hard items answered quickly keep separating strong players.
+ */
+function calculateClassicRunPp(rounds: PerformanceRound[]): number {
+    const correctRounds = rounds.filter((round) => round.correct);
+    if (correctRounds.length === 0) return 0;
+
+    const roundValue = correctRounds.reduce((total, round) => total + calculateClassicItemWeight(round.item_stats) * calculateClassicSpeedFactor(round.response_time_ms, round.item_stats), 0);
+    const accuracy = correctRounds.length / rounds.length;
+    const lengthFactor = Math.sqrt(rounds.length / 10);
+
+    return roundPp(100 * lengthFactor * (roundValue / rounds.length) * Math.pow(accuracy, CLASSIC_ACCURACY_EXPONENT));
 }
 
 function calculateSurvivalRunPp(rounds: PerformanceRound[]): number {
@@ -98,29 +146,7 @@ export function calculateRunPp(rounds: PerformanceRound[], variant: GameVariant)
     if (variant === "survival") return calculateSurvivalRunPp(rounds);
     if (variant === "death") return calculateDeathRunPp(rounds);
 
-    const correctRounds = rounds.filter((round) => round.correct);
-    if (correctRounds.length === 0) return 0;
-
-    const accuracy = correctRounds.length / rounds.length;
-    const accuracyFactor = Math.pow(accuracy, 2.4);
-
-    const responseRatios = correctRounds.map((round) => {
-        const timeLimit = Math.max(1, round.time_limit_ms ?? DEFAULT_ROUND_TIME_MS);
-        return clamp(round.response_time_ms / timeLimit, 0, 1);
-    });
-    const speed = responseRatios.reduce((total, ratio) => total + (1 - Math.pow(ratio, 0.65)), 0) / responseRatios.length;
-    const speedFactor = 0.75 + speed * 0.5;
-
-    const meanResponseRatio = responseRatios.reduce((total, ratio) => total + ratio, 0) / responseRatios.length;
-    const variance = responseRatios.reduce((total, ratio) => total + Math.pow(ratio - meanResponseRatio, 2), 0) / responseRatios.length;
-    const consistency = responseRatios.length < 2 ? 0.5 : 1 - clamp(Math.sqrt(variance) / 0.35, 0, 1);
-    const consistencyFactor = 0.9 + consistency * 0.1;
-
-    const difficultyFactor = correctRounds.reduce((total, round) => total + clamp(round.difficulty_snapshot ?? 1, 0.75, 1.5), 0) / correctRounds.length;
-
-    const lengthFactor = Math.sqrt(rounds.length / 10);
-
-    return roundPp(100 * accuracyFactor * speedFactor * consistencyFactor * difficultyFactor * lengthFactor);
+    return calculateClassicRunPp(rounds);
 }
 
 export function calculateProfilePp(runPp: number[], variant: GameVariant = "classic"): number {
