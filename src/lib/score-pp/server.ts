@@ -475,6 +475,7 @@ export async function submitScorePpGuessForUser(
             correct,
             response_time_ms: responseTimeMs,
             time_limit_ms: ROUND_TIME_MS,
+            answered_at: new Date(now).toISOString(),
             points_earned: pointsEarned,
             streak_before: run.current_streak,
             streak_after: nextStreak,

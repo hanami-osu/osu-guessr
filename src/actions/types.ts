@@ -247,6 +247,8 @@ export interface PersistedGameRound {
     correct: boolean;
     response_time_ms: number;
     time_limit_ms: number;
+    /** ISO time the answer, skip or timeout was received. Missing on rounds recorded before it existed. */
+    answered_at?: string;
     points_earned: number;
     streak_before: number;
     streak_after: number;

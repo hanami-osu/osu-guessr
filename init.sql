@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS game_rounds (
     correct BOOLEAN NOT NULL,
     response_time_ms INT UNSIGNED NOT NULL,
     time_limit_ms INT UNSIGNED,
+    answered_at DATETIME(3),
     points_earned INT NOT NULL DEFAULT 0,
     streak_before INT UNSIGNED NOT NULL DEFAULT 0,
     streak_after INT UNSIGNED NOT NULL DEFAULT 0,

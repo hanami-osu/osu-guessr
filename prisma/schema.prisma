@@ -181,6 +181,7 @@ model GameRound {
   correct            Boolean
   responseTimeMs     Int             @map("response_time_ms") @db.UnsignedInt
   timeLimitMs        Int?            @map("time_limit_ms") @db.UnsignedInt
+  answeredAt         DateTime?       @map("answered_at") @db.DateTime(3)
   pointsEarned       Int             @default(0) @map("points_earned")
   streakBefore       Int             @default(0) @map("streak_before") @db.UnsignedInt
   streakAfter        Int             @default(0) @map("streak_after") @db.UnsignedInt

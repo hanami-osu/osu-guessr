@@ -440,6 +440,7 @@ describe("game server lifecycle", () => {
         expect(persistedRound.response_time_ms).toBe(5000);
         expect(persistedRound.result_type).toBe("guess");
         expect(persistedRound.answer_snapshot).toBe(answer);
+        expect(persistedRound.answered_at).toBe("2026-01-01T00:00:05.000Z");
 
         const state = await getGameStateAction(sessionId);
         expect(state.timeLeft).toBe(25);
