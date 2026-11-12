@@ -23,7 +23,7 @@
             },
             "gamesPlayed": {
                 "title": "Sıralamalı Koşular",
-                "description": "Kaydedilmiş Klasik ve Hayatta Kalma sıralamalı koşuları"
+                "description": "Kaydedilmiş Klasik, Hayatta Kalma ve Ölüm sıralamalı koşuları"
             },
             "profilePp": {
                 "title": "En Yüksek pp",
@@ -39,7 +39,6 @@
         },
         "announcements": {
             "title": "Son duyurular",
-            "latestLabel": "Son Duyuru",
             "previous": "Önceki duyurular:",
             "viewAll": "Tüm duyuruları görüntüle"
         }
@@ -81,7 +80,7 @@
             "steps": {
                 "1": {
                     "title": "Modunu Seç",
-                    "description": "Arka plan, ses veya skin modunu, ardından Klasik veya Hayatta Kalma varyantını seç."
+                    "description": "Arka plan, ses veya skin modunu, ardından Klasik, Hayatta Kalma veya Ölüm varyantını seç."
                 },
                 "2": {
                     "title": "Tahmin Etmeye Başla",
@@ -102,13 +101,13 @@
                 "skipPenalty": "Yanlış tahmin, atlama veya süre aşımı: -{penalty} puan"
             },
             "gameInfo": {
-                "length": "Klasik: {rounds} tur. Hayatta Kalma: {lives} canın bitene kadar devam eder.",
+                "length": "Klasik: {rounds} tur. Hayatta Kalma: {lives} canın bitene kadar devam eder. Ölüm: tek hata koşuyu bitirir.",
                 "time": "Tur Süresi: {seconds} saniye"
             },
             "pp": {
                 "title": "pp",
-                "description": "Sıralamalı koşular tur doğruluğu, cevap hızı, içerik zorluğu ve tutarlılığa göre pp kazandırır. Hayatta Kalma ayrıca koşudaki doğru tur sayısına göre ölçeklenir.",
-                "profile": "Her oyun modu ve varyant için profil pp'si en iyi 100 sıralamalı koşunu birleştirir ve her alt koşuyu bir öncekine göre %95 ağırlıkla sayar. Liderlik tablosu bu pp'yi kullanır."
+                "description": "Sıralamalı koşular tur doğruluğu, cevap hızı, içerik zorluğu ve tutarlılığa göre pp kazandırır. Hayatta Kalma ayrıca koşudaki doğru tur sayısına göre ölçeklenir. Ölüm önce seriye göre sıralanır; hız, tutarlılık ve zorluk eşitlikleri bozar.",
+                "profile": "Her oyun modu ve varyant için profil pp'si en iyi 100 sıralamalı koşunu birleştirir ve her alt koşuyu bir öncekine göre %95 ağırlıkla sayar. Liderlik tablosu bu pp'yi kullanır. Ölüm bunun istisnasıdır: yalnızca en iyi koşun sayılır."
             }
         },
         "features": {
@@ -234,6 +233,10 @@
                     "continuous": "Tüm canlarını kaybedene kadar devam et; kaçırdığın içerikler tekrar gelebilir",
                     "time": "Her turda {seconds} saniye",
                     "lives": "Her yanlış tahmin, atlama veya süre aşımı {count} canından birini götürür"
+                },
+                "oneLife": {
+                    "continuous": "İlk hatana kadar devam et",
+                    "lives": "Tek bir yanlış tahmin, atlama veya süre aşımı koşuyu bitirir"
                 }
             },
             "scoring": {
@@ -249,6 +252,9 @@
                     "score": "Arcade skoru Klasik Mod ile aynı puan formülünü kullanır",
                     "streakOnly": "Hayatta Kalma pp'si koşu bitmeden önceki doğru tur sayısını da ödüllendirir",
                     "compete": "Sıralama bu oyun modu ve varyantın pp'sine göre yapılır"
+                },
+                "oneLife": {
+                    "streakFirst": "Ölüm pp'sinde önce seri sayılır; hız, tutarlılık ve zorluk yalnızca eşit serileri ayırır ve sadece en iyi koşun geçerlidir"
                 }
             },
             "modes": {
@@ -259,6 +265,10 @@
                 "death": {
                     "title": "Hayatta Kalma Modu",
                     "description": "{count} can"
+                },
+                "oneLife": {
+                    "title": "Ölüm Modu",
+                    "description": "1 can"
                 }
             },
             "warning": {
@@ -274,7 +284,7 @@
         "input": {
             "placeholder": "Şarkı adı...",
             "skinPlaceholder": "Skin adı...",
-            "skipDeath": "Atla",
+            "giveUp": "Pes Et",
             "title": "Tahmininizi girin:",
             "yourGuess": "Tahmininiz:",
             "submit": "Gönder",
@@ -335,7 +345,8 @@
                 "totalCorrect": "Toplam Doğru",
                 "averageTime": "Ortalama Yanıt Süresi",
                 "diedMessage": "Tüm {count} canını kaybettin.",
-                "livesRemaining": "Kalan Can"
+                "livesRemaining": "Kalan Can",
+                "diedMessageOneLife": "Tek bir hata koşuyu bitirdi."
             },
             "labels": {
                 "averageTime": "Ortalama Yanıt Süresi",
@@ -453,7 +464,8 @@
             },
             "variant": {
                 "classic": "Klasik Mod",
-                "survival": "Hayatta Kalma Modu"
+                "survival": "Hayatta Kalma Modu",
+                "death": "Ölüm Modu"
             }
         },
         "table": {
@@ -590,7 +602,7 @@
             "description": "Hanami hesabınızı yönetin veya bu osu!guessr oturumunu sonlandırın.",
             "hanami": {
                 "title": "Hanami hesabı",
-                "description": "Bağlı hesaplarınızı ve Hanami profilinizi yönetin.",
+                "description": "osu!guessr hesapları, osu! projelerimizin ortak giriş sistemi olan Hanami üzerinde çalışır. Bağlı hesaplarınızı ve profilinizi oradan yönetin.",
                 "action": "Hanami'yi aç"
             },
             "signOut": {
@@ -777,7 +789,8 @@
         "auth": {
             "required": {
                 "title": "Giriş Yapmanız Gerekiyor",
-                "description": "Hanami, osu!guessr için giriş işlemini yönetir. İlk kez giriş yapıyorsan Hanami hesabın otomatik olarak oluşturulur. Ardından osu!guessr'a dönersin.",
+                "description": "Oynamak için osu! hesabınla giriş yap. Ardından doğrudan osu!guessr'a dönersin.",
+                "notice": "Hesaplar Hanami tarafından sağlanır. Giriş yaparak şunları kabul edersin:",
                 "noAccount": "Bir {osu_base} hesabınız yok mu? Buradan oluşturun"
             }
         }

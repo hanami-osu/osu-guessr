@@ -1,5 +1,5 @@
 import redisClient from "@/lib/redis";
-import type { MultiplayerLobby } from "@/lib/multiplayer";
+import { toPublicMultiplayerLobby, type MultiplayerLobby } from "@/lib/multiplayer";
 
 const SOCKET_TOKEN_TTL_SECONDS = 60;
 const SOCKET_TOKEN_PREFIX = "multiplayer_socket_token:";
@@ -47,7 +47,7 @@ export async function publishMultiplayerBrowserChanged(): Promise<void> {
 }
 
 export async function publishMultiplayerLobby(lobby: MultiplayerLobby): Promise<void> {
-    await publishMultiplayerRealtimeEvent(lobby.code, { type: "lobby", lobby });
+    await publishMultiplayerRealtimeEvent(lobby.code, { type: "lobby", lobby: toPublicMultiplayerLobby(lobby) });
 }
 
 export async function publishMultiplayerLobbyDeleted(code: string): Promise<void> {

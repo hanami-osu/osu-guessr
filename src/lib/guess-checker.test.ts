@@ -17,6 +17,28 @@ describe("Guess Checker", () => {
             expect(checkGuess("hello-world", "hello world")).toBe(true);
         });
 
+        test("preserves Unicode letters and numbers while ignoring punctuation", () => {
+            expect(checkGuess("東京２０２５！", "東京２０２５", GuessDifficulty.Impossible)).toBe(true);
+            expect(checkGuess("東京２０２５ music", "京都２０２５ music", GuessDifficulty.Impossible)).toBe(false);
+            expect(checkGuess("東京２０２５ music", "東京２０２６ music", GuessDifficulty.Impossible)).toBe(false);
+        });
+
+        test("matches symbolic titles only when the nonempty text agrees", () => {
+            expect(checkGuess("!!!", "!!!")).toBe(true);
+            expect(checkGuess("", "!!!")).toBe(false);
+            expect(checkGuess("!!!", "？？？")).toBe(false);
+            expect(checkGuess("!!!", "song")).toBe(false);
+            expect(checkGuess("song", "!!!")).toBe(false);
+        });
+
+        test("keeps fuzzy matching for Unicode text", () => {
+            expect(checkGuess("夜明けの歌", "夜明けの唄", GuessDifficulty.Easy)).toBe(true);
+        });
+
+        test("fuzzy-matches supplementary-plane letters by code point", () => {
+            expect(checkGuess("𐐨𐐨𐐨𐐩", "𐐨𐐨𐐨𐐨", GuessDifficulty.Hard)).toBe(true);
+        });
+
         test("handles parentheses in actual answer", () => {
             expect(checkGuess("my song", "my song (TV Size)")).toBe(true);
             expect(checkGuess("my song tv size", "my song (TV Size)")).toBe(true);

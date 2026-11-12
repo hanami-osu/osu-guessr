@@ -2,12 +2,12 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Gamepad2, Plus, RefreshCw, Users } from "lucide-react";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createMultiplayerLobbyAction, listMultiplayerLobbiesAction } from "@/actions/multiplayer-server";
 import { GameMode, type GameVariant } from "@/actions/types";
-import { GAME_MODES } from "@/app/games/config";
+import { GAME_MODES, GAME_VARIANTS, VARIANT_LABELS } from "@/app/games/config";
 import type { MultiplayerLobbySummary } from "@/lib/multiplayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +71,7 @@ export default function MultiplayerBrowser() {
     const createLobby = async (event: FormEvent) => {
         event.preventDefault();
         if (!session?.user?.banchoId) {
-            await signIn("hanami");
+            router.push("/signin?callbackUrl=%2Fmultiplayer");
             return;
         }
 
@@ -145,8 +145,11 @@ export default function MultiplayerBrowser() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="classic">Classic</SelectItem>
-                                            <SelectItem value="survival">Survival</SelectItem>
+                                            {GAME_VARIANTS.map((value) => (
+                                                <SelectItem key={value} value={value}>
+                                                    {VARIANT_LABELS[value]}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </label>

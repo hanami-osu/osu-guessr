@@ -8,7 +8,7 @@ export default {
         extend: {
             fontFamily: {
                 sans: ["var(--public-sans)", "sans-serif"],
-                display: ["var(--sora)", "sans-serif"],
+                display: ["var(--space-grotesk)", "sans-serif"],
                 mono: ["var(--jetbrains-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
             },
             colors: {

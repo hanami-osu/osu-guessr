@@ -8,9 +8,9 @@ export default function Footer() {
     const { t } = useTranslationsContext();
 
     return (
-        <footer className="border-t border-border/40 bg-muted/30 py-4 sm:py-6">
-            <div className="page-container text-center">
-                <p className="text-sm sm:text-lg text-foreground/80">
+        <footer className="border-t border-border bg-muted/30 py-5">
+            <div className="page-container flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-foreground/80">
                     {t.components.footer.madeWith.split("{author}").map((part, index, array) => (
                         <React.Fragment key={index}>
                             {part}
@@ -22,14 +22,14 @@ export default function Footer() {
                         </React.Fragment>
                     ))}
                 </p>
-                <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-foreground/50 flex flex-wrap justify-center gap-4">
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-muted-foreground">
                     <Link href="/about" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.about}
                     </Link>
-                    <a href="https://hanami.yorunoken.com/legal/privacy" className="hover:text-foreground transition-colors duration-200">
+                    <a href="https://hanami.yorunoken.com/legal/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.privacy}
                     </a>
-                    <a href="https://hanami.yorunoken.com/legal/terms" className="hover:text-foreground transition-colors duration-200">
+                    <a href="https://hanami.yorunoken.com/legal/terms" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors duration-200">
                         {t.components.footer.tos}
                     </a>
                     <a href="https://github.com/hanami-osu/osu-guessr" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors duration-200">

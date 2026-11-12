@@ -1,6 +1,7 @@
 import GameActionButton from "./GameActionButton";
 import { useState, useEffect, useId, useRef } from "react";
 import { GameMode, type GameVariant } from "@/actions/types";
+import { isOnLastLife } from "../../config";
 import { GameClient } from "@/lib/game/client";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { createLatestRequestGate } from "@/lib/latest-request";
@@ -8,6 +9,7 @@ import { createLatestRequestGate } from "@/lib/latest-request";
 interface GuessInputProps {
     gameMode: GameMode;
     gameVariant: GameVariant;
+    mistakes: number;
     guess: string;
     setGuess: (guess: string) => void;
     isRevealed: boolean;
@@ -21,7 +23,7 @@ interface GuessInputProps {
     gameClient: GameClient;
 }
 
-export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isRevealed, revealedGuess, isBusy, onGuess, onSkip, onNextRound, nextRoundLabel, loadingLabel, gameClient }: GuessInputProps) {
+export default function GuessInput({ gameMode, gameVariant, mistakes, guess, setGuess, isRevealed, revealedGuess, isBusy, onGuess, onSkip, onNextRound, nextRoundLabel, loadingLabel, gameClient }: GuessInputProps) {
     const { t } = useTranslationsContext();
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -250,7 +252,7 @@ export default function GuessInput({ gameMode, gameVariant, guess, setGuess, isR
                     {t.game.input.submit}
                 </GameActionButton>
                 <GameActionButton intent="skip" onClick={onSkip} disabled={isBusy} className="flex-1">
-                    {gameVariant === "survival" ? t.game.input.skipDeath : t.game.input.skip}
+                    {isOnLastLife(gameVariant, mistakes) ? t.game.input.giveUp : t.game.input.skip}
                 </GameActionButton>
             </div>
         </div>

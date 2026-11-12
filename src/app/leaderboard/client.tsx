@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { getTopPlayersAction } from "@/actions/user-server";
 import { GameMode, type TopPlayer } from "@/actions/types";
-import type { GameVariant } from "@/app/games/config";
+import { GAME_VARIANTS, type GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { AdSlider } from "@/components/Ads";
 import { createLatestRequestGate } from "@/lib/latest-request";
@@ -113,7 +113,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                     <div>
                         <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.variantLabel}</p>
                         <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.variantLabel}>
-                            {(["classic", "survival"] as const).map((variant) => (
+                            {GAME_VARIANTS.map((variant) => (
                                 <button
                                     key={variant}
                                     type="button"
@@ -165,7 +165,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                             <th scope="col" className="hidden px-5 py-2.5 text-right lg:table-cell">
                                                 {t.leaderboard.table.bestRunPp}
                                             </th>
-                                            {selectedVariant === "survival" && (
+                                            {selectedVariant !== "classic" && (
                                                 <th scope="col" className="hidden px-3 py-2.5 text-right sm:table-cell sm:px-5">
                                                     {t.leaderboard.table.bestStreak}
                                                 </th>
@@ -221,7 +221,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                                 <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground lg:table-cell">
                                                     {Number(player.best_run_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}
                                                 </td>
-                                                {selectedVariant === "survival" && (
+                                                {selectedVariant !== "classic" && (
                                                     <td className="hidden px-5 py-3.5 text-right text-sm font-semibold tabular-nums text-foreground sm:table-cell">
                                                         {player.highest_streak.toLocaleString(locale)}
                                                     </td>

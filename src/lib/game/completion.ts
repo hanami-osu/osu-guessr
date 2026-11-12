@@ -1,4 +1,5 @@
 import type { GameState } from "@/actions/types";
+import { isContinuousVariant } from "@/app/games/config";
 
 interface PersistableGameState {
     variant: GameState["variant"];
@@ -11,6 +12,6 @@ export function isClassicGameIncomplete(gameState: GameState): boolean {
 }
 
 export function canPersistGameResult(state: PersistableGameState, maxRounds: number): boolean {
-    if (state.variant === "survival") return state.currentRound > 1 || state.hasGuessedCurrentRound;
+    if (isContinuousVariant(state.variant)) return state.currentRound > 1 || state.hasGuessedCurrentRound;
     return state.currentRound === maxRounds && state.hasGuessedCurrentRound;
 }

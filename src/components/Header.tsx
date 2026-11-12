@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import UserSearch from "./UserSearch";
-import { Menu, X } from "lucide-react";
+import { Heart, Info, Megaphone, Menu, Trophy, X } from "lucide-react";
 import { useState } from "react";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useTranslationsContext } from "@/context/translations-provider";
@@ -14,6 +14,7 @@ import { SupportPageLink } from "./SupportDialogWrapper";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = ["leaderboard", "about", "announcements"] as const;
+const NAV_ICONS = { leaderboard: Trophy, about: Info, announcements: Megaphone } as const;
 const MOBILE_NAV_ID = "mobile-navigation";
 
 export default function Header() {
@@ -23,8 +24,8 @@ export default function Header() {
     const pathname = usePathname();
 
     return (
-        <header className="bg-background/95 backdrop-blur-md border-b border-border/40 sticky top-0 z-50">
-            <div className="page-container flex items-center justify-between gap-2 py-3">
+        <header className="bg-background border-b border-border sticky top-0 z-50">
+            <div className="page-container relative flex items-center justify-between gap-2 py-3">
                 <div className="flex min-w-0 items-center gap-6 xl:gap-8">
                     <Link href="/" className="whitespace-nowrap font-display text-xl font-bold text-primary transition-[color,opacity] duration-150 ease-smooth hover:text-primary/80 sm:text-2xl">
                         osu!guessr
@@ -54,18 +55,6 @@ export default function Header() {
                     <div className="hidden lg:block">
                         <SupportPageLink />
                     </div>
-
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="lg:hidden"
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        aria-label={isMenuOpen ? t.components.header.accessibility.closeMenu : t.components.header.accessibility.openMenu}
-                        aria-expanded={isMenuOpen}
-                        aria-controls={MOBILE_NAV_ID}
-                    >
-                        {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                    </Button>
 
                     {session ? (
                         <DropdownMenu modal={false}>
@@ -101,37 +90,68 @@ export default function Header() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <Button onClick={() => signIn("hanami")} className="px-2 text-xs sm:px-4 sm:text-sm">
-                            {t.components.header.nav.signIn}
-                        </Button>
+                        pathname !== "/signin" && (
+                            <Button asChild className="px-2 text-xs sm:px-4 sm:text-sm">
+                                <Link href={`/signin?callbackUrl=${encodeURIComponent(pathname)}`}>{t.components.header.nav.signIn}</Link>
+                            </Button>
+                        )
                     )}
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="lg:hidden"
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        aria-label={isMenuOpen ? t.components.header.accessibility.closeMenu : t.components.header.accessibility.openMenu}
+                        aria-expanded={isMenuOpen}
+                        aria-controls={MOBILE_NAV_ID}
+                    >
+                        {isMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+                    </Button>
                 </div>
 
                 {isMenuOpen && (
-                    <nav id={MOBILE_NAV_ID} aria-label={t.components.header.accessibility.mobileNavigation} className="absolute left-0 top-full w-full bg-background shadow-lg lg:hidden">
-                        <ul className="page-container flex flex-col gap-1 py-3">
-                            <li className="w-full pb-2">
-                                <UserSearch />
-                            </li>
-                            {NAV_ITEMS.map((item) => (
-                                <li className="flex w-full items-center" key={item}>
-                                    <Link
-                                        href={`/${item}`}
-                                        aria-current={pathname === `/${item}` ? "page" : undefined}
-                                        className={`w-full rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-muted/60 hover:text-primary ${pathname === `/${item}` ? "bg-muted/45 text-primary" : "text-foreground/80"}`}
-                                        onClick={() => setIsMenuOpen(false)}
-                                    >
-                                        {t.components.header.nav[item]}
-                                    </Link>
-                                </li>
-                            ))}
-                            <li className="flex w-full items-center">
-                                <div className="w-full px-1 py-1" onClick={() => setIsMenuOpen(false)}>
-                                    <SupportPageLink />
-                                </div>
-                            </li>
-                        </ul>
-                    </nav>
+                    <>
+                        <div className="fixed inset-0 -z-10 lg:hidden" aria-hidden="true" onClick={() => setIsMenuOpen(false)} />
+                        <nav
+                            id={MOBILE_NAV_ID}
+                            aria-label={t.components.header.accessibility.mobileNavigation}
+                            className="motion-scale-in absolute inset-x-4 top-full mt-2 origin-top-right overflow-hidden rounded-lg border border-border bg-card shadow-xl shadow-black/30 sm:left-auto sm:w-72 lg:hidden"
+                        >
+                            <div className="border-b border-border p-2">
+                                <UserSearch className="justify-start border-transparent bg-muted/60 sm:w-full [&>kbd]:ml-auto" />
+                            </div>
+                            <ul className="p-2">
+                                {NAV_ITEMS.map((item) => {
+                                    const Icon = NAV_ICONS[item];
+                                    const isCurrent = pathname === `/${item}`;
+                                    return (
+                                        <li key={item}>
+                                            <Link
+                                                href={`/${item}`}
+                                                aria-current={isCurrent ? "page" : undefined}
+                                                className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150 hover:bg-muted ${isCurrent ? "bg-primary/10 text-primary" : "text-foreground/80 hover:text-foreground"}`}
+                                                onClick={() => setIsMenuOpen(false)}
+                                            >
+                                                <Icon className={`size-4 ${isCurrent ? "" : "text-muted-foreground"}`} aria-hidden="true" />
+                                                {t.components.header.nav[item]}
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                            <div className="border-t border-border p-2">
+                                <Link
+                                    href="/support"
+                                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-primary transition-colors duration-150 hover:bg-primary/10"
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    <Heart className="size-4" aria-hidden="true" />
+                                    {t.common.support}
+                                </Link>
+                            </div>
+                        </nav>
+                    </>
                 )}
             </div>
         </header>

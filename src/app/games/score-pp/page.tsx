@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { createPageMetadata } from "@/lib/social-metadata";
-import type { GameVariant } from "@/actions/types";
+import { GAME_VARIANTS, type GameVariant } from "@/actions/types";
 import SignInPrompt from "../shared/SignInPrompt";
 import ScorePpGame from "./components/ScorePpGame";
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 function isGameVariant(value: string | undefined): value is GameVariant {
-    return value === "classic" || value === "survival";
+    return (GAME_VARIANTS as readonly string[]).includes(value ?? "");
 }
 
 export default async function ScorePpPage({ searchParams }: { searchParams: Promise<{ variant?: string | string[]; lobby?: string | string[] }> }) {

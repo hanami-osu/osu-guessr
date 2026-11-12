@@ -73,16 +73,13 @@ export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeConten
                     )}
                 >
                     <div className="min-w-0">
-                        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                            <span className="font-medium text-primary">{t.home.announcements.latestLabel}</span>
-                            <time className="text-muted-foreground" dateTime={latestAnnouncement.created_at}>
-                                {new Date(latestAnnouncement.created_at).toLocaleDateString(locale, { timeZone: "UTC" })}
-                            </time>
-                        </div>
+                        <time className="mb-2 block text-sm text-muted-foreground" dateTime={latestAnnouncement.created_at}>
+                            {new Date(latestAnnouncement.created_at).toLocaleDateString(locale, { timeZone: "UTC" })}
+                        </time>
                         <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{latestAnnouncement.title}</h3>
                         <p className="mt-2 max-w-4xl whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{preview}</p>
                     </div>
-                    <ArrowRight className="hidden h-5 w-5 text-muted-foreground transition-[color,transform] duration-150 group-hover:translate-x-1 group-hover:text-primary sm:block" aria-hidden="true" />
+                    <ArrowRight className="hidden h-5 w-5 text-muted-foreground transition-colors duration-150 group-hover:text-primary sm:block" aria-hidden="true" />
                 </Link>
             </div>
         </section>

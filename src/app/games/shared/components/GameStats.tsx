@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { GameVariant, SURVIVAL_LIVES } from "../../config";
+import { GameVariant, getVariantLives, isContinuousVariant } from "../../config";
 import { useTranslationsContext } from "@/context/translations-provider";
 
 interface GameStatsProps {
@@ -33,9 +33,9 @@ function ResultStat({ label, value }: ResultStatProps) {
 export default function GameStats({ runPp, totalPoints, correctGuesses, maxStreak, totalRounds, averageTime, mistakes, onPlayAgain, gameVariant, gameEndReason }: GameStatsProps) {
     const { t, locale } = useTranslationsContext();
     const isSurvival = gameVariant === "survival";
-    const isContinuous = isSurvival;
+    const isContinuous = isContinuousVariant(gameVariant);
     const died = isContinuous && gameEndReason === "died";
-    const livesRemaining = Math.max(0, SURVIVAL_LIVES - mistakes);
+    const livesRemaining = Math.max(0, getVariantLives(gameVariant) - mistakes);
     const title = isContinuous
         ? gameEndReason === "died"
             ? t.game.stats.death.title.died
@@ -49,7 +49,11 @@ export default function GameStats({ runPp, totalPoints, correctGuesses, maxStrea
             <div className="motion-fade-up">
                 <header className="border-b border-border/60 pb-4">
                     <h1 className={`font-display text-3xl font-semibold tracking-tight sm:text-4xl ${died ? "text-destructive" : "text-foreground"}`}>{title}</h1>
-                    {died && <p className="mt-2 text-sm font-medium text-destructive/90">{t.game.stats.death.diedMessage.replace("{count}", SURVIVAL_LIVES.toString())}</p>}
+                    {died && (
+                        <p className="mt-2 text-sm font-medium text-destructive/90">
+                            {isSurvival ? t.game.stats.death.diedMessage.replace("{count}", getVariantLives(gameVariant).toString()) : t.game.stats.death.diedMessageOneLife}
+                        </p>
+                    )}
                 </header>
 
                 <section className="border-b border-border/60 py-5 sm:py-6">

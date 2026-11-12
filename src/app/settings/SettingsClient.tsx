@@ -522,7 +522,9 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                     <p className="mt-1 text-sm text-muted-foreground">{t.settings.privacy.deletion.description}</p>
                                 </div>
                                 <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive" asChild>
-                                    <a href="https://hanami.yorunoken.com/legal/data-deletion#other">{t.settings.privacy.deletion.action}</a>
+                                    <a href="https://hanami.yorunoken.com/legal/data-deletion#other" target="_blank" rel="noreferrer">
+                                        {t.settings.privacy.deletion.action}
+                                    </a>
                                 </Button>
                             </div>
                         </div>

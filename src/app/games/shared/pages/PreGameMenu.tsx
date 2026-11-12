@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useState } from "react";
-import { BASE_POINTS, GAME_MODES, GameVariant, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIVAL_LIVES, TIME_BONUS_MULTIPLIER } from "../../config";
+import { BASE_POINTS, GAME_MODES, GameVariant, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIVAL_LIVES, TIME_BONUS_MULTIPLIER, isContinuousVariant } from "../../config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { SectionLabel } from "@/components/page-heading";
 import { GameMode } from "@/actions/types";
@@ -48,7 +48,7 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
         </section>
     );
 
-    const SurvivalModeContent = () => (
+    const ContinuousModeContent = () => (
         <section>
             <SectionLabel className="mb-3">{t.game.preGame.howToPlay.title}</SectionLabel>
             <ul className={listClass}>
@@ -60,11 +60,11 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
                 )}
                 <li className={listItemClass}>
                     <span aria-hidden="true" className={markerClass} />
-                    {t.game.preGame.howToPlay.death.continuous}
+                    {selectedMode === "death" ? t.game.preGame.howToPlay.oneLife.continuous : t.game.preGame.howToPlay.death.continuous}
                 </li>
                 <li className={listItemClass}>
                     <span aria-hidden="true" className={markerClass} />
-                    {t.game.preGame.howToPlay.death.lives.replace("{count}", SURVIVAL_LIVES.toString())}
+                    {selectedMode === "death" ? t.game.preGame.howToPlay.oneLife.lives : t.game.preGame.howToPlay.death.lives.replace("{count}", SURVIVAL_LIVES.toString())}
                 </li>
                 <li className={listItemClass}>
                     <span aria-hidden="true" className={markerClass} />
@@ -87,7 +87,7 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
                 </div>
 
                 <section className="relative z-10 bg-card">
-                    <div className="grid grid-cols-2 gap-2 px-3 py-2.5 sm:px-5" role="radiogroup" aria-label={t.game.preGame.variantLabel}>
+                    <div className="grid grid-cols-3 gap-2 px-3 py-2.5 sm:px-5" role="radiogroup" aria-label={t.game.preGame.variantLabel}>
                         <button
                             type="button"
                             role="radio"
@@ -112,11 +112,23 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
                                 <span className="text-xs text-muted-foreground">{t.game.preGame.modes.death.description.replace("{count}", SURVIVAL_LIVES.toString())}</span>
                             </span>
                         </button>
+                        <button
+                            type="button"
+                            role="radio"
+                            onClick={() => setSelectedMode("death")}
+                            className={`rounded-md px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === "death" ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            aria-checked={selectedMode === "death"}
+                        >
+                            <span className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                                <span className="text-sm font-semibold">{t.game.preGame.modes.oneLife.title}</span>
+                                <span className="text-xs text-muted-foreground">{t.game.preGame.modes.oneLife.description}</span>
+                            </span>
+                        </button>
                     </div>
                 </section>
 
                 <div className="px-5 py-4 sm:px-6 sm:py-5">
-                    {selectedMode === "classic" ? <ClassicModeContent /> : <SurvivalModeContent />}
+                    {isContinuousVariant(selectedMode) ? <ContinuousModeContent /> : <ClassicModeContent />}
 
                     <details className="group mt-6">
                         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 text-sm font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
@@ -165,7 +177,7 @@ export default function PreGameMenu({ onStart, onCancel, gameMode }: PreGameMenu
                                     </li>
                                     <li className={listItemClass}>
                                         <span aria-hidden="true" className={markerClass} />
-                                        {t.game.preGame.scoring.death.streakOnly}
+                                        {selectedMode === "death" ? t.game.preGame.scoring.oneLife.streakFirst : t.game.preGame.scoring.death.streakOnly}
                                     </li>
                                     <li className={listItemClass}>
                                         <span aria-hidden="true" className={markerClass} />

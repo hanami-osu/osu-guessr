@@ -73,7 +73,7 @@ export default function GameModeCards() {
                                         alt=""
                                         fill
                                         sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
-                                        className="object-cover opacity-85 transition-[opacity,transform] duration-200 group-hover:scale-[1.015] group-hover:opacity-100"
+                                        className="object-cover opacity-85 transition-opacity duration-200 group-hover:opacity-100"
                                     />
                                 </div>
                             )}

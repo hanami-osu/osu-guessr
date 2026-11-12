@@ -550,6 +550,12 @@ export default function AdminMenu() {
                         </span>
                     )}
                     <Button asChild variant="outline">
+                        <Link href="/admin/analytics">
+                            Analytics
+                            <ExternalLink />
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline">
                         <Link href="/admin/beatmaps">
                             Browse beatmaps
                             <ExternalLink />

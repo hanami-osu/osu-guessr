@@ -16,7 +16,7 @@ export default function MultiplayerStandings({
 }) {
     if (!lobby || lobby.players.length === 0) return null;
 
-    const roundParticipants = currentRound ? lobby.players.filter((player) => !player.finished || player.round >= currentRound) : [];
+    const roundParticipants = currentRound ? lobby.players.filter((player) => !player.finished || player.submittedRound >= currentRound) : [];
     const roundComplete = Boolean(currentRound && roundParticipants.length > 0 && roundParticipants.every((player) => player.submittedRound >= currentRound));
     const visiblePoints = (player: MultiplayerLobby["players"][number]) => (!roundComplete && currentRound && player.resultRound === currentRound ? player.points - player.resultPoints : player.points);
     const players = [...lobby.players].sort((a, b) => visiblePoints(b) - visiblePoints(a) || b.round - a.round || a.joinedAt.localeCompare(b.joinedAt));

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { GameMode, type GameVariant } from "@/actions/types";
+import { GAME_VARIANTS, GameMode, type GameVariant } from "@/actions/types";
 import { getAuthSession } from "@/actions/server";
 import {
     createMultiplayerLobby,
@@ -15,6 +15,7 @@ import {
     readMultiplayerLobby,
     removeMultiplayerUserFromLobby,
     setMultiplayerUserLobby,
+    toPublicMultiplayerLobby,
     type MultiplayerLobby,
     type MultiplayerLobbySummary,
     withMultiplayerLobbyLock,
@@ -24,7 +25,7 @@ import {
 import { createMultiplayerSocketToken, getPresentMultiplayerUsers } from "@/lib/multiplayer-realtime";
 
 const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp]);
-const variantSchema = z.enum(["classic", "survival"]);
+const variantSchema = z.enum(GAME_VARIANTS);
 const lobbyCodeSchema = z
     .string()
     .trim()
@@ -165,7 +166,7 @@ export async function joinMultiplayerLobbyAction(code: string): Promise<Multipla
         }
         await setMultiplayerUserLobby(userId, normalizedCode);
         if (joinedAt) scheduleUnconnectedPlayerCleanup(normalizedCode, userId, joinedAt);
-        return joinedLobby;
+        return toPublicMultiplayerLobby(joinedLobby);
     });
 }
 
@@ -201,7 +202,7 @@ export async function updateMultiplayerLobbyAction(code: string, settings: { nam
         lobby.gameMode = parsedSettings.gameMode;
         lobby.variant = parsedSettings.variant;
         await writeMultiplayerLobby(lobby);
-        return lobby;
+        return toPublicMultiplayerLobby(lobby);
     });
 }
 
@@ -220,7 +221,7 @@ export async function kickMultiplayerPlayerAction(code: string, targetUserId: nu
         lobby.players = lobby.players.filter((player) => player.userId !== parsedTargetUserId);
         await writeMultiplayerLobby(lobby);
         await clearMultiplayerUserLobby(parsedTargetUserId, normalizedCode);
-        return lobby;
+        return toPublicMultiplayerLobby(lobby);
     });
 }
 
@@ -235,14 +236,14 @@ export async function transferMultiplayerHostAction(code: string, targetUserId: 
         if (!isMultiplayerLobbyHost(lobby, session.user.banchoId)) throw new Error("Only the host can transfer host");
         if (lobby.status !== "waiting" && lobby.status !== "starting" && lobby.status !== "finished") throw new Error("Host cannot be transferred during a game");
         if (!lobby.players.some((player) => player.userId === parsedTargetUserId)) throw new Error("Player not found in lobby");
-        if (parsedTargetUserId === lobby.hostId) return lobby;
+        if (parsedTargetUserId === lobby.hostId) return toPublicMultiplayerLobby(lobby);
 
         if (!(await getPresentMultiplayerUsers(normalizedCode)).includes(parsedTargetUserId)) throw new Error("The new host must be connected");
         cancelMultiplayerCountdown(lobby, "Host changed. Start cancelled.");
         lobby.players.find((player) => player.userId === lobby.hostId)!.ready = false;
         lobby.hostId = parsedTargetUserId;
         await writeMultiplayerLobby(lobby);
-        return lobby;
+        return toPublicMultiplayerLobby(lobby);
     });
 }
 
@@ -263,7 +264,7 @@ export async function startMultiplayerLobbyAction(code: string): Promise<Multipl
         const lobby = await readMultiplayerLobby(normalizedCode);
         if (!lobby) throw new Error("Lobby not found");
         if (!isMultiplayerLobbyHost(lobby, session.user.banchoId)) throw new Error("Only a host can start the lobby");
-        if (lobby.status !== "waiting") return lobby;
+        if (lobby.status !== "waiting") return toPublicMultiplayerLobby(lobby);
         if (lobby.players.length < 2) throw new Error("At least two players are required");
         const present = new Set(await getPresentMultiplayerUsers(normalizedCode));
         if (lobby.players.some((player) => !present.has(player.userId))) throw new Error("Waiting for all players to connect");
@@ -273,7 +274,7 @@ export async function startMultiplayerLobbyAction(code: string): Promise<Multipl
         lobby.matchId = crypto.randomUUID();
         lobby.notice = null;
         await writeMultiplayerLobby(lobby);
-        return lobby;
+        return toPublicMultiplayerLobby(lobby);
     });
 }
 
@@ -292,7 +293,7 @@ export async function setMultiplayerReadyAction(code: string, ready: boolean, se
         player.ready = parsedReady;
         if (!parsedReady) cancelMultiplayerCountdown(lobby, `${player.username} is not ready. Start cancelled.`);
         await writeMultiplayerLobby(lobby);
-        return lobby;
+        return toPublicMultiplayerLobby(lobby);
     });
 }
 
@@ -304,7 +305,7 @@ export async function cancelMultiplayerStartAction(code: string): Promise<Multip
         if (!lobby || lobby.hostId !== session.user.banchoId) throw new Error("Only the host can cancel the start");
         cancelMultiplayerCountdown(lobby, "The host cancelled the start.");
         await writeMultiplayerLobby(lobby);
-        return lobby;
+        return toPublicMultiplayerLobby(lobby);
     });
 }
 
@@ -337,6 +338,6 @@ export async function resetMultiplayerLobbyAction(code: string): Promise<Multipl
             completedMatch: false,
         }));
         await writeMultiplayerLobby(lobby);
-        return lobby;
+        return toPublicMultiplayerLobby(lobby);
     });
 }

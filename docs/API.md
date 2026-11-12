@@ -53,11 +53,12 @@ GET /api/users/{userId}
             globalRank?: {
                 classic?: number;
                 survival?: number;
+                death?: number;
             };
             modeRanks: {
-                background: { classic?: number; survival?: number };
-                audio: { classic?: number; survival?: number };
-                skin: { classic?: number; survival?: number };
+                background: { classic?: number; survival?: number; death?: number };
+                audio: { classic?: number; survival?: number; death?: number };
+                skin: { classic?: number; survival?: number; death?: number };
             };
         };
     };
@@ -75,7 +76,7 @@ GET /api/users/{userId}/games
 Query parameters:
 
 - `mode` (optional): `background`, `audio`, or `skin`.
-- `variant` (optional): `classic`, `survival`, or legacy `death`; defaults to `classic`.
+- `variant` (optional): `classic`, `survival`, or `death`; defaults to `classic`.
 - `limit` (optional): integer from 1 to 100; defaults to 20.
 - `offset` (optional): non-negative integer; defaults to 0.
 
@@ -111,7 +112,7 @@ GET /api/users/{userId}/stats
 Query parameters:
 
 - `mode` (optional): `background`, `audio`, or `skin`.
-- `variant` (optional): `classic`, `survival`, or legacy `death`.
+- `variant` (optional): `classic`, `survival`, or `death`.
 
 ```typescript
 {
@@ -173,7 +174,7 @@ GET /api/games/leaderboard
 Query parameters:
 
 - `mode` (optional): `background`, `audio`, or `skin`; defaults to `background`.
-- `variant` (optional): `classic`, `survival`, or legacy `death`; defaults to `classic`.
+- `variant` (optional): `classic`, `survival`, or `death`; defaults to `classic`.
 - `limit` (optional): integer from 1 to 100; defaults to 100.
 
 ```typescript
@@ -210,7 +211,7 @@ GET /api/stats
 
 Query parameters:
 
-- `variant` (optional): `classic`, `survival`, or legacy `death`; defaults to `classic`.
+- `variant` (optional): `classic`, `survival`, or `death`; defaults to `classic`.
 
 ```typescript
 {

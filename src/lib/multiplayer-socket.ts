@@ -18,12 +18,16 @@ type PendingRequest = {
     reject(reason: Error): void;
 };
 
+// The server closes with 1008 when the lobby is gone or the user is not a member, so retrying cannot succeed.
+const SOCKET_REJECTED_CODE = 1008;
+const LOBBY_UNAVAILABLE_MESSAGE = "This lobby is no longer available";
+
 function getRoundState(lobby: MultiplayerLobby | null, userId: number | null, round: number | undefined): MultiplayerRoundState | null {
     if (!lobby || !userId || round === undefined) return null;
     const player = lobby.players.find((item) => item.userId === userId);
     if (!player) return null;
 
-    const participants = lobby.players.filter((item) => !item.finished || item.round >= round);
+    const participants = lobby.players.filter((item) => !item.finished || item.submittedRound >= round);
     const submitted = player.submittedRound >= round;
     const submittedCount = participants.filter((item) => item.submittedRound >= round).length;
     const readyCount = participants.filter((item) => item.finished || item.readyRound >= round).length;
@@ -42,6 +46,7 @@ export function useMultiplayerSocket(code?: string, round?: number, enabled: boo
     const [unavailable, setUnavailable] = useState(false);
     const socketRef = useRef<WebSocket | null>(null);
     const pendingRequestsRef = useRef(new Map<string, PendingRequest>());
+    const unavailableRef = useRef(false);
 
     useEffect(() => {
         if (!code || !enabled) {
@@ -54,6 +59,7 @@ export function useMultiplayerSocket(code?: string, round?: number, enabled: boo
 
         let active = true;
         let reconnectTimer: number | null = null;
+        unavailableRef.current = false;
 
         const connect = async () => {
             try {
@@ -106,14 +112,21 @@ export function useMultiplayerSocket(code?: string, round?: number, enabled: boo
                         setError("Invalid multiplayer update");
                     }
                 };
-                socket.onclose = () => {
+                socket.onclose = (event) => {
                     if (!active) return;
                     setConnected(false);
                     if (socketRef.current === socket) socketRef.current = null;
+                    const rejected = event.code === SOCKET_REJECTED_CODE;
                     for (const [id, request] of pendingRequestsRef.current) {
-                        if (!request.sent) continue;
+                        if (!request.sent && !rejected) continue;
                         pendingRequestsRef.current.delete(id);
-                        request.reject(new Error("Connection closed"));
+                        request.reject(new Error(rejected ? LOBBY_UNAVAILABLE_MESSAGE : "Connection closed"));
+                    }
+                    if (rejected) {
+                        unavailableRef.current = true;
+                        setUnavailable(true);
+                        setError(LOBBY_UNAVAILABLE_MESSAGE);
+                        return;
                     }
                     reconnectTimer = window.setTimeout(() => void connect(), 1000);
                 };
@@ -140,6 +153,7 @@ export function useMultiplayerSocket(code?: string, round?: number, enabled: boo
     const request = useCallback(
         function request<T>(action: MultiplayerRpcAction, payload: Record<string, unknown>): Promise<T> {
             if (!code || !enabled) return Promise.reject(new Error("Multiplayer connection is unavailable"));
+            if (unavailableRef.current) return Promise.reject(new Error(LOBBY_UNAVAILABLE_MESSAGE));
 
             const id = crypto.randomUUID();
             const message = stringifyMultiplayerMessage({ type: "rpc", id, action, payload });

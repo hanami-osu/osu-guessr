@@ -1,6 +1,6 @@
 "use server";
 
-import { GameVariant } from "@/app/games/config";
+import { GAME_VARIANTS, GameVariant } from "@/app/games/config";
 import { query } from "@/lib/database/database";
 import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
@@ -11,8 +11,7 @@ import { z } from "zod";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
 
 const gameModeSchema = z.nativeEnum(GameMode);
-const gameVariantSchema = z.enum(["classic", "survival"]);
-const currentGameVariants = ["classic", "survival"] as const;
+const gameVariantSchema = z.enum(GAME_VARIANTS);
 const searchSchema = z.object({
     term: z.string().min(2).max(250),
     limit: z.number().min(1).max(100).default(10),
@@ -32,21 +31,6 @@ const profileBannerSchema = z
             return false;
         }
     }, "Banner must be a valid HTTPS image URL");
-
-function getProfileHistoryVariantWhere(variant: GameVariant) {
-    if (variant !== "survival") return { variant };
-
-    return {
-        OR: [
-            { variant: "survival" as const },
-            {
-                variant: "death" as const,
-                rulesetVersion: 0,
-                ppVersion: 0,
-            },
-        ],
-    };
-}
 
 type UserRow = Awaited<ReturnType<typeof prisma.user.findFirstOrThrow>>;
 type AchievementRow = Awaited<ReturnType<typeof prisma.userAchievement.findFirstOrThrow>>;
@@ -186,8 +170,8 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
     });
     const achievements = achievementRows.map(mapAchievement);
     const badgesByUser = await getBadgesForUsers([banchoId]);
-    const [classicGlobalRank, survivalGlobalRank] = await Promise.all([getGlobalRank(banchoId, "classic"), getGlobalRank(banchoId, "survival")]);
-    const modeRanks: { [key in GameMode]: { classic?: number; survival?: number } } = {
+    const globalRanks = await Promise.all(GAME_VARIANTS.map((variant) => getGlobalRank(banchoId, variant)));
+    const modeRanks: NonNullable<UserWithStats["ranks"]>["modeRanks"] = {
         [GameMode.Background]: {},
         [GameMode.Audio]: {},
         [GameMode.Skin]: {},
@@ -196,7 +180,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
 
     await Promise.all(
         (Object.keys(modeRanks) as GameMode[]).flatMap((mode) =>
-            currentGameVariants.map(async (variant) => {
+            GAME_VARIANTS.map(async (variant) => {
                 const achievement = achievementRows.find((row) => row.gameMode === mode && row.variant === variant);
                 if (!achievement || achievement.gamesPlayed === 0) return;
                 const rank = await prisma.userAchievement.count({
@@ -217,10 +201,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
         ...mapUser(userRow, badgesByUser.get(banchoId) ?? []),
         achievements,
         ranks: {
-            globalRank: {
-                classic: hasPlayedGame(achievements, "classic") ? classicGlobalRank : undefined,
-                survival: hasPlayedGame(achievements, "survival") ? survivalGlobalRank : undefined,
-            },
+            globalRank: Object.fromEntries(GAME_VARIANTS.map((variant, index) => [variant, hasPlayedGame(achievements, variant) ? globalRanks[index] : undefined])),
             modeRanks,
         },
     };
@@ -251,7 +232,7 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
     const rows = await prisma.game.findMany({
         where: {
             userId: banchoId,
-            ...getProfileHistoryVariantWhere(validatedVariant),
+            variant: validatedVariant,
             ranked: true,
             ...(endedAfter ? { endedAt: { gte: endedAfter } } : {}),
             ...(validatedMode ? { gameMode: validatedMode } : {}),
@@ -268,7 +249,7 @@ export async function getUserGamesCountAction(banchoId: number, gameMode?: GameM
     return prisma.game.count({
         where: {
             userId: banchoId,
-            ...getProfileHistoryVariantWhere(validatedVariant),
+            variant: validatedVariant,
             ranked: true,
             ...(validatedMode ? { gameMode: validatedMode } : {}),
         },
@@ -282,7 +263,7 @@ export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode:
         where: {
             userId: banchoId,
             gameMode: validatedMode,
-            ...getProfileHistoryVariantWhere(validatedVariant),
+            variant: validatedVariant,
             ranked: true,
         },
         _count: { _all: true },
@@ -356,7 +337,7 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
 
     const profilePpByUser = new Map<number, number>();
     for (const [userId, runs] of topRunsByUser) {
-        profilePpByUser.set(userId, calculateProfilePp(runs));
+        profilePpByUser.set(userId, calculateProfilePp(runs, validated.variant));
     }
 
     const events = await prisma.game.findMany({
@@ -393,7 +374,7 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
                 runs.sort((a, b) => b - a);
                 if (runs.length > 100) runs.length = 100;
                 topRunsByUser.set(event.userId, runs);
-                profilePpByUser.set(event.userId, calculateProfilePp(runs));
+                profilePpByUser.set(event.userId, calculateProfilePp(runs, validated.variant));
             }
 
             eventIndex += 1;
@@ -419,7 +400,7 @@ export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMod
     const rows = await prisma.game.findMany({
         where: {
             userId: banchoId,
-            ...getProfileHistoryVariantWhere(validated.variant),
+            variant: validated.variant,
             ranked: true,
             ...(validatedMode ? { gameMode: validatedMode } : {}),
         },

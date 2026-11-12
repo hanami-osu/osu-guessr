@@ -47,6 +47,7 @@ export interface ScorePpPairSnapshot {
     left: ScorePpScoreSnapshot;
     right: ScorePpScoreSnapshot;
     ppGap: number;
+    difficultySnapshot?: number;
 }
 
 export interface ScorePpPairCandidate {
@@ -99,6 +100,7 @@ export interface ScorePpRunState {
     active: boolean;
     terminal: boolean;
     saved: boolean;
+    submitted: boolean;
     round: number;
     pair: ScorePpPublicPair | null;
     deadlineAt: number | null;
@@ -109,3 +111,5 @@ export interface ScorePpRunState {
     mistakes: number;
     runPp?: number;
 }
+
+export type ScorePpRunEndResult = number | null | { pending: true };

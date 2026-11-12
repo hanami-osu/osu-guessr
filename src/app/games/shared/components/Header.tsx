@@ -1,4 +1,4 @@
-import { ROUND_TIME, SURVIVAL_LIVES } from "../../config";
+import { ROUND_TIME, getVariantLives } from "../../config";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Heart, HeartCrack } from "lucide-react";
@@ -15,6 +15,7 @@ interface GameHeaderProps {
     mistakes?: number;
     lifeCount?: number;
     timerDuration?: number;
+    gameOver?: boolean;
 }
 
 export default function GameHeader({
@@ -27,8 +28,9 @@ export default function GameHeader({
     gameVariant,
     maxStreak = 0,
     mistakes = 0,
-    lifeCount = SURVIVAL_LIVES,
+    lifeCount = getVariantLives(gameVariant),
     timerDuration = ROUND_TIME,
+    gameOver = false,
 }: GameHeaderProps) {
     const { t, locale } = useTranslationsContext();
     const statClass = "min-w-0 border-l border-border/60 pl-4 first:border-l-0 first:pl-0 sm:pl-6 pr-4 sm:pr-6";
@@ -39,14 +41,20 @@ export default function GameHeader({
             <div className="flex items-center justify-between gap-4">
                 <div>
                     <div className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {gameVariant === "classic" ? t.game.preGame.modes.classic.title : t.game.preGame.modes.death.title}
+                        {gameVariant === "classic" ? t.game.preGame.modes.classic.title : gameVariant === "survival" ? t.game.preGame.modes.death.title : t.game.preGame.modes.oneLife.title}
                     </div>
                     <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">{t.game.preGame.title[mode as keyof typeof t.game.preGame.title]}</h1>
                 </div>
                 <div className="shrink-0 text-right">
-                    <div className={`font-mono text-3xl font-semibold tabular-nums sm:text-4xl lg:text-5xl ${timeLeft < 10 ? "text-destructive" : "text-foreground"}`}>
-                        {t.game.header.timeLeft.replace("{seconds}", timeLeft.toString())}
-                    </div>
+                    {gameOver ? (
+                        <div role="status" className="font-display text-2xl font-semibold tracking-tight text-destructive sm:text-3xl lg:text-4xl">
+                            {t.game.header.death.lives.gameOver}
+                        </div>
+                    ) : (
+                        <div className={`font-mono text-3xl font-semibold tabular-nums sm:text-4xl lg:text-5xl ${timeLeft < 10 ? "text-destructive" : "text-foreground"}`}>
+                            {t.game.header.timeLeft.replace("{seconds}", timeLeft.toString())}
+                        </div>
+                    )}
                 </div>
             </div>
 

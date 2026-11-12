@@ -71,7 +71,7 @@ export async function rebuildUserAchievementCache(): Promise<void> {
                     highestStreak: group._max.streak ?? 0,
                     highestScore: group._max.points ?? 0,
                     bestRunPp: group._max.pp ?? 0,
-                    profilePp: calculateProfilePp(runPpByAchievement.get(achievementKey(group)) ?? []),
+                    profilePp: calculateProfilePp(runPpByAchievement.get(achievementKey(group)) ?? [], group.variant),
                     lastPlayed: group._max.endedAt ?? new Date(0),
                 })),
             });

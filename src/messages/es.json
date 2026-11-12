@@ -23,7 +23,7 @@
             },
             "gamesPlayed": {
                 "title": "Partidas clasificadas",
-                "description": "Partidas clasificadas registradas de Clásico y Supervivencia"
+                "description": "Partidas clasificadas registradas de Clásico, Supervivencia y Muerte"
             },
             "profilePp": {
                 "title": "pp más alto",
@@ -39,7 +39,6 @@
         },
         "announcements": {
             "title": "Últimos anuncios",
-            "latestLabel": "Último anuncio",
             "previous": "Anuncios anteriores:",
             "viewAll": "Ver todos los anuncios"
         }
@@ -81,7 +80,7 @@
             "steps": {
                 "1": {
                     "title": "Elige un modo",
-                    "description": "Elige fondos, audio o skins, y después Clásico o Supervivencia."
+                    "description": "Elige fondos, audio o skins, y después Clásico, Supervivencia o Muerte."
                 },
                 "2": {
                     "title": "Empieza a adivinar",
@@ -102,13 +101,13 @@
                 "skipPenalty": "Respuesta incorrecta, omisión o tiempo agotado: -{penalty} puntos"
             },
             "gameInfo": {
-                "length": "Clásico: {rounds} rondas. Supervivencia: continúa hasta perder las {lives} vidas.",
+                "length": "Clásico: {rounds} rondas. Supervivencia: continúa hasta perder las {lives} vidas. Muerte: un solo error termina la partida.",
                 "time": "Tiempo por ronda: {seconds} segundos"
             },
             "pp": {
                 "title": "pp",
-                "description": "Las partidas clasificadas otorgan pp según la precisión por ronda, la velocidad de respuesta, la dificultad del contenido y la consistencia. Supervivencia también escala con el número de rondas acertadas.",
-                "profile": "El pp del perfil para cada modo de juego y variante combina tus 100 mejores partidas clasificadas, y cada partida inferior pesa un 95 % de la anterior. Las clasificaciones usan ese pp."
+                "description": "Las partidas clasificadas otorgan pp según la precisión por ronda, la velocidad de respuesta, la dificultad del contenido y la consistencia. Supervivencia también escala con el número de rondas acertadas. Muerte se ordena primero por racha; la velocidad, la consistencia y la dificultad sirven de desempate.",
+                "profile": "El pp del perfil para cada modo de juego y variante combina tus 100 mejores partidas clasificadas, y cada partida inferior pesa un 95 % de la anterior. Las clasificaciones usan ese pp. Muerte es la excepción: solo cuenta tu mejor partida."
             }
         },
         "features": {
@@ -234,6 +233,10 @@
                     "continuous": "Continúa hasta perder todas tus vidas; los elementos fallados pueden volver a aparecer",
                     "time": "{seconds} segundos por ronda",
                     "lives": "Cada respuesta incorrecta, omisión o tiempo agotado cuesta una de tus {count} vidas"
+                },
+                "oneLife": {
+                    "continuous": "Continúa hasta tu primer error",
+                    "lives": "Una respuesta incorrecta, omisión o tiempo agotado termina la partida"
                 }
             },
             "scoring": {
@@ -249,6 +252,9 @@
                     "score": "La puntuación arcade usa la misma fórmula de puntos que el modo clásico",
                     "streakOnly": "El pp de Supervivencia también premia acertar más rondas antes de que termine la partida",
                     "compete": "La clasificación usa el pp de este modo de juego y variante"
+                },
+                "oneLife": {
+                    "streakFirst": "El pp de Muerte depende primero de la racha; la velocidad, la consistencia y la dificultad solo desempatan rachas iguales, y solo cuenta tu mejor partida"
                 }
             },
             "modes": {
@@ -259,6 +265,10 @@
                 "death": {
                     "title": "Modo supervivencia",
                     "description": "{count} vidas"
+                },
+                "oneLife": {
+                    "title": "Modo muerte",
+                    "description": "1 vida"
                 }
             },
             "warning": {
@@ -289,7 +299,7 @@
         "input": {
             "placeholder": "Título de la canción...",
             "skinPlaceholder": "Nombre de la skin...",
-            "skipDeath": "Saltar",
+            "giveUp": "Rendirse",
             "title": "Introduce tu suposición:",
             "yourGuess": "Tu respuesta:",
             "submit": "Enviar",
@@ -335,7 +345,8 @@
                 "totalCorrect": "Aciertos totales",
                 "averageTime": "Tiempo medio de respuesta",
                 "diedMessage": "Perdiste tus {count} vidas.",
-                "livesRemaining": "Vidas restantes"
+                "livesRemaining": "Vidas restantes",
+                "diedMessageOneLife": "Un solo error terminó la partida."
             },
             "labels": {
                 "averageTime": "Tiempo medio de respuesta",
@@ -453,7 +464,8 @@
             },
             "variant": {
                 "classic": "Modo clásico",
-                "survival": "Modo supervivencia"
+                "survival": "Modo supervivencia",
+                "death": "Modo muerte"
             }
         },
         "table": {
@@ -590,7 +602,7 @@
             "description": "Gestiona tu cuenta de Hanami o cierra esta sesión de osu!guessr.",
             "hanami": {
                 "title": "Cuenta de Hanami",
-                "description": "Gestiona tus cuentas conectadas y tu perfil de Hanami.",
+                "description": "Las cuentas de osu!guessr funcionan con Hanami, el inicio de sesión compartido de nuestros proyectos de osu!. Gestiona allí tus cuentas conectadas y tu perfil.",
                 "action": "Abrir Hanami"
             },
             "signOut": {
@@ -777,7 +789,8 @@
         "auth": {
             "required": {
                 "title": "Inicio de sesión obligatorio",
-                "description": "Hanami gestiona el inicio de sesión en osu!guessr. Si es tu primera vez, se creará una cuenta de Hanami automáticamente. Después de iniciar sesión, volverás a osu!guessr.",
+                "description": "Inicia sesión con tu cuenta de osu! para jugar. Después volverás directamente a osu!guessr.",
+                "notice": "Las cuentas las proporciona Hanami. Al iniciar sesión aceptas:",
                 "noAccount": "¿No tienes una cuenta de {osu_base}? Crea una aquí"
             }
         }

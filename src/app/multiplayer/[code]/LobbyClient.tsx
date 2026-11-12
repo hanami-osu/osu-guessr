@@ -17,7 +17,7 @@ import {
     updateMultiplayerLobbyAction,
 } from "@/actions/multiplayer-server";
 import { GameMode, type GameVariant } from "@/actions/types";
-import { GAME_MODES } from "@/app/games/config";
+import { GAME_MODES, GAME_VARIANTS, VARIANT_LABELS } from "@/app/games/config";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -28,10 +28,6 @@ import type { MultiplayerLobby, MultiplayerPlayer } from "@/lib/multiplayer";
 import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
 
 type LobbyAction = "start" | "cancel-start" | "ready" | "room-settings" | "reset" | "leave" | "copy" | `kick:${number}` | `host:${number}`;
-
-function variantLabel(variant: GameVariant): string {
-    return variant === "survival" ? "Survival" : "Classic";
-}
 
 function gameUrl(lobby: MultiplayerLobby): string {
     const mode = GAME_MODES.find((item) => item.id === lobby.gameMode);
@@ -446,8 +442,11 @@ export default function LobbyClient({ code, userId, initialLobby }: { code: stri
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="classic">Classic</SelectItem>
-                                                        <SelectItem value="survival">Survival</SelectItem>
+                                                        {GAME_VARIANTS.map((value) => (
+                                                            <SelectItem key={value} value={value}>
+                                                                {VARIANT_LABELS[value]}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </label>
@@ -708,7 +707,7 @@ export default function LobbyClient({ code, userId, initialLobby }: { code: stri
                         <div className="border-b border-border/60 pb-8">
                             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{isFinished ? "Match complete" : "Next match"}</div>
                             <h2 className="mt-3 text-3xl font-semibold tracking-tight">{GAME_MODES.find((mode) => mode.id === lobby.gameMode)?.label ?? lobby.gameMode}</h2>
-                            <p className="mt-2 text-lg text-muted-foreground">{variantLabel(lobby.variant)}</p>
+                            <p className="mt-2 text-lg text-muted-foreground">{VARIANT_LABELS[lobby.variant]}</p>
                         </div>
 
                         <div className="border-b border-border/60 py-8">

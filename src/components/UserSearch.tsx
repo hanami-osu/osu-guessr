@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,7 +21,7 @@ interface SearchResult {
 
 const SEARCH_RESULT_LIMIT = 10;
 
-export default function UserSearch() {
+export default function UserSearch({ className }: { className?: string }) {
     const { t } = useTranslationsContext();
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState("");
@@ -98,7 +99,7 @@ export default function UserSearch() {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto gap-2">
+                <Button variant="outline" className={cn("w-full sm:w-auto gap-2", className)}>
                     <Search className="h-4 w-4" />
                     <span className="text-muted-foreground inline">{t.user.search.title}</span>
                     <kbd className="hidden sm:inline-flex pointer-events-none h-5 select-none items-center gap-1 rounded-sm border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-2">

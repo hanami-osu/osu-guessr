@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/database/prisma";
 import redisClient from "@/lib/redis";
 import { z } from "zod";
-import { MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES, type GameVariant } from "@/app/games/config";
+import { GAME_VARIANTS, MAX_ROUNDS, ROUND_TIME, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
 import { getRandomAudio, getRandomBackground, getRandomSkin } from "@/lib/game/mapsets";
 import { GameMode, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "@/actions/types";
 import { getMediaData } from "@/actions/media";
@@ -10,7 +10,7 @@ import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { isNoGameContentError } from "@/lib/game/content-errors";
 import { canPersistGameResult } from "@/lib/game/completion";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
-import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp, type ContentPerformanceStats } from "@/lib/game/performance-points";
+import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp } from "@/lib/game/performance-points";
 import { Prisma } from "@/generated/prisma/client";
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer";
@@ -43,11 +43,7 @@ const gameSchema = z.object({
         .transform((g) => (typeof g === "string" ? g.trim() : g)),
 });
 const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin]);
-const gameVariantSchema = z.enum(["classic", "survival"]);
-
-type ContentStatRow = ContentPerformanceStats & {
-    item_id: number;
-};
+const gameVariantSchema = z.enum(GAME_VARIANTS);
 
 function toPrismaJson(value: Record<string, unknown> | null): Prisma.InputJsonValue | undefined {
     return value ? (JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue) : undefined;
@@ -63,6 +59,7 @@ async function releaseSessionLock(lock: Parameters<typeof releaseGameSessionLock
 
 type GuessRoundItem = {
     data: MapsetDataWithTags | SkinData;
+    difficultySnapshot?: number;
     backgroundData?: string;
     audioData?: string;
     skinData?: string;
@@ -88,7 +85,7 @@ async function getGuessRoundItem(gameMode: GameMode, sessionId: string, lobbyCod
     if (!multiplayerMatchId) throw new Error("Game session belongs to a previous match");
     const roundNamespace = `${normalizeLobbyCode(lobbyCode)}:${multiplayerMatchId}`;
     const selectionId = `multiplayer_${normalizeLobbyCode(roundNamespace)}`;
-    const data = await getOrCreateMultiplayerRound<MapsetDataWithTags | SkinData>(roundNamespace, round, async () => {
+    const data = await getOrCreateMultiplayerRound<(MapsetDataWithTags | SkinData) & { difficulty_snapshot?: number }>(roundNamespace, round, async () => {
         let selected: MapsetDataWithTags | SkinData;
         if (gameMode === GameMode.Audio) selected = (await getRandomAudio(selectionId)).data;
         else if (gameMode === GameMode.Background) selected = (await getRandomBackground(selectionId)).data;
@@ -100,17 +97,17 @@ async function getGuessRoundItem(gameMode: GameMode, sessionId: string, lobbyCod
         const key = `session_items:${selectionId}:${itemType}`;
         await redisClient.sAdd(key, itemId.toString());
         await redisClient.expire(key, 3600);
-        return selected;
+        return { ...selected, difficulty_snapshot: await getRoundDifficultySnapshot(gameMode, itemType, itemId) };
     });
 
     if (gameMode === GameMode.Audio && "audio_filename" in data) {
-        return { data, audioData: await getMediaData(GameMode.Audio, data.audio_filename) };
+        return { data, audioData: await getMediaData(GameMode.Audio, data.audio_filename), difficultySnapshot: data.difficulty_snapshot };
     }
     if (gameMode === GameMode.Background && "image_filename" in data) {
-        return { data, backgroundData: await getMediaData(GameMode.Background, data.image_filename) };
+        return { data, backgroundData: await getMediaData(GameMode.Background, data.image_filename), difficultySnapshot: data.difficulty_snapshot };
     }
     if (gameMode === GameMode.Skin && "image_filename" in data) {
-        return { data, skinData: await getMediaData(GameMode.Skin, data.image_filename) };
+        return { data, skinData: await getMediaData(GameMode.Skin, data.image_filename), difficultySnapshot: data.difficulty_snapshot };
     }
     throw new Error("Multiplayer round content is invalid");
 }
@@ -128,7 +125,7 @@ async function getGameSession(sessionId: string, userId: number): Promise<Databa
 
 async function validateGameSession(sessionId: string, userId: number): Promise<DatabaseGameSession> {
     const session = await getGameSession(sessionId, userId);
-    if (!session.is_active || session.end_pending) {
+    if (!gameModeSchema.safeParse(session.game_mode).success || !session.is_active || session.end_pending) {
         throw new Error("Game session not found or expired");
     }
     return session;
@@ -143,38 +140,24 @@ function resolveEndReason(gameState: DatabaseGameSession, requestedReason?: Game
     return gameState.variant === "classic" ? "completed" : "quit";
 }
 
-async function resolveRoundDifficulties(gameState: DatabaseGameSession, rounds: PersistedGameRound[]): Promise<PersistedGameRound[]> {
-    if (rounds.length === 0) return rounds;
-
-    const itemType = rounds[0].item_type;
-    const itemIds = [...new Set(rounds.map((round) => round.item_id))];
-    const rows = await prisma.contentStat.findMany({
+export async function getRoundDifficultySnapshot(
+    gameMode: GameMode,
+    itemType: PersistedGameRound["item_type"],
+    itemId: number,
+    rulesetVersion = CURRENT_RULESET_VERSION,
+    ppVersion = CURRENT_PP_VERSION,
+): Promise<number> {
+    const stats = await prisma.contentStat.findUnique({
         where: {
-            gameMode: gameState.game_mode,
-            itemType,
-            rulesetVersion: gameState.ruleset_version ?? 0,
-            ppVersion: gameState.pp_version ?? 0,
-            itemId: { in: itemIds },
+            gameMode_itemType_itemId_rulesetVersion_ppVersion: { gameMode, itemType, itemId, rulesetVersion, ppVersion },
         },
         select: {
-            itemId: true,
             appearances: true,
             correctCount: true,
             totalResponseTimeMs: true,
         },
     });
-    const stats: ContentStatRow[] = rows.map((row) => ({
-        item_id: row.itemId,
-        appearances: Number(row.appearances),
-        correct_count: Number(row.correctCount),
-        total_response_time_ms: Number(row.totalResponseTimeMs),
-    }));
-    const contentStats = new Map(stats.map((row) => [row.item_id, row]));
-
-    return rounds.map((round) => ({
-        ...round,
-        difficulty_snapshot: round.difficulty_snapshot ?? calculateEmpiricalDifficulty(contentStats.get(round.item_id)),
-    }));
+    return calculateEmpiricalDifficulty(stats ? { appearances: Number(stats.appearances), correct_count: Number(stats.correctCount), total_response_time_ms: Number(stats.totalResponseTimeMs) } : undefined);
 }
 
 export async function finishGameSession(sessionId: string, userId: number, requestedReason?: GameEndReason): Promise<number | null> {
@@ -212,8 +195,7 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     }
 
     const points = gameState.total_points;
-    const recordedRounds = gameState.round_history ?? [];
-    const roundHistory = await resolveRoundDifficulties(gameState, recordedRounds);
+    const roundHistory = (gameState.round_history ?? []).map((round) => ({ ...round, difficulty_snapshot: round.difficulty_snapshot ?? 1 }));
     const skipCount = roundHistory.filter((round) => round.result_type === "skip").length;
     const timeoutCount = roundHistory.filter((round) => round.result_type === "timeout").length;
     const totalResponseTimeMs = gameState.total_response_time_ms ?? roundHistory.reduce((total, round) => total + round.response_time_ms, 0);
@@ -364,7 +346,10 @@ export async function finishGameSession(sessionId: string, userId: number, reque
                         take: 100,
                     }),
                 ]);
-                const profilePp = calculateProfilePp(topRuns.map(({ pp }) => Number(pp)));
+                const profilePp = calculateProfilePp(
+                    topRuns.map(({ pp }) => Number(pp)),
+                    gameState.variant,
+                );
 
                 await tx.userAchievement.upsert({
                     where: { userId_gameMode_variant_rulesetVersion_ppVersion: achievementKey },
@@ -434,19 +419,21 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
     variant = gameVariantSchema.parse(variant);
     const lobbyCode = multiplayerLobbyCode ? normalizeLobbyCode(multiplayerLobbyCode) : undefined;
     const lobby = lobbyCode ? await requireActiveMultiplayerLobby(lobbyCode, userId, gameMode, variant) : null;
-    const existingSessionId = lobby?.players.find((player) => player.userId === userId && !player.finished)?.scoreSessionId;
-    if (existingSessionId) {
+    const lobbyPlayer = lobby?.players.find((player) => player.userId === userId);
+    if (lobbyPlayer?.scoreSessionId) {
         try {
-            const existingState = await getGameStateForUser(userId, existingSessionId);
+            const existingState = await getGameStateForUser(userId, lobbyPlayer.scoreSessionId);
             if (existingState.gameStatus === "active") return existingState;
         } catch {}
     }
+    if (lobbyPlayer?.finished) throw new Error("You have already finished this match");
     const sessionId = crypto.randomUUID();
 
     const item = await getGuessRoundItem(gameMode, sessionId, lobbyCode, 1, lobby?.matchId);
 
     const itemId = gameMode === GameMode.Skin ? (item.data as SkinData).id : (item.data as MapsetDataWithTags).mapset_id;
     const itemType = gameMode === GameMode.Skin ? "skin" : "mapset";
+    const difficultySnapshot = item.difficultySnapshot ?? (await getRoundDifficultySnapshot(gameMode, itemType, itemId));
 
     await Promise.all([deleteGameSession(sessionId), redisClient.del(`session_items:${sessionId}:mapset`), redisClient.del(`session_items:${sessionId}:skin`)]);
 
@@ -466,6 +453,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         highest_streak: 0,
         current_round: 1,
         current_item_id: itemId,
+        current_difficulty_snapshot: difficultySnapshot,
         time_left: ROUND_TIME,
         last_guess: null,
         last_guess_correct: null,
@@ -478,7 +466,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         run_type: "standard",
         challenge_id: null,
         seed: null,
-        config_snapshot: null,
+        config_snapshot: lobby ? { multiplayer: { matchId: lobby.matchId } } : null,
         ranked: true,
         ruleset_version: CURRENT_RULESET_VERSION,
         pp_version: CURRENT_PP_VERSION,
@@ -551,8 +539,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
             throw new Error("You must make a guess, skip, or let the timer run out before advancing to the next round");
         }
 
-        const isSurvivalMode = gameState.variant === "survival";
-        const isContinuousMode = isSurvivalMode;
+        const isContinuousMode = isContinuousVariant(gameState.variant);
 
         if (!isContinuousMode && gameState.current_round > MAX_ROUNDS) {
             throw new Error("Game is complete");
@@ -614,15 +601,14 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
 
         const currentAnswer = gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).name : (currentItem as MapsetDataWithTags).title;
 
-        const isCorrect = isGuess ? checkGuess(effectiveGuess || "", currentAnswer, guessingDifficulty) : false;
+        const isCorrect = isGuess && !isSkipped ? checkGuess(effectiveGuess || "", currentAnswer, guessingDifficulty) : false;
         const points = isNextRound ? 0 : calculateArcadeScore(isCorrect, timeLeft, gameState.current_streak);
         const madeMistake = !isNextRound && (isSkipped || isTimeout || (!isCorrect && isGuess));
         const existingMistakes = (gameState.round_history ?? []).filter((round) => !round.correct).length;
         const mistakes = existingMistakes + (madeMistake ? 1 : 0);
-        const survivalFailed = isSurvivalMode && mistakes >= SURVIVAL_LIVES;
-        const runFailed = survivalFailed;
+        const runFailed = isContinuousMode && mistakes >= getVariantLives(gameState.variant);
 
-        let nextBeatmap: { data: MapsetDataWithTags | SkinData; backgroundData?: string; audioData?: string; skinData?: string } | null = null;
+        let nextBeatmap: GuessRoundItem | null = null;
 
         if (isNextRound) {
             if (gameState.multiplayer_lobby_id) {
@@ -692,7 +678,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
                   points_earned: points,
                   streak_before: gameState.current_streak,
                   streak_after: newStreak,
-                  difficulty_snapshot: null,
+                  difficulty_snapshot: gameState.current_difficulty_snapshot ?? 1,
                   content_snapshot:
                       gameState.game_mode === GameMode.Skin
                           ? { name: (currentItem as SkinData).name }
@@ -706,12 +692,23 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
                             },
               };
 
+        const nextDifficultySnapshot = nextBeatmap
+            ? (nextBeatmap.difficultySnapshot ??
+              (await getRoundDifficultySnapshot(
+                  gameState.game_mode,
+                  gameState.game_mode === GameMode.Skin ? "skin" : "mapset",
+                  "mapset_id" in nextBeatmap.data ? nextBeatmap.data.mapset_id : nextBeatmap.data.id,
+                  gameState.ruleset_version,
+                  gameState.pp_version,
+              )))
+            : (gameState.current_difficulty_snapshot ?? 1);
         const updatedGameState = {
             ...gameState,
             total_points: gameState.total_points + points,
             current_streak: newStreak,
             highest_streak: Math.max(gameState.highest_streak, isCorrect ? gameState.current_streak + 1 : gameState.highest_streak),
             current_item_id: nextBeatmap ? ("mapset_id" in nextBeatmap.data ? nextBeatmap.data.mapset_id : nextBeatmap.data.id) : gameState.current_item_id,
+            current_difficulty_snapshot: nextDifficultySnapshot,
             time_left: nextBeatmap ? ROUND_TIME : timeLeft,
             last_action_at: new Date().toISOString(),
             last_guess: isTimeout ? "TIMEOUT" : isSkipped ? "SKIPPED" : effectiveGuess,
@@ -749,7 +746,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
             ).catch((error) => console.error("Failed to update multiplayer progress:", error));
         }
 
-        if (isSurvivalMode && madeMistake && !survivalFailed) {
+        if (isContinuousMode && madeMistake && !runFailed) {
             const itemType = gameState.game_mode === GameMode.Skin ? "skin" : "mapset";
             await redisClient.sRem(`session_items:${sessionId}:${itemType}`, gameState.current_item_id.toString());
         }
@@ -814,6 +811,7 @@ export async function getGameStateForUser(userId: number, sessionId: string): Pr
     sessionId = z.string().uuid().parse(sessionId);
 
     let gameState = await getGameSession(sessionId, userId);
+    if (!gameModeSchema.safeParse(gameState.game_mode).success) throw new Error("Game session not found or expired");
     if (gameState.end_pending) {
         const lock = await acquireGameSessionLock(sessionId);
         if (!lock) throw new Error("Action in progress, please wait");
@@ -882,6 +880,8 @@ export async function endGameForUser(userId: number, sessionId: string): Promise
     if (!lock) throw new Error("Action in progress, please wait");
 
     try {
+        const gameState = await getGameSession(sessionId, userId);
+        if (!gameModeSchema.safeParse(gameState.game_mode).success) throw new Error("Game session not found or expired");
         return await finishGameSession(sessionId, userId, "quit");
     } finally {
         await releaseSessionLock(lock);

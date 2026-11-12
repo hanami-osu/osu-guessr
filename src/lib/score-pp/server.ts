@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { finishGameSession } from "@/lib/game/server";
+import { finishGameSession, getRoundDifficultySnapshot } from "@/lib/game/server";
 import { GameMode, type DatabaseGameSession, type GameRoundResult, type GameVariant, type PersistedGameRound } from "@/actions/types";
-import type { ScorePpPairSnapshot, ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunState, ScorePpScoreSnapshot } from "@/lib/score-pp/types";
+import type { ScorePpPairSnapshot, ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunEndResult, ScorePpRunState, ScorePpScoreSnapshot } from "@/lib/score-pp/types";
 import { getBeatmapMaxCombo } from "@/lib/score-pp/beatmap-max-combo";
 import { selectStoredScorePpPair } from "@/lib/score-pp/store";
 import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
-import { MAX_ROUNDS, ROUND_TIME, SURVIVAL_LIVES } from "@/app/games/config";
+import { GAME_VARIANTS, MAX_ROUNDS, ROUND_TIME, getVariantLives, isContinuousVariant } from "@/app/games/config";
 import { acquireGameSessionLock, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer";
 
@@ -21,7 +21,7 @@ const roundSchema = z.number().int().min(1).max(10_000);
 const pairIdSchema = z.number().int().positive();
 const scoreIdSchema = z.string().min(1).max(64).nullable();
 const sessionIdSchema = z.string().uuid();
-const variantSchema = z.enum(["classic", "survival"]);
+const variantSchema = z.enum(GAME_VARIANTS);
 const submissionTypeSchema = z.enum(["guess", "skip", "timeout"]);
 
 function getRoundExclusions(run: DatabaseGameSession, requested: { scoreIds: string[]; userIds: number[]; beatmapIds: number[] }) {
@@ -132,31 +132,80 @@ async function getResolution(run: DatabaseGameSession): Promise<ScorePpResolutio
         correctAnswers: run.correct_guesses,
         mistakes: getMistakes(run),
         responseTimeMs: latestRound.response_time_ms,
-        terminal: false,
+        terminal: isTerminalRound(run),
+        ...(run.pp !== undefined ? { runPp: run.pp } : {}),
     };
 }
 
-async function toRunState(run: DatabaseGameSession): Promise<ScorePpRunState> {
-    const terminal = !run.is_active && !run.end_pending;
+function isTerminalRound(run: DatabaseGameSession): boolean {
+    return (run.variant === "classic" && run.current_round >= MAX_ROUNDS) || (isContinuousVariant(run.variant) && getMistakes(run) >= getVariantLives(run.variant));
+}
+
+async function toRunState(run: DatabaseGameSession, allSubmitted = true): Promise<ScorePpRunState> {
+    const withholdingCurrentRound = run.has_guessed_current_round && !allSubmitted;
+    const previousRounds = withholdingCurrentRound ? run.round_history.filter((round) => round.round_number < run.current_round) : run.round_history;
+    const terminal = !withholdingCurrentRound && !run.is_active && !run.end_pending;
     const saved = terminal && run.pp !== undefined;
-    const pairSnapshot = run.is_active && run.current_item_id > 0 ? (run.current_score_pp_pair ?? null) : null;
+    const pairSnapshot = run.current_item_id > 0 && (run.is_active || run.has_guessed_current_round) ? (run.current_score_pp_pair ?? null) : null;
     const pair = pairSnapshot ? await toPublicPair(pairSnapshot) : null;
-    const resolution = run.is_active ? await getResolution(run) : null;
+    const resolution = run.has_guessed_current_round && !withholdingCurrentRound ? await getResolution(run) : null;
 
     return {
-        active: run.is_active && !run.end_pending,
+        active: withholdingCurrentRound || (run.is_active && !run.end_pending),
         terminal,
         saved,
+        submitted: run.has_guessed_current_round,
         round: run.current_round,
         pair,
         deadlineAt: run.is_active && !run.has_guessed_current_round && pair ? getRoundDeadline(run) : null,
         resolution,
-        points: run.total_points,
-        streak: run.current_streak,
-        maxStreak: run.highest_streak,
-        mistakes: getMistakes(run),
-        runPp: run.pp,
+        points: withholdingCurrentRound ? previousRounds.reduce((total, round) => total + round.points_earned, 0) : run.total_points,
+        streak: withholdingCurrentRound ? (previousRounds.at(-1)?.streak_after ?? 0) : run.current_streak,
+        maxStreak: withholdingCurrentRound ? Math.max(0, ...previousRounds.map((round) => round.streak_after)) : run.highest_streak,
+        mistakes: withholdingCurrentRound ? previousRounds.filter((round) => !round.correct).length : getMistakes(run),
+        ...(!withholdingCurrentRound && run.pp !== undefined ? { runPp: run.pp } : {}),
     };
+}
+
+async function isCurrentRoundRevealed(run: DatabaseGameSession, userId: number): Promise<boolean> {
+    if (!run.multiplayer_lobby_id || !run.has_guessed_current_round) return true;
+    const state = await getMultiplayerRoundState(run.multiplayer_lobby_id, userId, run.current_round);
+    return state.allSubmitted;
+}
+
+async function finishTerminalMultiplayerRuns(run: DatabaseGameSession | null): Promise<void> {
+    if (!run?.multiplayer_lobby_id || !run.has_guessed_current_round) return;
+    try {
+        const lobby = await getCurrentMultiplayerLobby(run);
+        if (!lobby || !(await isCurrentRoundRevealed(run, run.user_id))) return;
+
+        for (const player of lobby.players) {
+            if (!player.scoreSessionId) continue;
+            const lock = await acquireGameSessionLock(player.scoreSessionId);
+            if (!lock) continue;
+            try {
+                const peer = await readOwnedRun(player.scoreSessionId, player.userId);
+                if (
+                    !peer.multiplayer_lobby_id ||
+                    normalizeLobbyCode(peer.multiplayer_lobby_id) !== normalizeLobbyCode(lobby.code) ||
+                    peer.multiplayer_match_id !== lobby.matchId ||
+                    (!peer.is_active && !peer.end_pending) ||
+                    !peer.has_guessed_current_round ||
+                    !isTerminalRound(peer) ||
+                    !(await isCurrentRoundRevealed(peer, player.userId))
+                )
+                    continue;
+
+                await finishGameSession(peer.id, player.userId, isContinuousVariant(peer.variant) ? "failed" : peer.end_reason);
+            } catch (error) {
+                console.error("Failed to finalize multiplayer Score PP session:", error);
+            } finally {
+                await releaseGameSessionLock(lock);
+            }
+        }
+    } catch (error) {
+        console.error("Failed to finalize multiplayer Score PP sessions:", error);
+    }
 }
 
 async function acquireRunLock(sessionId: string): Promise<{ key: string; token: string }> {
@@ -170,13 +219,14 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
 
     const lobbyCode = multiplayerLobbyCode ? normalizeLobbyCode(multiplayerLobbyCode) : undefined;
     const lobby = lobbyCode ? await requireActiveMultiplayerLobby(lobbyCode, userId, GameMode.ScorePp, parsedVariant) : null;
-    const existingSessionId = lobby?.players.find((player) => player.userId === userId && !player.finished)?.scoreSessionId;
-    if (existingSessionId) {
+    const lobbyPlayer = lobby?.players.find((player) => player.userId === userId);
+    if (lobbyPlayer?.scoreSessionId) {
         try {
-            const existingState = await getScorePpRunStateForUser(userId, existingSessionId);
-            if (existingState.active) return existingSessionId;
+            const existingState = await getScorePpRunStateForUser(userId, lobbyPlayer.scoreSessionId);
+            if (existingState.active) return lobbyPlayer.scoreSessionId;
         } catch {}
     }
+    if (lobbyPlayer?.finished) throw new Error("You have already finished this match");
     const sessionId = crypto.randomUUID();
     const startedAt = new Date(lobby?.startAt ?? Date.now()).toISOString();
     const run: DatabaseGameSession = {
@@ -201,7 +251,7 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
         run_type: "standard",
         challenge_id: null,
         seed: null,
-        config_snapshot: null,
+        config_snapshot: lobby ? { multiplayer: { matchId: lobby.matchId } } : null,
         ranked: true,
         ruleset_version: CURRENT_RULESET_VERSION,
         pp_version: CURRENT_PP_VERSION,
@@ -245,7 +295,12 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
         }
 
         if (!run.has_guessed_current_round && run.current_item_id > 0 && run.current_round === parsedRound) {
-            const existing = run.current_score_pp_pair ?? null;
+            let existing = run.current_score_pp_pair ?? null;
+            if (existing && (run.current_difficulty_snapshot === undefined || existing.difficultySnapshot === undefined)) {
+                const difficultySnapshot = existing.difficultySnapshot ?? run.current_difficulty_snapshot ?? 1;
+                existing = { ...existing, difficultySnapshot };
+                await writeGameSession({ ...run, current_difficulty_snapshot: difficultySnapshot, current_score_pp_pair: existing });
+            }
             return {
                 pair: existing ? await toPublicPair(existing) : null,
                 deadlineAt: existing ? getRoundDeadline(run) : null,
@@ -255,8 +310,8 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
         }
 
         const exclusions = getRoundExclusions(run, parsedExclusions);
-        const selectPair = () =>
-            selectStoredScorePpPair(
+        const selectPair = async () => {
+            const pair = await selectStoredScorePpPair(
                 parsedRound,
                 {
                     pairIds: new Set(run.round_history.map((item) => item.item_id)),
@@ -266,11 +321,18 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
                 },
                 run.score_pp_batch_id,
             );
-        const pair = run.multiplayer_lobby_id
+            if (!pair) return null;
+            return {
+                ...pair,
+                difficultySnapshot: await getRoundDifficultySnapshot(GameMode.ScorePp, "score_pair", pair.id, run.ruleset_version, run.pp_version),
+            };
+        };
+        const selectedPair = run.multiplayer_lobby_id
             ? await getOrCreateMultiplayerRound<ScorePpPairSnapshot | null>(`${normalizeLobbyCode(run.multiplayer_lobby_id)}:${run.multiplayer_match_id}`, parsedRound, selectPair)
             : await selectPair();
+        const pair = selectedPair ? { ...selectedPair, difficultySnapshot: selectedPair.difficultySnapshot ?? 1 } : null;
         if (!pair) {
-            if (run.variant !== "survival") {
+            if (!isContinuousVariant(run.variant)) {
                 return { pair: null, deadlineAt: null, terminal: false, saved: false };
             }
             const runPp = await finishGameSession(parsedSessionId, userId, "content_exhausted");
@@ -295,6 +357,7 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
             last_points: null,
             has_guessed_current_round: false,
             score_pp_batch_id: run.score_pp_batch_id ?? pair.batchId,
+            current_difficulty_snapshot: pair.difficultySnapshot,
             current_score_pp_pair: pair,
         };
         await writeGameSession(nextRun);
@@ -325,28 +388,37 @@ export async function getScorePpRunStateForUser(userId: number, sessionId: strin
     const parsedSessionId = sessionIdSchema.parse(sessionId);
 
     const lock = await acquireRunLock(parsedSessionId);
+    let recoveredRun: DatabaseGameSession | null = null;
     try {
         let run = await readOwnedRun(parsedSessionId, userId);
-        if (run.end_pending) {
-            await finishGameSession(parsedSessionId, userId, run.end_reason);
+        recoveredRun = run;
+        const allSubmitted = await isCurrentRoundRevealed(run, userId);
+        if (allSubmitted && (run.end_pending || (run.is_active && run.has_guessed_current_round && isTerminalRound(run)))) {
+            await finishGameSession(parsedSessionId, userId, isContinuousVariant(run.variant) && isTerminalRound(run) ? "failed" : run.end_reason);
             run = await readOwnedRun(parsedSessionId, userId);
         }
-        return await toRunState(run);
+        return await toRunState(run, allSubmitted);
     } finally {
         await releaseGameSessionLock(lock);
+        await finishTerminalMultiplayerRuns(recoveredRun);
     }
 }
 
-export async function endScorePpRunForUser(userId: number, sessionId: string): Promise<number | null> {
+export async function endScorePpRunForUser(userId: number, sessionId: string): Promise<ScorePpRunEndResult> {
     const parsedSessionId = sessionIdSchema.parse(sessionId);
 
     const lock = await acquireRunLock(parsedSessionId);
+    let endingRun: DatabaseGameSession | null = null;
     try {
         const run = await readOwnedRun(parsedSessionId, userId);
+        endingRun = run;
+        if (!(await isCurrentRoundRevealed(run, userId))) return { pending: true };
         if (!run.is_active && !run.end_pending) return run.pp ?? null;
-        return await finishGameSession(parsedSessionId, userId, run.end_reason ?? "quit");
+        const endReason = isTerminalRound(run) && isContinuousVariant(run.variant) ? "failed" : (run.end_reason ?? "quit");
+        return await finishGameSession(parsedSessionId, userId, endReason);
     } finally {
         await releaseGameSessionLock(lock);
+        await finishTerminalMultiplayerRuns(endingRun);
     }
 }
 
@@ -356,7 +428,7 @@ export async function submitScorePpGuessForUser(
     pairId: number,
     selectedScoreId: string | null,
     submissionType: "guess" | "skip" | "timeout" = selectedScoreId === null ? "timeout" : "guess",
-): Promise<ScorePpResolution> {
+): Promise<ScorePpResolution | null> {
     const parsedSessionId = sessionIdSchema.parse(sessionId);
     const parsedPairId = pairIdSchema.parse(pairId);
     const parsedSelectedScoreId = scoreIdSchema.parse(selectedScoreId);
@@ -365,6 +437,7 @@ export async function submitScorePpGuessForUser(
     if (parsedSubmissionType !== "guess" && parsedSelectedScoreId) throw new Error("Skip and timeout submissions cannot include a score choice");
 
     const lock = await acquireRunLock(parsedSessionId);
+    let submittedRun: DatabaseGameSession | null = null;
     try {
         const run = await readRun(parsedSessionId, userId);
         if (run.has_guessed_current_round) throw new Error("Already submitted a choice for this round");
@@ -405,7 +478,7 @@ export async function submitScorePpGuessForUser(
             points_earned: pointsEarned,
             streak_before: run.current_streak,
             streak_after: nextStreak,
-            difficulty_snapshot: null,
+            difficulty_snapshot: run.current_difficulty_snapshot ?? pair.difficultySnapshot ?? 1,
             content_snapshot: {
                 pairId: pair.id,
                 left: pair.left,
@@ -431,8 +504,9 @@ export async function submitScorePpGuessForUser(
             round_history: [...run.round_history, roundRecord],
             has_guessed_current_round: true,
         };
-        const terminal = (run.variant === "classic" && run.current_round >= MAX_ROUNDS) || (run.variant === "survival" && mistakes >= SURVIVAL_LIVES);
+        const terminal = isTerminalRound(nextRun);
         await writeGameSession(nextRun);
+        submittedRun = nextRun;
         if (run.multiplayer_lobby_id) {
             await updateMultiplayerProgress(
                 run.multiplayer_lobby_id,
@@ -451,7 +525,9 @@ export async function submitScorePpGuessForUser(
             ).catch((error) => console.error("Failed to update multiplayer progress:", error));
         }
 
-        const runPp = terminal ? await finishGameSession(parsedSessionId, userId, run.variant === "survival" ? "failed" : undefined) : null;
+        const allSubmitted = await isCurrentRoundRevealed(nextRun, userId);
+        const runPp = terminal && allSubmitted ? await finishGameSession(parsedSessionId, userId, isContinuousVariant(run.variant) ? "failed" : undefined) : undefined;
+        if (!allSubmitted) return null;
 
         return {
             correct,
@@ -475,5 +551,6 @@ export async function submitScorePpGuessForUser(
         };
     } finally {
         await releaseGameSessionLock(lock);
+        await finishTerminalMultiplayerRuns(submittedRun);
     }
 }

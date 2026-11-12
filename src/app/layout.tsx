@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Public_Sans, Sora, JetBrains_Mono } from "next/font/google";
+import { Public_Sans, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { SessionWrapper } from "@/context/session-wrapper";
@@ -20,9 +20,9 @@ const publicSans = Public_Sans({
     variable: "--public-sans",
 });
 
-const sora = Sora({
+const spaceGrotesk = Space_Grotesk({
     subsets: ["latin"],
-    variable: "--sora",
+    variable: "--space-grotesk",
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -88,7 +88,7 @@ export default async function RootLayout({
     if (lock && session?.user?.banchoId !== OWNER_ID && session?.user?.banchoId !== lock.ownerId) {
         return (
             <html lang={initialLocale} suppressHydrationWarning>
-                <body className={`${publicSans.variable} ${sora.variable} ${jetbrainsMono.variable} antialiased`}>
+                <body className={`${publicSans.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}>
                     <div className="flex items-center justify-center min-h-screen bg-background">
                         <div className="max-w-xl mx-auto px-4 py-8">
                             <h1 className="text-2xl font-bold mb-4">{t.lockdown.title}</h1>
@@ -117,7 +117,7 @@ export default async function RootLayout({
                     }}
                 />
             </head>
-            <body className={`${publicSans.variable} ${sora.variable} ${jetbrainsMono.variable} antialiased`}>
+            <body className={`${publicSans.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}>
                 <TranslationsProvider initialLocale={initialLocale} migrateStoredLocale={!hasValidLocaleCookie}>
                     <SessionWrapper session={session}>
                         <div className="flex min-h-screen flex-col bg-background text-foreground">

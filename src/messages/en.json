@@ -16,14 +16,14 @@
             "multiplayer": "Multiplayer"
         },
         "statistics": {
-            "title": "Game Statistics",
+            "title": "Statistics",
             "totalPlayers": {
                 "title": "Total Players",
                 "description": "Players who signed up to play"
             },
             "gamesPlayed": {
                 "title": "Ranked Runs",
-                "description": "Classic and Survival ranked runs recorded"
+                "description": "Classic, Survival, and Death ranked runs recorded"
             },
             "profilePp": {
                 "title": "Top pp",
@@ -32,7 +32,6 @@
         },
         "announcements": {
             "title": "Latest announcements",
-            "latestLabel": "Latest Announcement",
             "previous": "Previous announcements:",
             "viewAll": "View all announcements"
         },
@@ -205,7 +204,7 @@
             "steps": {
                 "1": {
                     "title": "Choose Your Mode",
-                    "description": "Choose backgrounds, audio, or skins, then Classic or Survival."
+                    "description": "Choose backgrounds, audio, or skins, then Classic, Survival, or Death."
                 },
                 "2": {
                     "title": "Start Guessing",
@@ -226,13 +225,13 @@
                 "skipPenalty": "Wrong guess, skip, or timeout: -{penalty} points"
             },
             "gameInfo": {
-                "length": "Classic: {rounds} rounds. Survival: keep going until all {lives} lives are lost.",
+                "length": "Classic: {rounds} rounds. Survival: keep going until all {lives} lives are lost. Death: one mistake ends the run.",
                 "time": "Round Time: {seconds} seconds"
             },
             "pp": {
                 "title": "pp",
-                "description": "Ranked runs earn pp from round accuracy, response speed, content difficulty, and consistency. Survival also scales with the number of correct rounds in the run.",
-                "profile": "Profile pp for each game mode and variant combines your 100 strongest ranked runs, with each lower run weighted at 95% of the previous one. Leaderboards use that pp."
+                "description": "Ranked runs earn pp from round accuracy, response speed, content difficulty, and consistency. Survival also scales with the number of correct rounds in the run. Death ranks by streak first, with speed, consistency, and difficulty as tiebreakers.",
+                "profile": "Profile pp for each game mode and variant combines your 100 strongest ranked runs, with each lower run weighted at 95% of the previous one. Leaderboards use that pp. Death is the exception: only your best run counts."
             }
         },
         "features": {
@@ -309,7 +308,7 @@
         }
     },
     "gameModes": {
-        "title": "Choose Your Game Mode",
+        "title": "Game modes",
         "modes": {
             "background": {
                 "title": "Background Guessr",
@@ -358,6 +357,10 @@
                     "continuous": "Keep going until you lose all your lives; missed items can appear again",
                     "time": "{seconds} seconds per round",
                     "lives": "Wrong guesses, skips, and timeouts each cost one of your {count} lives"
+                },
+                "oneLife": {
+                    "continuous": "Keep going until your first mistake",
+                    "lives": "One wrong guess, skip, or timeout ends the run"
                 }
             },
             "scoring": {
@@ -373,6 +376,9 @@
                     "score": "Arcade score uses the same points formula as Classic Mode",
                     "streakOnly": "Survival pp also rewards more correct rounds before the run ends",
                     "compete": "The leaderboard ranks pp for this game mode and variant"
+                },
+                "oneLife": {
+                    "streakFirst": "Death pp is your streak first; speed, consistency, and difficulty only separate equal streaks, and only your best run counts"
                 }
             },
             "modes": {
@@ -383,6 +389,10 @@
                 "death": {
                     "title": "Survival Mode",
                     "description": "{count} lives"
+                },
+                "oneLife": {
+                    "title": "Death Mode",
+                    "description": "1 life"
                 }
             },
             "warning": {
@@ -413,7 +423,7 @@
         "input": {
             "placeholder": "Song title...",
             "skinPlaceholder": "Skin name...",
-            "skipDeath": "Skip",
+            "giveUp": "Give Up",
             "title": "Enter your guess:",
             "yourGuess": "Your guess:",
             "submit": "Submit",
@@ -459,7 +469,8 @@
                 "totalCorrect": "Total Correct",
                 "averageTime": "Average Response Time",
                 "diedMessage": "You lost all {count} lives.",
-                "livesRemaining": "Lives Remaining"
+                "livesRemaining": "Lives Remaining",
+                "diedMessageOneLife": "One mistake ended the run."
             },
             "labels": {
                 "averageTime": "Average Response Time",
@@ -577,7 +588,8 @@
             },
             "variant": {
                 "classic": "Classic Mode",
-                "survival": "Survival Mode"
+                "survival": "Survival Mode",
+                "death": "Death Mode"
             }
         },
         "table": {
@@ -714,7 +726,7 @@
             "description": "Manage your Hanami account or end this osu!guessr session.",
             "hanami": {
                 "title": "Hanami account",
-                "description": "Manage your connected accounts and Hanami profile.",
+                "description": "osu!guessr accounts run on Hanami, the shared sign-in for our osu! projects. Manage your linked accounts and profile there.",
                 "action": "Open Hanami"
             },
             "signOut": {
@@ -901,7 +913,8 @@
         "auth": {
             "required": {
                 "title": "Sign in Required",
-                "description": "Hanami manages sign-in for osu!guessr. If you're new, a Hanami account is created automatically. You'll return to osu!guessr after signing in.",
+                "description": "Sign in with your osu! account to play. You'll come straight back to osu!guessr afterwards.",
+                "notice": "Accounts are provided by Hanami. By signing in you accept:",
                 "noAccount": "Don't have an {osu_base} account? Create one here"
             }
         }

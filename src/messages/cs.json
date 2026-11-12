@@ -23,7 +23,7 @@
             },
             "gamesPlayed": {
                 "title": "Hodnocené běhy",
-                "description": "Zaznamenané hodnocené běhy v klasickém režimu a režimu přežití"
+                "description": "Zaznamenané hodnocené běhy v klasickém režimu, režimu přežití a režimu smrti"
             },
             "profilePp": {
                 "title": "Nejvyšší pp",
@@ -39,7 +39,6 @@
         },
         "announcements": {
             "title": "Nejnovější oznámení",
-            "latestLabel": "Nejnovější oznámení",
             "previous": "Předchozí oznámení:",
             "viewAll": "Zobrazit všechna oznámení"
         }
@@ -81,7 +80,7 @@
             "steps": {
                 "1": {
                     "title": "Vyberte svůj mód",
-                    "description": "Vyberte pozadí, zvuk nebo skiny a potom klasický režim nebo režim přežití."
+                    "description": "Vyberte pozadí, zvuk nebo skiny a potom klasický režim, režim přežití nebo režim smrti."
                 },
                 "2": {
                     "title": "Začít hádat",
@@ -102,13 +101,13 @@
                 "skipPenalty": "Chybný tip, přeskočení nebo vypršení času: -{penalty} bodů"
             },
             "gameInfo": {
-                "length": "Klasický režim: {rounds} kol. Přežití: pokračuje, dokud neztratíte všech {lives} životů.",
+                "length": "Klasický režim: {rounds} kol. Přežití: pokračuje, dokud neztratíte všech {lives} životů. Smrt: běh končí první chybou.",
                 "time": "Čas kola: {seconds} sekund"
             },
             "pp": {
                 "title": "pp",
-                "description": "Hodnocené běhy získávají pp podle přesnosti kol, rychlosti odpovědí, obtížnosti obsahu a konzistence. Přežití navíc škáluje podle počtu správných kol v běhu.",
-                "profile": "Profilové pp pro každý herní režim a variantu kombinuje 100 nejsilnějších hodnocených běhů, přičemž každý další běh má 95 % váhy předchozího. Žebříčky používají toto pp."
+                "description": "Hodnocené běhy získávají pp podle přesnosti kol, rychlosti odpovědí, obtížnosti obsahu a konzistence. Přežití navíc škáluje podle počtu správných kol v běhu. Režim smrti řadí hlavně podle série; rychlost, konzistence a obtížnost rozhodují při shodě.",
+                "profile": "Profilové pp pro každý herní režim a variantu kombinuje 100 nejsilnějších hodnocených běhů, přičemž každý další běh má 95 % váhy předchozího. Žebříčky používají toto pp. Výjimkou je režim smrti: počítá se jen váš nejlepší běh."
             }
         },
         "features": {
@@ -234,6 +233,10 @@
                     "continuous": "Pokračujte, dokud neztratíte všechny životy; nezvládnuté položky se mohou objevit znovu",
                     "time": "{seconds} sekund na kolo",
                     "lives": "Každý chybný tip, přeskočení nebo vypršení času stojí jeden z vašich {count} životů"
+                },
+                "oneLife": {
+                    "continuous": "Pokračujte až do první chyby",
+                    "lives": "Jediný chybný tip, přeskočení nebo vypršení času běh ukončí"
                 }
             },
             "scoring": {
@@ -249,6 +252,9 @@
                     "score": "Arkádové skóre používá stejný bodový systém jako klasický režim",
                     "streakOnly": "pp v režimu přežití navíc odměňuje více správných kol před koncem běhu",
                     "compete": "Žebříček řadí podle pp pro zvolený herní režim a variantu"
+                },
+                "oneLife": {
+                    "streakFirst": "pp v režimu smrti určuje hlavně série; rychlost, konzistence a obtížnost rozhodují jen mezi stejnými sériemi a počítá se pouze váš nejlepší běh"
                 }
             },
             "modes": {
@@ -259,6 +265,10 @@
                 "death": {
                     "title": "Režim přežití",
                     "description": "{count} životy"
+                },
+                "oneLife": {
+                    "title": "Režim smrti",
+                    "description": "1 život"
                 }
             },
             "warning": {
@@ -289,7 +299,7 @@
         "input": {
             "placeholder": "Název písně...",
             "skinPlaceholder": "Název skinu...",
-            "skipDeath": "Přeskočit",
+            "giveUp": "Vzdát se",
             "title": "Zadejte odpověď:",
             "yourGuess": "Váš tip:",
             "submit": "Odeslat",
@@ -335,7 +345,8 @@
                 "totalCorrect": "Celkový počet správných odpovědí",
                 "averageTime": "Průměrná doba odpovědi",
                 "diedMessage": "Přišli jste o všechny {count} životy.",
-                "livesRemaining": "Zbývající životy"
+                "livesRemaining": "Zbývající životy",
+                "diedMessageOneLife": "Běh ukončila jediná chyba."
             },
             "labels": {
                 "averageTime": "Průměrná doba odpovědi",
@@ -453,7 +464,8 @@
             },
             "variant": {
                 "classic": "Klasika",
-                "survival": "Režim přežití"
+                "survival": "Režim přežití",
+                "death": "Režim smrti"
             }
         },
         "table": {
@@ -590,7 +602,7 @@
             "description": "Spravujte účet Hanami nebo ukončete tuto relaci osu!guessr.",
             "hanami": {
                 "title": "Účet Hanami",
-                "description": "Spravujte propojené účty a profil Hanami.",
+                "description": "Účty osu!guessr běží na Hanami, společném přihlášení našich osu! projektů. Propojené účty a profil spravujete tam.",
                 "action": "Otevřít Hanami"
             },
             "signOut": {
@@ -777,7 +789,8 @@
         "auth": {
             "required": {
                 "title": "Nutné přihlášení",
-                "description": "Přihlášení do osu!guessr spravuje Hanami. Pokud jste tu poprvé, účet Hanami se vytvoří automaticky. Po přihlášení se vrátíte do osu!guessr.",
+                "description": "Přihlaste se svým osu! účtem a hrajte. Poté se vrátíte rovnou do osu!guessr.",
+                "notice": "Účty poskytuje Hanami. Přihlášením přijímáte:",
                 "noAccount": "Nemáte {osu_base} účet? Vytvořte si ho zde"
             }
         }

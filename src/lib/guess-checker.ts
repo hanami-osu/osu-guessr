@@ -15,14 +15,20 @@ function normalizeString(str: string): string {
     // Ignore featured-artist credits.
     normalized = normalized.replace(/\b(?:feat|ft)\.?\b.*/g, "");
 
-    normalized = normalized.replace(/[^a-z0-9\s]/g, "").trim();
+    normalized = normalized.replace(/[^\p{L}\p{N}\s]/gu, "").trim();
 
     return normalized;
 }
 
 export function checkGuess(guess: string, actual: string, difficulty: GuessDifficulty = 0.5): boolean {
+    if (guess.trim() && guess.trim().toLowerCase() === actual.trim().toLowerCase()) return true;
+
     guess = normalizeString(guess);
     actual = normalizeString(actual);
+
+    if (!guess || !actual) {
+        return false;
+    }
 
     if (guess === actual) {
         return true;

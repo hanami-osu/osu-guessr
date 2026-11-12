@@ -74,8 +74,16 @@ mock.module("@/lib/multiplayer-realtime", () => ({
 
 const { joinMultiplayerLobbyAction, resetMultiplayerLobbyAction, setMultiplayerReadyAction, startMultiplayerLobbyAction, updateMultiplayerLobbyAction, leaveMultiplayerLobbyAction } =
     await import("./multiplayer-server");
-const { addMultiplayerMessage, cleanupDisconnectedMultiplayerPlayer, disconnectMultiplayerPlayer, finishMultiplayerCountdown, markMultiplayerPlayerConnected, readMultiplayerLobby, updateMultiplayerProgress } =
-    await import("@/lib/multiplayer");
+const {
+    addMultiplayerMessage,
+    cleanupDisconnectedMultiplayerPlayer,
+    disconnectMultiplayerPlayer,
+    finishMultiplayerCountdown,
+    getMultiplayerRoundState,
+    markMultiplayerPlayerConnected,
+    readMultiplayerLobby,
+    updateMultiplayerProgress,
+} = await import("@/lib/multiplayer");
 
 function sessionFor(userId: number): AuthSession {
     return {
@@ -180,6 +188,21 @@ beforeEach(() => {
 afterEach(() => setSystemTime());
 
 describe("multiplayer pre-game lifecycle", () => {
+    test("withholds Score PP outcomes from lobby responses until every player submits", async () => {
+        seedLobby({
+            gameMode: GameMode.ScorePp,
+            status: "playing",
+            players: [player(1, { round: 1, submittedRound: 1, resultRound: 1, resultCorrect: true, resultPoints: 140, points: 640 }), player(2, { round: 1 })],
+        });
+
+        const pending = await joinMultiplayerLobbyAction(lobbyCode);
+        expect(pending.players[0]).toMatchObject({ points: 500, resultCorrect: null, resultPoints: 0 });
+
+        await updateMultiplayerProgress(lobbyCode, 2, { round: 1, submittedRound: 1, resultRound: 1, resultCorrect: false, resultPoints: -50, points: -50 }, "match-old");
+        const revealed = await joinMultiplayerLobbyAction(lobbyCode);
+        expect(revealed.players[0]).toMatchObject({ points: 640, resultCorrect: true, resultPoints: 140 });
+    });
+
     test("adds a join event to lobby chat", async () => {
         seedLobby({ players: [player(1)] });
         loginAs(2);
@@ -460,6 +483,19 @@ describe("multiplayer pre-game lifecycle", () => {
                 (item) => item.points === 0 && item.round === 0 && item.submittedRound === 0 && item.readyRound === 0 && item.scoreSessionId === null && !item.finished && !item.completedMatch && !item.ready,
             ),
         ).toBe(true);
+    });
+
+    test("stops waiting for a player who quit before answering the round", async () => {
+        seedLobby({
+            status: "playing",
+            players: [
+                player(1, { round: 3, submittedRound: 3, readyRound: 2 }),
+                player(2, { finished: true, round: 3, submittedRound: 2, readyRound: 2 }),
+                player(3, { finished: true, round: 3, submittedRound: 3 }),
+            ],
+        });
+
+        expect(await getMultiplayerRoundState(lobbyCode, 1, 3)).toMatchObject({ allSubmitted: true, participantCount: 2, readyCount: 1 });
     });
 
     test("ignores progress submitted with an old matchId", async () => {

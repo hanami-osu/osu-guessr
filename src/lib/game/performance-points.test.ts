@@ -21,11 +21,46 @@ describe("performance points", () => {
         const shortSurvival = [...Array.from({ length: 5 }, () => round()), round({ correct: false })];
         const longSurvival = [...Array.from({ length: 20 }, () => round()), round({ correct: false })];
 
+        expect(calculateRunPp(baseline, "classic")).toBe(100.518);
         expect(calculateRunPp(faster, "classic")).toBeGreaterThan(calculateRunPp(baseline, "classic"));
         expect(calculateRunPp(harder, "classic")).toBeGreaterThan(calculateRunPp(baseline, "classic"));
         expect(calculateRunPp(inconsistent, "classic")).toBeLessThan(calculateRunPp(baseline, "classic"));
         expect(calculateRunPp(miss, "classic")).toBeLessThan(calculateRunPp(baseline, "classic"));
         expect(calculateRunPp(longSurvival, "survival")).toBeGreaterThan(calculateRunPp(shortSurvival, "survival"));
+    });
+
+    test("scores a quit and a three-life failure equally when their correct rounds match", () => {
+        const correctRounds = Array.from({ length: 5 }, () => round());
+        const quit = correctRounds;
+        const failed = [...correctRounds, ...Array.from({ length: 3 }, () => round({ correct: false }))];
+
+        expect(calculateRunPp(quit, "survival")).toBe(23.006);
+        expect(calculateRunPp(quit, "survival")).toBe(calculateRunPp(failed, "survival"));
+    });
+
+    test("does not lower survival PP when a slow, easier correct round is appended", () => {
+        const twentyCorrect = Array.from({ length: 20 }, () => round({ difficulty_snapshot: 1.5 }));
+        const twentyOneCorrect = [...twentyCorrect, round({ response_time_ms: 30_000, difficulty_snapshot: 0.75 })];
+
+        expect(calculateRunPp(twentyOneCorrect, "survival")).toBeGreaterThanOrEqual(calculateRunPp(twentyCorrect, "survival"));
+    });
+
+    test("ranks death runs by streak first and by speed and difficulty only between equal streaks", () => {
+        const slowTen = [...Array.from({ length: 10 }, () => round({ response_time_ms: 29_000, difficulty_snapshot: 0.75 })), round({ correct: false })];
+        const fastNine = [...Array.from({ length: 9 }, () => round({ response_time_ms: 500, difficulty_snapshot: 1.5 })), round({ correct: false })];
+        const fastTen = Array.from({ length: 10 }, () => round({ response_time_ms: 500 }));
+        const hardTen = Array.from({ length: 10 }, () => round({ response_time_ms: 29_000, difficulty_snapshot: 1.5 }));
+
+        expect(calculateRunPp(slowTen, "death")).toBeGreaterThan(calculateRunPp(fastNine, "death"));
+        expect(calculateRunPp(fastTen, "death")).toBeGreaterThan(calculateRunPp(slowTen, "death"));
+        expect(calculateRunPp(hardTen, "death")).toBeGreaterThan(calculateRunPp(slowTen, "death"));
+        expect(calculateRunPp(fastTen, "death")).toBeLessThan(110);
+        expect(calculateRunPp([round({ correct: false })], "death")).toBe(0);
+    });
+
+    test("uses only the best death run for profile pp", () => {
+        expect(calculateProfilePp([50, 120, 80], "death")).toBe(120);
+        expect(calculateProfilePp([], "death")).toBe(0);
     });
 
     test("weights stronger runs most heavily instead of rewarding unlimited grinding", () => {

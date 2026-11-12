@@ -15,6 +15,7 @@ import {
     markMultiplayerRoundReady,
     normalizeLobbyCode,
     readMultiplayerLobby,
+    toPublicMultiplayerLobby,
     type MultiplayerLobby,
 } from "@/lib/multiplayer";
 import {
@@ -30,6 +31,9 @@ import {
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
+// Auth cookies are host-scoped, so sign-in only works on the origin Auth.js redirects back to.
+const devOrigin = dev && process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
+const LOOPBACK_ALIASES = new Set(["0.0.0.0", "127.0.0.1", "[::1]"]);
 const SOCKET_PATH = "/multiplayer-ws";
 const HEARTBEAT_MS = 10_000;
 const DISCONNECT_GRACE_MS = 5_000;
@@ -313,7 +317,7 @@ async function registerSocket(socket: WebSocket, requestUrl: URL): Promise<void>
         return;
     }
     scheduleCountdown(currentLobby);
-    socket.send(JSON.stringify({ type: "lobby", lobby: currentLobby } satisfies MultiplayerRealtimeEvent));
+    socket.send(JSON.stringify({ type: "lobby", lobby: toPublicMultiplayerLobby(currentLobby) } satisfies MultiplayerRealtimeEvent));
     socket.send(JSON.stringify({ type: "presence", code, userIds: await getPresentMultiplayerUsers(code) } satisfies MultiplayerRealtimeEvent));
     await publishPresence(code);
 }
@@ -323,7 +327,14 @@ async function main(): Promise<void> {
     await app.prepare();
     const handle = app.getRequestHandler();
     const handleUpgrade = app.getUpgradeHandler();
-    const server = createServer((req, res) => handle(req, res));
+    const server = createServer((req, res) => {
+        const requestHost = req.headers.host;
+        if (devOrigin && requestHost && requestHost !== devOrigin.host && LOOPBACK_ALIASES.has(requestHost.replace(/:\d+$/, ""))) {
+            res.writeHead(307, { Location: new URL(req.url ?? "/", devOrigin).toString() }).end();
+            return;
+        }
+        void handle(req, res);
+    });
     const wss = new WebSocketServer({ noServer: true });
     const subscriber = redisClient.duplicate();
     await subscriber.connect();
@@ -394,7 +405,7 @@ async function main(): Promise<void> {
     heartbeat.unref();
 
     server.listen(port, hostname, () => {
-        console.log(`> Ready on http://${hostname}:${port}`);
+        console.log(`> Ready on ${devOrigin?.origin ?? `http://${hostname}:${port}`}`);
     });
 }
 

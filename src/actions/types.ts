@@ -5,8 +5,8 @@ export enum GameMode {
     ScorePp = "score_pp",
 }
 export type GuessGameMode = Exclude<GameMode, GameMode.ScorePp>;
-export type GameVariant = "classic" | "survival";
-export type StoredGameVariant = GameVariant | "death";
+export const GAME_VARIANTS = ["classic", "survival", "death"] as const;
+export type GameVariant = (typeof GAME_VARIANTS)[number];
 export type GameRunType = "standard" | "daily" | "challenge" | "practice";
 export type GameEndReason = "completed" | "failed" | "quit" | "content_exhausted";
 export type GameRoundResult = "guess" | "skip" | "timeout";
@@ -103,7 +103,7 @@ export interface User {
 export interface UserAchievement {
     user_id: number;
     game_mode: GameMode;
-    variant: StoredGameVariant;
+    variant: GameVariant;
     ruleset_version: number;
     pp_version: number;
     total_score: bigint;
@@ -121,16 +121,8 @@ export interface UserAchievement {
 }
 
 export interface UserRanks {
-    globalRank?: {
-        classic?: number;
-        survival?: number;
-    };
-    modeRanks: {
-        [key in GameMode]: {
-            classic?: number;
-            survival?: number;
-        };
-    };
+    globalRank?: Partial<Record<GameVariant, number>>;
+    modeRanks: Record<GameMode, Partial<Record<GameVariant, number>>>;
 }
 
 export interface UserWithStats extends User {
@@ -144,7 +136,7 @@ export interface Game {
     game_mode: GameMode;
     points: number;
     streak: number;
-    variant: StoredGameVariant;
+    variant: GameVariant;
     ruleset_version: number;
     pp_version: number;
     pp: string | number;
@@ -211,6 +203,7 @@ export interface DatabaseGameSession {
     highest_streak: number;
     current_round: number;
     current_item_id: number;
+    current_difficulty_snapshot?: number;
     time_left: number;
     last_action_at: string | Date;
     last_guess: string | null;

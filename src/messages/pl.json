@@ -23,7 +23,7 @@
             },
             "gamesPlayed": {
                 "title": "Rankingowe rozgrywki",
-                "description": "Zapisane rankingowe rozgrywki w trybach Klasycznym i Przetrwania"
+                "description": "Zapisane rankingowe rozgrywki w trybach Klasycznym, Przetrwania i Śmierci"
             },
             "profilePp": {
                 "title": "Najwyższe pp",
@@ -39,7 +39,6 @@
         },
         "announcements": {
             "title": "Najnowsze ogłoszenia",
-            "latestLabel": "Najnowsze ogłoszenie",
             "previous": "Poprzednie ogłoszenia:",
             "viewAll": "Zobacz wszystkie ogłoszenia"
         }
@@ -147,7 +146,7 @@
             "steps": {
                 "1": {
                     "title": "Wybierz Tryb",
-                    "description": "Wybierz tła, audio lub skiny, a następnie tryb Klasyczny lub Przetrwania."
+                    "description": "Wybierz tła, audio lub skiny, a następnie tryb Klasyczny, Przetrwania lub Śmierci."
                 },
                 "2": {
                     "title": "Zacznij Zgadywać",
@@ -168,13 +167,13 @@
                 "skipPenalty": "Błędna odpowiedź, pominięcie lub przekroczenie czasu: -{penalty} punktów"
             },
             "gameInfo": {
-                "length": "Klasyczny: {rounds} rund. Przetrwanie: trwa, dopóki nie stracisz wszystkich {lives} żyć.",
+                "length": "Klasyczny: {rounds} rund. Przetrwanie: trwa, dopóki nie stracisz wszystkich {lives} żyć. Śmierć: pierwszy błąd kończy grę.",
                 "time": "Czas rundy: {seconds} sekund"
             },
             "pp": {
                 "title": "pp",
-                "description": "Rankingowe rozgrywki przyznają pp za celność rund, szybkość odpowiedzi, trudność zawartości i regularność. Przetrwanie dodatkowo skaluje się z liczbą poprawnych rund.",
-                "profile": "Profilowe pp dla każdego trybu gry i wariantu łączy 100 najlepszych rankingowych rozgrywek, a każda kolejna ma 95% wagi poprzedniej. Ranking używa tego pp."
+                "description": "Rankingowe rozgrywki przyznają pp za celność rund, szybkość odpowiedzi, trudność zawartości i regularność. Przetrwanie dodatkowo skaluje się z liczbą poprawnych rund. Tryb Śmierci szereguje najpierw według serii; szybkość, regularność i trudność rozstrzygają remisy.",
+                "profile": "Profilowe pp dla każdego trybu gry i wariantu łączy 100 najlepszych rankingowych rozgrywek, a każda kolejna ma 95% wagi poprzedniej. Ranking używa tego pp. Wyjątkiem jest tryb Śmierci: liczy się tylko najlepsza rozgrywka."
             }
         },
         "features": {
@@ -300,6 +299,10 @@
                     "continuous": "Graj, dopóki nie stracisz wszystkich żyć; pominięte elementy mogą pojawić się ponownie",
                     "time": "{seconds} sekund na rundę",
                     "lives": "Każda błędna odpowiedź, pominięcie lub przekroczenie czasu kosztuje jedno z {count} żyć"
+                },
+                "oneLife": {
+                    "continuous": "Graj do pierwszego błędu",
+                    "lives": "Jedna błędna odpowiedź, pominięcie lub przekroczenie czasu kończy grę"
                 }
             },
             "scoring": {
@@ -315,6 +318,9 @@
                     "score": "Wynik arcade używa tego samego systemu punktów co tryb klasyczny",
                     "streakOnly": "pp w Przetrwaniu dodatkowo nagradza większą liczbę poprawnych rund przed końcem gry",
                     "compete": "Ranking jest ustalany według pp dla wybranego trybu gry i wariantu"
+                },
+                "oneLife": {
+                    "streakFirst": "pp w trybie Śmierci zależy przede wszystkim od serii; szybkość, regularność i trudność rozstrzygają tylko przy równych seriach, a liczy się wyłącznie najlepsza rozgrywka"
                 }
             },
             "modes": {
@@ -325,6 +331,10 @@
                 "death": {
                     "title": "Tryb Przetrwania",
                     "description": "{count} życia"
+                },
+                "oneLife": {
+                    "title": "Tryb Śmierci",
+                    "description": "1 życie"
                 }
             },
             "warning": {
@@ -355,7 +365,7 @@
         "input": {
             "placeholder": "Tytuł piosenki...",
             "skinPlaceholder": "Nazwa skina...",
-            "skipDeath": "Pomiń",
+            "giveUp": "Poddaj się",
             "title": "Wpisz odpowiedź:",
             "yourGuess": "Twój typ:",
             "submit": "Potwierdź",
@@ -401,7 +411,8 @@
                 "totalCorrect": "Ilość Poprawnych Odpowiedzi",
                 "averageTime": "Średni czas odpowiedzi",
                 "diedMessage": "Straciłeś/aś wszystkie {count} życia.",
-                "livesRemaining": "Pozostałe życia"
+                "livesRemaining": "Pozostałe życia",
+                "diedMessageOneLife": "Jeden błąd zakończył grę."
             },
             "labels": {
                 "averageTime": "Średni czas odpowiedzi",
@@ -519,7 +530,8 @@
             },
             "variant": {
                 "classic": "Tryb Klasyczny",
-                "survival": "Tryb Przetrwania"
+                "survival": "Tryb Przetrwania",
+                "death": "Tryb Śmierci"
             }
         },
         "table": {
@@ -656,7 +668,7 @@
             "description": "Zarządzaj kontem Hanami lub zakończ tę sesję osu!guessr.",
             "hanami": {
                 "title": "Konto Hanami",
-                "description": "Zarządzaj połączonymi kontami i profilem Hanami.",
+                "description": "Konta osu!guessr działają w oparciu o Hanami, wspólne logowanie naszych projektów osu!. Tam zarządzasz połączonymi kontami i profilem.",
                 "action": "Otwórz Hanami"
             },
             "signOut": {
@@ -843,7 +855,8 @@
         "auth": {
             "required": {
                 "title": "Musisz się zalogować",
-                "description": "Hanami obsługuje logowanie do osu!guessr. Jeśli korzystasz z niego po raz pierwszy, konto Hanami zostanie utworzone automatycznie. Po zalogowaniu wrócisz do osu!guessr.",
+                "description": "Zaloguj się kontem osu!, aby grać. Potem wrócisz prosto do osu!guessr.",
+                "notice": "Konta zapewnia Hanami. Logując się, akceptujesz:",
                 "noAccount": "Nie masz konta {osu_base}? Stwórz je tutaj."
             }
         }

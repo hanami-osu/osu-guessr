@@ -61,7 +61,7 @@ const txMock = {
 };
 const transactionMock = mock(async (operation: (tx: typeof txMock) => Promise<unknown>) => operation(txMock));
 const prismaMock = {
-    contentStat: { findMany: contentStatFindManyMock },
+    contentStat: { findMany: contentStatFindManyMock, findUnique: contentStatFindUniqueMock },
     mapsetData: { findUnique: mapsetDataFindUniqueMock, findMany: mapsetDataFindManyMock },
     skin: { findUnique: skinFindUniqueMock, findMany: skinFindManyMock },
     $transaction: transactionMock,
@@ -239,6 +239,53 @@ beforeEach(() => {
 afterEach(() => setSystemTime());
 
 describe("game server lifecycle", () => {
+    test("rejects regular game actions for Score PP sessions even when the pair ID matches a mapset", async () => {
+        putSession(makeSession({ game_mode: GameMode.ScorePp }));
+
+        await expect(submitGuessAction(sessionId, answer)).rejects.toThrow("Game session not found or expired");
+        await expect(getGameStateAction(sessionId)).rejects.toThrow("Game session not found or expired");
+        await expect(endGameAction(sessionId)).rejects.toThrow("Game session not found or expired");
+    });
+
+    test("penalizes skips and expired guesses for titles that normalize to empty", async () => {
+        mapsetDataFindUniqueMock.mockResolvedValue({
+            mapsetId: 1,
+            title: "!!!",
+            artist: "Artist",
+            mapper: "Mapper",
+            rankedAt: null,
+            starRatingMin: null,
+            starRatingMax: null,
+        });
+
+        for (const [guess, elapsedMs] of [
+            [null, 1000],
+            ["wrong answer", 40_000],
+        ] as const) {
+            putSession(makeSession({ total_points: 0, last_action_at: new Date(Date.now() - elapsedMs).toISOString() }));
+
+            const result = await submitGuessAction(sessionId, guess);
+            expect(result.lastGuess).toMatchObject({ correct: false, type: "skip" });
+            expect(result.score.total).toBe(-50);
+            expect(result.rounds.correctGuesses).toBe(0);
+        }
+    });
+
+    test("freezes each round's difficulty before answering and keeps it through finalization", async () => {
+        contentStatFindUniqueMock.mockResolvedValue({ appearances: 100n, correctCount: 20n, totalResponseTimeMs: 2_400_000n, fastestCorrectMs: null });
+        const started = await startGameAction(GameMode.Background, "survival");
+
+        contentStatFindUniqueMock.mockResolvedValue({ appearances: 100n, correctCount: 95n, totalResponseTimeMs: 400_000n, fastestCorrectMs: null });
+        contentStatFindManyMock.mockResolvedValue([{ itemId: 2, appearances: 100n, correctCount: 95n, totalResponseTimeMs: 400_000n }]);
+        await submitGuessAction(started.sessionId, answer);
+        await submitGuessAction(started.sessionId);
+        contentStatFindUniqueMock.mockResolvedValue({ appearances: 100n, correctCount: 20n, totalResponseTimeMs: 2_400_000n, fastestCorrectMs: null });
+        await submitGuessAction(started.sessionId, answer);
+        await endGameAction(started.sessionId);
+
+        expect(gameRoundCreateManyMock.mock.calls[0]?.[0].data.map((round) => round.difficultySnapshot)).toEqual([1.456, 0.75]);
+    });
+
     test("rejects invalid game settings before creating a session", async () => {
         await expect(startGameAction("invalid" as GameMode, "classic")).rejects.toThrow();
         expect(getRandomActionMock).not.toHaveBeenCalled();

@@ -88,6 +88,28 @@ export interface MultiplayerLobbySummary {
     createdAt: string;
 }
 
+export function toPublicMultiplayerLobby(lobby: MultiplayerLobby): MultiplayerLobby {
+    if (lobby.gameMode !== "score_pp") return lobby;
+
+    return {
+        ...lobby,
+        players: lobby.players.map((player) => {
+            if (!player.resultRound || multiplayerRoundState(lobby, player.userId, player.resultRound).allSubmitted) return player;
+            return {
+                ...player,
+                points: player.points - player.resultPoints,
+                resultCorrect: null,
+                resultSkipped: false,
+                resultPoints: 0,
+                results: null,
+                finished: false,
+                completedMatch: false,
+                scoreSessionId: null,
+            };
+        }),
+    };
+}
+
 function lobbyKey(code: string): string {
     return `multiplayer_lobby:${code}`;
 }
@@ -452,7 +474,7 @@ function multiplayerRoundState(lobby: MultiplayerLobby, userId: number, round: n
     const player = lobby.players.find((item) => item.userId === userId);
     if (!player) throw new Error("Multiplayer lobby not found");
 
-    const participants = lobby.players.filter((item) => !item.finished || item.round >= round);
+    const participants = lobby.players.filter((item) => !item.finished || item.submittedRound >= round);
     const submitted = player.submittedRound >= round;
     const submittedCount = participants.filter((item) => item.submittedRound >= round).length;
     const readyCount = participants.filter((item) => item.finished || item.readyRound >= round).length;

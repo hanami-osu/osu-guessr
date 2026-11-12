@@ -1,7 +1,7 @@
 "use client";
 
 import { Game, GameMode, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "@/actions/types";
-import { GameVariant } from "@/app/games/config";
+import { GAME_VARIANTS, GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { ArrowUpRight, ChevronDown, ChevronRight, Clock3 } from "lucide-react";
 import Image from "next/image";
@@ -90,7 +90,7 @@ export default function UserProfileClient({
                     <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-border sm:block" />
 
                     <nav aria-label={t.user.profile.variantLabel} className="flex flex-wrap items-center gap-1.5">
-                        {(["classic", "survival"] as const).map((variant) => (
+                        {GAME_VARIANTS.map((variant) => (
                             <Link
                                 key={variant}
                                 href={`/user/${banchoId}?mode=${currentMode}&variant=${variant}`}
@@ -188,7 +188,6 @@ export default function UserProfileClient({
                     emptyText={t.user.profile.topGames.empty}
                     games={bestScores}
                     kind="top"
-                    variant={currentVariant}
                     locale={locale}
                     pointsTemplate={t.user.profile.topGames.points}
                     streakTemplate={t.user.profile.topGames.streak}
@@ -201,7 +200,6 @@ export default function UserProfileClient({
                     emptyText={t.user.profile.recentGames.noGames}
                     games={recentScores}
                     kind="recent"
-                    variant={currentVariant}
                     locale={locale}
                     pointsTemplate={t.user.profile.topGames.points}
                     streakTemplate={t.user.profile.topGames.streak}
@@ -220,7 +218,6 @@ interface ScoreSectionProps {
     emptyText: string;
     games: Game[];
     kind: "top" | "recent";
-    variant: GameVariant;
     locale: string;
     pointsTemplate: string;
     streakTemplate: string;
@@ -230,7 +227,7 @@ interface ScoreSectionProps {
     generatedAt?: string;
 }
 
-function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTemplate, streakTemplate, ppTemplate, showMoreText, relativeDates = false, generatedAt }: ScoreSectionProps) {
+function ScoreSection({ title, emptyText, games, kind, locale, pointsTemplate, streakTemplate, ppTemplate, showMoreText, relativeDates = false, generatedAt }: ScoreSectionProps) {
     const [expanded, setExpanded] = useState(false);
     const visibleGames = expanded ? games : games.slice(0, 5);
     const isTopSection = kind === "top";
@@ -247,7 +244,7 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                     <div className="space-y-1.5">
                         {visibleGames.map((game, index) => {
                             const endedAt = new Date(game.ended_at);
-                            const isLegacyDeath = variant === "survival" && game.variant === "death" && game.ruleset_version === 0 && game.pp_version === 0;
+                            const isLegacyDeath = game.variant === "death" && game.ruleset_version === 0 && game.pp_version === 0;
                             const scoreText = isLegacyDeath ? streakTemplate.replace("{count}", game.streak.toLocaleString(locale)) : pointsTemplate.replace("{points}", game.points.toLocaleString(locale));
                             const detailText = streakTemplate.replace("{count}", game.streak.toLocaleString(locale));
                             const dateText = relativeDates && generatedAt ? formatHoursAgo(endedAt, new Date(generatedAt)) : endedAt.toLocaleDateString(locale, { dateStyle: "medium" });
@@ -259,7 +256,7 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                                 <Link
                                     key={`${game.ended_at.toString()}-${index}`}
                                     href={`/scores/${game.id}`}
-                                    className="group grid min-h-14 grid-cols-[3.25rem_minmax(0,1fr)_6.75rem] items-stretch overflow-hidden rounded-xl bg-muted/55 ring-1 ring-inset ring-border/35 transition-[background-color,box-shadow,transform] hover:-translate-y-px hover:bg-muted/75 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_6rem_6.75rem]"
+                                    className="group grid min-h-14 grid-cols-[3.25rem_minmax(0,1fr)_6.75rem] items-stretch overflow-hidden rounded-xl bg-muted/55 ring-1 ring-inset ring-border/35 transition-colors hover:bg-muted/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_6rem_6.75rem]"
                                 >
                                     <div
                                         className={`flex items-center justify-center border-r border-border/35 ${isTopSection && index < 3 ? "bg-primary/15 text-primary" : "bg-background/15 text-muted-foreground"}`}
@@ -298,7 +295,7 @@ function ScoreSection({ title, emptyText, games, kind, variant, locale, pointsTe
                                         >
                                             {ppText}
                                         </div>
-                                        <ChevronRight aria-hidden="true" className="absolute right-2 size-4 text-primary/45 transition-transform group-hover:translate-x-0.5" />
+                                        <ChevronRight aria-hidden="true" className="absolute right-2 size-4 text-primary/45" />
                                     </div>
                                 </Link>
                             );

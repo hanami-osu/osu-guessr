@@ -1,11 +1,11 @@
-import { type GameVariant, type GuessGameMode } from "@/actions/types";
+import { GAME_VARIANTS, type GameVariant, type GuessGameMode } from "@/actions/types";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import MenuManager from "./MenuManager";
 import SignInPrompt from "./SignInPrompt";
 
 function isGameVariant(value: string | undefined): value is GameVariant {
-    return value === "classic" || value === "survival";
+    return (GAME_VARIANTS as readonly string[]).includes(value ?? "");
 }
 
 export default async function GamePage({ gameMode, gameVariant, multiplayerLobbyCode }: { gameMode: GuessGameMode; gameVariant?: string | string[]; multiplayerLobbyCode?: string | string[] }) {

@@ -13,13 +13,15 @@ function levenshteinDistance(wordA: string, wordB: string): [number, number] {
         [m, n] = [n, m];
     }
 
+    const charsA = [...wordA];
+    const charsB = [...wordB];
     const costs = Array.from({ length: n + 1 }, (_, i) => i);
 
-    for (let i = 0; i < wordA.length; i++) {
+    for (let i = 0; i < m; i++) {
         let lastVal = i + 1;
 
-        for (let j = 0; j < wordB.length; j++) {
-            const newVal = wordA[i] === wordB[j] ? costs[j] : Math.min(costs[j], lastVal, costs[j + 1]) + 1;
+        for (let j = 0; j < n; j++) {
+            const newVal = charsA[i] === charsB[j] ? costs[j] : Math.min(costs[j], lastVal, costs[j + 1]) + 1;
 
             costs[j] = lastVal;
             lastVal = newVal;

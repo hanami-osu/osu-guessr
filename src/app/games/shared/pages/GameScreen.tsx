@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { GameClient } from "@/lib/game/client";
 import { GameState, GameMode } from "@/actions/types";
 
-import { AUTO_ADVANCE_DELAY_MS, GameVariant, MAX_ROUNDS, SURVIVAL_LIVES } from "../../config";
+import { AUTO_ADVANCE_DELAY_MS, GameVariant, MAX_ROUNDS, isContinuousVariant } from "../../config";
 import GuessInput from "../components/GuessInput";
 import LoadingScreen from "../components/LoadingScreen";
 import GameHeader from "../components/Header";
@@ -214,6 +214,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
     const waitingLabel = t.game.status.waitingForPlayers.replace("{submitted}", String(multiplayerRoundState?.submittedCount ?? 0)).replace("{total}", String(participantCount));
     const readyLabel = t.game.status.readyPlayers.replace("{ready}", String(multiplayerRoundState?.readyCount ?? 0)).replace("{total}", String(participantCount));
     const isFinalRound = Boolean(gameState && (gameState.gameStatus === "finished" || gameState.rounds.current >= gameState.rounds.total));
+    const gameOver = isContinuousVariant(gameVariant) && revealed && resultVisible && isFinalRound;
     const baseNextRoundLabel = isFinalRound ? t.game.actions.viewResults : t.game.actions.nextRoundTime.replace("{seconds}", String(countdown));
     const multiplayerNextRoundLabel = isFinalRound ? t.game.actions.viewResults : t.game.actions.nextRound;
     const nextRoundLabel = waitingForGuesses ? waitingLabel : multiplayerLobbyCode && revealed ? `${multiplayerNextRoundLabel} · ${readyLabel}` : baseNextRoundLabel;
@@ -224,7 +225,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
     }, [handleNextRound, isLoading, multiplayerRoundState?.allReady, multiplayerRoundState?.ready, revealed]);
 
     const exitConfirmation = gameState
-        ? gameVariant === "survival"
+        ? isContinuousVariant(gameVariant)
             ? t.confirmations.exitGame.death
             : isClassicGameIncomplete(gameState)
               ? t.confirmations.exitGame.classic
@@ -359,8 +360,8 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 gameVariant={gameVariant}
                 maxStreak={publicStats?.highestStreak ?? gameState.score.highestStreak}
                 mistakes={publicStats?.mistakes ?? gameState.rounds.mistakes}
-                lifeCount={SURVIVAL_LIVES}
                 timerDuration={showAdvanceCountdown ? AUTO_ADVANCE_DELAY_MS / 1000 : undefined}
+                gameOver={gameOver}
             />
             <div className={`grid items-start gap-5 md:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:gap-8 ${multiplayerLobby ? "lg:grid-cols-[13rem_minmax(0,1.6fr)_minmax(320px,1fr)]" : ""}`}>
                 {multiplayerLobby && (
@@ -423,6 +424,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                     <GuessInput
                         gameMode={gameMode}
                         gameVariant={gameVariant}
+                        mistakes={gameState.rounds.mistakes}
                         guess={guess}
                         setGuess={setGuess}
                         isRevealed={revealed}
@@ -438,9 +440,11 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                     <MultiplayerChat lobby={multiplayerLobby} sendMessage={sendChat} />
                     <GameShortcuts hasSuggestions />
                     <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
-                        <GameActionButton intent="exit" onClick={requestExit} disabled={isLoading}>
-                            {gameVariant === "survival" ? t.game.actions.endRun : t.game.actions.exitGame}
-                        </GameActionButton>
+                        {!gameOver && (
+                            <GameActionButton intent="exit" onClick={requestExit} disabled={isLoading}>
+                                {isContinuousVariant(gameVariant) ? t.game.actions.endRun : t.game.actions.exitGame}
+                            </GameActionButton>
+                        )}
                         {gameMode !== GameMode.Skin && revealed && resultVisible && gameState.currentBeatmap.mapsetId && (
                             <ReportDialog mapsetId={gameState.currentBeatmap.mapsetId} mapsetTitle={gameState.currentBeatmap.title || t.game.media.unknown} onOpenChange={setIsReportDialogOpen} />
                         )}
