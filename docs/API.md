@@ -141,7 +141,7 @@ Query parameters:
 }
 ```
 
-This route returns one array entry per stored user-achievement row. Without `variant`, it returns both variants.
+This route returns one array entry per stored user-achievement row. Without `variant`, it returns every variant.
 
 ### Search users
 

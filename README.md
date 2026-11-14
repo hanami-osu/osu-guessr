@@ -7,12 +7,15 @@ Guess osu! songs from beatmap backgrounds or audio clips, and skins from screens
 - **Background Guessr**: identify songs from beatmap backgrounds.
 - **Audio Guessr**: identify songs from audio clips.
 - **Skin Guessr**: identify community skins from screenshots.
-- Classic and survival variants, leaderboards, profiles, game statistics, reports, and API keys.
+- **Score pp**: compare two real osu! plays and pick the one worth more pp.
+- Classic, survival, and death variants, plus multiplayer lobbies.
+- pp-based rankings, leaderboards, profiles, game statistics, reports, and API keys.
 - English, Turkish, Czech, Spanish, Polish, and Russian interfaces.
 
 ## Documentation
 
 - [API documentation](./docs/API.md)
+- [Deployment notes](./docs/DEPLOYMENT.md)
 - [Translation guide](./docs/TRANSLATING.md)
 
 ## Requirements
@@ -46,8 +49,6 @@ Guess osu! songs from beatmap backgrounds or audio clips, and skins from screens
     HANAMI_ISSUER="https://hanami.yorunoken.com/api/auth"
     HANAMI_CLIENT_ID="your_public_client_id"
     OSU_API_KEY="your_api_key"
-    OSU_CLIENT_ID="your_oauth_client_id"
-    OSU_CLIENT_SECRET="your_oauth_client_secret"
 
     NEXTAUTH_URL="http://localhost:3000"
     NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -58,9 +59,18 @@ Guess osu! songs from beatmap backgrounds or audio clips, and skins from screens
     REDIS_URL="redis://127.0.0.1:6379"
     ```
 
-    Configure the public OIDC client in Hanami with the local callback URL `http://localhost:3000/api/auth/callback/hanami` for development and the production callback URL `https://your-domain.com/api/auth/callback/hanami` for deployment. Generate independent secrets for `AUTH_SECRET` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`; do not reuse the placeholders in production.
+    Sign-in goes through Hanami as a public OIDC client (PKCE, no client secret). The client is defined in Hanami Web's environment rather than created in a UI: set Hanami Web's `OSU_GUESSR_CLIENT_ID` to the same value as `HANAMI_CLIENT_ID` here, and list the callback URLs in its comma-separated `OSU_GUESSR_REDIRECT_URIS`, for example `http://localhost:3000/api/auth/callback/hanami` for development and `https://your-domain.com/api/auth/callback/hanami` for deployment. Hanami Web registers the client when its container starts or when you run `bun run db:reconcile-oauth-client` there. It silently skips registration if any URI is not HTTPS (plain HTTP is only allowed for localhost) or contains a fragment. When developing against the production issuer, the localhost callback must be in the production allowlist.
 
-    `DISCORD_WEBHOOK` is optional. Reports are stored even when it is unset; the variable only enables Discord notifications.
+    In development, open the app at the `NEXTAUTH_URL` origin. Auth cookies are host-scoped, so requests to `127.0.0.1` or `0.0.0.0` are redirected there.
+
+    Generate independent secrets for `AUTH_SECRET` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`; do not reuse the placeholders in production.
+
+    Optional values:
+
+    - `DISCORD_WEBHOOK` enables Discord notifications for reports. Reports are stored even when it is unset.
+    - `OSUCK_API_KEY` enables the random skin integration.
+    - `OSU_CLIENT_ID` and `OSU_CLIENT_SECRET` are only needed by `bun run prepare:score-pp-pairs`, which fills the Score pp pair pool from the osu! API.
+    - `DB_HOST` is used to build a connection to `mysql://root@DB_HOST:3306/osu_guessr` when `DATABASE_URL` is empty.
 
 4. Prepare a database.
 
@@ -102,6 +112,7 @@ bun run build
 - Run only one app container while migrations execute. Scale it after startup if a future deployment adds replicas.
 - Conflicting legacy `mapset_tags` duplicates must be resolved manually if startup reports them. Successful migration keeps the original rows in `mapset_tags_before_20260905` for recovery.
 - Treat applied migration files as immutable. Add a new migration for later schema changes.
+- The app runs through a custom server (`server.ts`) that also serves multiplayer WebSockets at `/multiplayer-ws`. Reverse proxies must forward `Upgrade` and `Connection` headers on that path.
 
 ## Built with
 
