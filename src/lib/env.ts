@@ -23,8 +23,6 @@ const envSchema = z.object({
 
     NEXT_PUBLIC_API_URL: z.string().optional(),
     NEXT_PUBLIC_APP_URL: optionalUrl("NEXT_PUBLIC_APP_URL must be a valid URL").default("http://localhost:3000"),
-    NEXT_PUBLIC_ADSENSE_CLIENT: z.string().optional(),
-    NEXT_PUBLIC_ADSENSE_SLOT: z.string().optional(),
 });
 
 const processEnv = {
@@ -44,8 +42,6 @@ const processEnv = {
     DISCORD_WEBHOOK: process.env.DISCORD_WEBHOOK,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXT_PUBLIC_ADSENSE_CLIENT: process.env.NEXT_PUBLIC_ADSENSE_CLIENT,
-    NEXT_PUBLIC_ADSENSE_SLOT: process.env.NEXT_PUBLIC_ADSENSE_SLOT,
 };
 
 const parsed = envSchema.safeParse(processEnv);

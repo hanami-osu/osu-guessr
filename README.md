@@ -69,7 +69,7 @@ Guess osu! songs from beatmap backgrounds or audio clips, and skins from screens
 
     - `DISCORD_WEBHOOK` enables Discord notifications for reports. Reports are stored even when it is unset.
     - `OSUCK_API_KEY` enables the random skin integration.
-    - `OSU_CLIENT_ID` and `OSU_CLIENT_SECRET` are only needed by `bun run prepare:score-pp-pairs`, which fills the Score pp pair pool from the osu! API.
+    - `OSU_CLIENT_ID` and `OSU_CLIENT_SECRET` fill the Score pp pair pool from the osu! API. The server refreshes the pool in the background (shortly after start, then every 15 minutes), and `bun run prepare:score-pp-pairs` builds it manually. Without them, Score pp has no pairs to show.
     - `DB_HOST` is used to build a connection to `mysql://root@DB_HOST:3306/osu_guessr` when `DATABASE_URL` is empty.
 
 4. Prepare a database.

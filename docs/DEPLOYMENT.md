@@ -33,4 +33,4 @@ Create host bind-mount directories with appropriate ownership and permissions be
 
 ## Publishing checks
 
-The Docker publishing workflow runs `bun run check`, `bun test`, and `bun run build` before the Docker job. The check command generates Prisma Client before linting and type-checking, so it also works from a clean checkout. Image login, build, and push steps do not run when the quality job fails.
+The Docker publishing workflow runs `bun run check`, `bun run test`, and `bun run build` before the Docker job. The check command generates Prisma Client before linting and type-checking, so it also works from a clean checkout. Image login, build, and push steps do not run when the quality job fails.

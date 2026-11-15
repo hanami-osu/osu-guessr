@@ -8,7 +8,7 @@ Translations live in `src/messages/`, with one JSON file per language (e.g., `en
     - Use the standard two-letter language code (e.g., `fr.json` for French)
     - Copy the content from `en.json` as a starting point
 
-2. Import the file and register its code and display name in the translation registry used by `src/hooks/use-translations.ts`.
+2. Import the file and add its code and display name to `languages` in `src/lib/translations.ts`.
 
 3. Maintain the same structure as the English file, changing only text values.
 

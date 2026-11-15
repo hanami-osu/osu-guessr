@@ -4,15 +4,12 @@ import { useState, useEffect } from "react";
 import type { Translations } from "@/lib/translations";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { AtSign, Coffee, Gamepad2, MessagesSquare, type LucideIcon } from "lucide-react";
-import AdSlot from "./AdSlot";
 
 interface LinkPromo {
     id: string;
     title: string;
     link: string;
 }
-
-type Promo = LinkPromo | { id: "adsense"; kind: "ad" };
 
 const promoIcons: Record<string, LucideIcon> = {
     twitter: AtSign,
@@ -21,36 +18,28 @@ const promoIcons: Record<string, LucideIcon> = {
     discord: MessagesSquare,
 };
 
-const createPromos = (t: Translations): Array<Promo> => {
-    const promos: Array<Promo> = [
-        {
-            id: "twitter",
-            title: t.components.ads.twitter.title,
-            link: "https://twitter.com/_yorunoken",
-        },
-        {
-            id: "osu",
-            title: t.components.ads.osu.title,
-            link: "https://osu.ppy.sh/users/yorunoken",
-        },
-        {
-            id: "buymeacoffe",
-            title: t.components.ads.buymeacoffe.title,
-            link: "https://ko-fi.com/yorunoken",
-        },
-        {
-            id: "discord",
-            title: t.components.ads.discord.title,
-            link: "https://discord.gg/qrud2g4CA5",
-        },
-    ];
-
-    if (process.env.NEXT_PUBLIC_ADSENSE_SLOT) {
-        promos.push({ id: "adsense", kind: "ad" });
-    }
-
-    return promos;
-};
+const createPromos = (t: Translations): Array<LinkPromo> => [
+    {
+        id: "twitter",
+        title: t.components.ads.twitter.title,
+        link: "https://twitter.com/_yorunoken",
+    },
+    {
+        id: "osu",
+        title: t.components.ads.osu.title,
+        link: "https://osu.ppy.sh/users/yorunoken",
+    },
+    {
+        id: "buymeacoffe",
+        title: t.components.ads.buymeacoffe.title,
+        link: "https://ko-fi.com/yorunoken",
+    },
+    {
+        id: "discord",
+        title: t.components.ads.discord.title,
+        link: "https://discord.gg/qrud2g4CA5",
+    },
+];
 
 export function AdSlider({ compact = false }: { compact?: boolean }) {
     const { t } = useTranslationsContext();
@@ -86,21 +75,17 @@ export function AdSlider({ compact = false }: { compact?: boolean }) {
     return (
         <div className={compact ? "mt-5 text-xs text-muted-foreground" : "max-w-md mx-auto my-8"}>
             <div className="h-full">
-                {"kind" in currentPromo ? (
-                    <AdSlot compact={compact} />
-                ) : (
-                    <a href={currentPromo.link} target="_blank" rel="noopener noreferrer" className={`block h-full ${compact ? "py-3" : "p-4"} hover:opacity-80 transition-opacity`}>
-                        <div className={`flex items-center justify-center text-center h-full ${compact ? "gap-2" : "flex-col gap-3"}`}>
-                            {(() => {
-                                const Icon = promoIcons[currentPromo.id];
-                                return Icon ? <Icon aria-hidden="true" className={compact ? "size-4" : "size-7"} /> : null;
-                            })()}
-                            <div>
-                                <h3 className="font-medium">{currentPromo.title}</h3>
-                            </div>
+                <a href={currentPromo.link} target="_blank" rel="noopener noreferrer" className={`block h-full ${compact ? "py-3" : "p-4"} hover:opacity-80 transition-opacity`}>
+                    <div className={`flex items-center justify-center text-center h-full ${compact ? "gap-2" : "flex-col gap-3"}`}>
+                        {(() => {
+                            const Icon = promoIcons[currentPromo.id];
+                            return Icon ? <Icon aria-hidden="true" className={compact ? "size-4" : "size-7"} /> : null;
+                        })()}
+                        <div>
+                            <h3 className="font-medium">{currentPromo.title}</h3>
                         </div>
-                    </a>
-                )}
+                    </div>
+                </a>
             </div>
         </div>
     );

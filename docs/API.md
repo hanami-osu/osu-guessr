@@ -32,7 +32,7 @@ GET /api/users/{userId}
         }>;
         achievements: Array<{
             user_id: number;
-            game_mode: "background" | "audio" | "skin";
+            game_mode: "background" | "audio" | "skin" | "score_pp";
             variant: "classic" | "survival" | "death";
             ruleset_version: number;
             pp_version: number;
@@ -59,13 +59,14 @@ GET /api/users/{userId}
                 background: { classic?: number; survival?: number; death?: number };
                 audio: { classic?: number; survival?: number; death?: number };
                 skin: { classic?: number; survival?: number; death?: number };
+                score_pp: { classic?: number; survival?: number; death?: number };
             };
         };
     };
 }
 ```
 
-Returns `404` when the user does not exist. Rank fields can be absent when the user is unranked.
+Returns `404` when the user does not exist. Rank fields can be absent when the user is unranked. Achievements and ranks cover the current ruleset and pp version only.
 
 ### Get a user's games
 
@@ -75,9 +76,12 @@ GET /api/users/{userId}/games
 
 Query parameters:
 
-- `mode` (optional): `background`, `audio`, or `skin`.
+- `mode` (optional): `background`, `audio`, `skin`, or `score_pp`.
 - `variant` (optional): `classic`, `survival`, or `death`; defaults to `classic`.
 - `limit` (optional): integer from 1 to 100; defaults to 20.
+
+Only ranked games are returned.
+
 - `offset` (optional): non-negative integer; defaults to 0.
 
 ```typescript
@@ -86,7 +90,7 @@ Query parameters:
     data: Array<{
         id: string;
         user_id: number;
-        game_mode: "background" | "audio" | "skin";
+        game_mode: "background" | "audio" | "skin" | "score_pp";
         points: number;
         streak: number;
         variant: "classic" | "survival" | "death";
@@ -113,15 +117,17 @@ GET /api/users/{userId}/stats
 
 Query parameters:
 
-- `mode` (optional): `background`, `audio`, or `skin`.
+- `mode` (optional): `background`, `audio`, or `skin`. This filter does not accept `score_pp`; omit it to get every mode, including `score_pp`.
 - `variant` (optional): `classic`, `survival`, or `death`.
+
+Statistics cover the current ruleset and pp version only.
 
 ```typescript
 {
     success: true;
     data: Array<{
         user_id: number;
-        game_mode: "background" | "audio" | "skin";
+        game_mode: "background" | "audio" | "skin" | "score_pp";
         variant: "classic" | "survival" | "death";
         ruleset_version: number;
         pp_version: number;
@@ -175,7 +181,7 @@ GET /api/games/leaderboard
 
 Query parameters:
 
-- `mode` (optional): `background`, `audio`, or `skin`; defaults to `background`.
+- `mode` (optional): `background`, `audio`, `skin`, or `score_pp`; defaults to `background`.
 - `variant` (optional): `classic`, `survival`, or `death`; defaults to `classic`.
 - `limit` (optional): integer from 1 to 100; defaults to 100.
 
