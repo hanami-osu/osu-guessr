@@ -27,6 +27,23 @@ describe("validateApiKeyValue", () => {
         await expect(validateApiKeyValue("limited", dependencies({ requestCount: 121 }))).rejects.toBeInstanceOf(ApiRateLimitError);
     });
 
+    test("only matches keys whose owner is not scheduled for deletion", async () => {
+        const queries: string[] = [];
+        const deps = dependencies({ row: null });
+
+        await expect(
+            validateApiKeyValue("hidden-owner", {
+                ...deps,
+                query: async (sql: string) => {
+                    queries.push(sql);
+                    return deps.query(sql);
+                },
+            }),
+        ).rejects.toBeInstanceOf(InvalidApiKeyError);
+        expect(queries[0]).toContain("JOIN users u ON u.bancho_id = k.user_id");
+        expect(queries[0]).toContain("u.deletion_scheduled_at IS NULL");
+    });
+
     test("maps database and Redis failures to a validation service error", async () => {
         const consoleError = spyOn(console, "error").mockImplementation(() => {});
         await expect(validateApiKeyValue("key", dependencies({ queryError: new Error("database unavailable") }))).rejects.toBeInstanceOf(ApiValidationServiceError);

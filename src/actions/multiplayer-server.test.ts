@@ -20,6 +20,7 @@ const getPresentMultiplayerUsersMock = mock(async (code: string) => [...(presenc
 const publishMultiplayerLobbyMock = mock(async () => {});
 const publishMultiplayerLobbyDeletedMock = mock(async () => {});
 const publishMultiplayerBrowserChangedMock = mock(async () => {});
+const revokeMultiplayerSocketTokensMock = mock(async () => {});
 
 const redisClientMock = {
     get: mock(async (key: string) => redisValues.get(key) ?? null),
@@ -70,6 +71,7 @@ mock.module("@/lib/multiplayer-realtime", () => ({
     publishMultiplayerBrowserChanged: publishMultiplayerBrowserChangedMock,
     publishMultiplayerLobby: publishMultiplayerLobbyMock,
     publishMultiplayerLobbyDeleted: publishMultiplayerLobbyDeletedMock,
+    revokeMultiplayerSocketTokens: revokeMultiplayerSocketTokensMock,
 }));
 
 const { joinMultiplayerLobbyAction, resetMultiplayerLobbyAction, setMultiplayerReadyAction, startMultiplayerLobbyAction, updateMultiplayerLobbyAction, leaveMultiplayerLobbyAction } =
@@ -82,6 +84,7 @@ const {
     getMultiplayerRoundState,
     markMultiplayerPlayerConnected,
     readMultiplayerLobby,
+    removeMultiplayerUser,
     updateMultiplayerProgress,
 } = await import("@/lib/multiplayer");
 
@@ -175,6 +178,7 @@ beforeEach(() => {
     publishMultiplayerLobbyMock.mockClear();
     publishMultiplayerLobbyDeletedMock.mockClear();
     publishMultiplayerBrowserChangedMock.mockClear();
+    revokeMultiplayerSocketTokensMock.mockClear();
     redisClientMock.get.mockClear();
     redisClientMock.set.mockClear();
     redisClientMock.eval.mockClear();
@@ -336,6 +340,18 @@ describe("multiplayer pre-game lifecycle", () => {
         expect(cancelled.status).toBe("waiting");
         expect(cancelled.startAt).toBeNull();
         expect(cancelled.players[1]?.ready).toBe(false);
+    });
+
+    test("removes a user scheduled for deletion from their lobby and revokes their socket tokens", async () => {
+        seedLobby();
+        redisValues.set("multiplayer_user_lobby:2", lobbyCode);
+
+        await removeMultiplayerUser(2);
+        await removeMultiplayerUser(2);
+
+        expect((await storedLobby()).players.map((item) => item.userId)).toEqual([1]);
+        expect(redisValues.has("multiplayer_user_lobby:2")).toBe(false);
+        expect(revokeMultiplayerSocketTokensMock).toHaveBeenCalledWith(2);
     });
 
     test("cancels a countdown when a player leaves", async () => {

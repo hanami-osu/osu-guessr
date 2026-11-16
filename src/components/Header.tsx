@@ -56,7 +56,7 @@ export default function Header() {
                         <SupportPageLink />
                     </div>
 
-                    {session ? (
+                    {session?.user ? (
                         <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 active:!transform-none" aria-label={t.components.header.accessibility.profileMenu}>

@@ -12,6 +12,7 @@ const envSchema = z.object({
     AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
     HANAMI_ISSUER: z.string().url("HANAMI_ISSUER must be a valid URL"),
     HANAMI_CLIENT_ID: z.string().min(1, "HANAMI_CLIENT_ID is required"),
+    HANAMI_INTERNAL_SECRET: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(32, "HANAMI_INTERNAL_SECRET must be at least 32 characters").optional()),
     NEXTAUTH_URL: optionalUrl("NEXTAUTH_URL must be a valid URL"),
 
     OSU_API_KEY: z.string().min(1, "OSU_API_KEY is required"),
@@ -33,6 +34,7 @@ const processEnv = {
     AUTH_SECRET: process.env.AUTH_SECRET,
     HANAMI_ISSUER: process.env.HANAMI_ISSUER,
     HANAMI_CLIENT_ID: process.env.HANAMI_CLIENT_ID,
+    HANAMI_INTERNAL_SECRET: process.env.HANAMI_INTERNAL_SECRET,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     OSU_API_KEY: process.env.OSU_API_KEY,
     OSU_CLIENT_ID: process.env.OSU_CLIENT_ID,

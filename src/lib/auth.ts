@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { HanamiProvider, parseHanamiProfile } from "@/lib/hanami-auth";
-import { isAdminUserId } from "@/lib/admin";
+import { getSessionUserAccess } from "@/lib/admin";
 import { upsertUser } from "@/lib/user-service";
 import NextAuth, { DefaultSession } from "next-auth";
 
@@ -19,10 +19,11 @@ const developmentCookies =
 
 declare module "next-auth" {
     interface Session {
-        user: {
+        // Absent when the signed-in user no longer exists or has a deletion scheduled.
+        user?: {
             banchoId: number;
             isAdmin: boolean;
-        } & DefaultSession["user"];
+        } & NonNullable<DefaultSession["user"]>;
     }
 }
 
@@ -49,12 +50,16 @@ export const { auth, handlers } = NextAuth({
             return sanitizedToken;
         },
         session: async ({ session, token }) => {
-            const banchoId = token.banchoId as number;
+            const banchoId = typeof token.banchoId === "number" ? token.banchoId : undefined;
+            const access = await getSessionUserAccess(banchoId);
+            // `user` must be set explicitly: server-side auth() merges the raw token in as `user` when the key is absent.
+            if (!banchoId || !access.active) return { expires: session.expires, user: undefined };
+
             return {
                 ...session,
                 user: {
                     banchoId,
-                    isAdmin: await isAdminUserId(banchoId),
+                    isAdmin: access.isAdmin,
                     name: typeof token.name === "string" ? token.name : null,
                     image: typeof token.picture === "string" ? token.picture : null,
                 },

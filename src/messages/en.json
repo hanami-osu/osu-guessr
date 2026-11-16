@@ -807,9 +807,9 @@
                 "action": "View privacy policy"
             },
             "deletion": {
-                "title": "Request data deletion",
-                "description": "Continue to Hanami for deletion instructions and requests related to osu!guessr data.",
-                "action": "Continue to Hanami"
+                "title": "Delete your data",
+                "description": "Choose what to delete on Hanami, such as your osu!guessr data or your whole Hanami account. Your data is hidden right away and deleted after 14 days, and you can cancel any time before then.",
+                "action": "Choose what to delete"
             }
         }
     },

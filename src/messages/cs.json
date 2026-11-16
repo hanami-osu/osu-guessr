@@ -683,9 +683,9 @@
                 "action": "Zobrazit zásady soukromí"
             },
             "deletion": {
-                "title": "Požádat o smazání dat",
-                "description": "Pokračujte do Hanami pro pokyny a žádosti o smazání související s daty osu!guessr.",
-                "action": "Pokračovat do Hanami"
+                "title": "Smazat svá data",
+                "description": "Na Hanami si vyberte, co chcete smazat, například svá data z osu!guessr nebo celý účet Hanami. Data se okamžitě skryjí a po 14 dnech se smažou. Do té doby můžete smazání kdykoli zrušit.",
+                "action": "Vybrat, co smazat"
             }
         }
     },

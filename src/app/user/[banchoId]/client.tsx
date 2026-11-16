@@ -88,7 +88,6 @@ export default function UserProfileClient({
                                 className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${currentMode === mode ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             >
                                 {t.leaderboard.filters.mode[mode]}
-                                <TabPp value={tabPp(mode, currentVariant)} />
                             </Link>
                         ))}
                     </nav>

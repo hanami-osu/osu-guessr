@@ -65,7 +65,8 @@ export default function MultiplayerBrowser() {
     }, [refresh]);
 
     useEffect(() => {
-        if (session?.user?.name) setName((current) => current || `${session.user.name}'s lobby`);
+        const username = session?.user?.name;
+        if (username) setName((current) => current || `${username}'s lobby`);
     }, [session?.user?.name]);
 
     const createLobby = async (event: FormEvent) => {
@@ -176,8 +177,8 @@ export default function MultiplayerBrowser() {
                                 </div>
                                 <Switch checked={isPrivate} onCheckedChange={setIsPrivate} aria-label="Private lobby" />
                             </div>
-                            <Button className="w-full" type="submit" disabled={isCreating || (Boolean(session) && !name.trim())}>
-                                {isCreating ? "Creating..." : session ? "Create lobby" : "Sign in to create"}
+                            <Button className="w-full" type="submit" disabled={isCreating || (Boolean(session?.user) && !name.trim())}>
+                                {isCreating ? "Creating..." : session?.user ? "Create lobby" : "Sign in to create"}
                             </Button>
                         </div>
                     </form>

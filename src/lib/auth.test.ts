@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, mock, test } from "bun:test";
 import type { Profile } from "next-auth";
 
 const upsertUserMock = mock(async () => {});
-const isAdminUserIdMock = mock(async (userId?: number) => userId === 123);
+const getSessionUserAccessMock = mock(async (userId?: number) => ({ active: userId === 123 || userId === 456, isAdmin: userId === 123 }));
 type TestProvider = {
     id: string;
     name: string;
@@ -30,7 +30,7 @@ type TestAuthConfig = {
         jwt: (args: { token: Record<string, unknown>; profile?: Profile }) => Promise<Record<string, unknown>>;
         session: (args: { session: { expires: string; user?: Record<string, unknown> }; token: Record<string, unknown> }) => Promise<{
             expires: string;
-            user: Record<string, unknown>;
+            user?: Record<string, unknown>;
         }>;
     };
 };
@@ -43,7 +43,7 @@ mock.module("@/lib/env", () => ({
     },
 }));
 mock.module("@/lib/user-service", () => ({ upsertUser: upsertUserMock }));
-mock.module("@/lib/admin", () => ({ isAdminUserId: isAdminUserIdMock }));
+mock.module("@/lib/admin", () => ({ getSessionUserAccess: getSessionUserAccessMock }));
 mock.module("next-auth", () => ({
     default: (config: TestAuthConfig) => {
         authConfig = config;
@@ -129,7 +129,28 @@ describe("Hanami authentication configuration", () => {
                 image: "https://osu.ppy.sh/avatar/123",
             },
         });
-        expect(isAdminUserIdMock).toHaveBeenCalledWith(123);
+        expect(getSessionUserAccessMock).toHaveBeenCalledWith(123);
+    });
+
+    test("drops the user from sessions of users that are missing or scheduled for deletion", async () => {
+        const session = await authConfig.callbacks.session({
+            session: { expires: "2099-01-01T00:00:00.000Z", user: { name: "player" } },
+            token: { banchoId: 789, name: "player", picture: "https://osu.ppy.sh/avatar/789" },
+        });
+
+        expect(session).toEqual({ expires: "2099-01-01T00:00:00.000Z" });
+        // next-auth's server-side auth() falls back to the raw token unless `user` is explicitly present.
+        expect(Object.hasOwn(session, "user")).toBe(true);
+        expect(getSessionUserAccessMock).toHaveBeenCalledWith(789);
+    });
+
+    test("drops the user from sessions without an osu id", async () => {
+        const session = await authConfig.callbacks.session({
+            session: { expires: "2099-01-01T00:00:00.000Z" },
+            token: { sub: "hanami-sub" },
+        });
+
+        expect(session).toEqual({ expires: "2099-01-01T00:00:00.000Z" });
     });
 
     test("maps Hanami claims to the existing user profile contract", async () => {

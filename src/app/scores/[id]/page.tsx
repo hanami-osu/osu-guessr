@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createPageMetadata } from "@/lib/social-metadata";
+import { visibleUserWhere } from "@/lib/user-visibility";
 import { getTranslations, isLocale } from "@/lib/translations";
 import { cache } from "react";
 
@@ -165,14 +166,15 @@ const findGameByRouteId = cache(async (id: string) => {
     return null;
 });
 
-const findUserByBanchoId = cache((banchoId: number) => prisma.user.findUnique({ where: { banchoId } }));
+const findVisibleUser = cache((banchoId: number) => prisma.user.findFirst({ where: { banchoId, ...visibleUserWhere } }));
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { id } = await params;
 
     try {
         const game = await findGameByRouteId(id);
-        if (!game) {
+        const user = game ? await findVisibleUser(game.userId) : null;
+        if (!game || !user) {
             return createPageMetadata({
                 title: "Score",
                 description: "Detailed osu!guessr score and round history.",
@@ -180,8 +182,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             });
         }
 
-        const user = await findUserByBanchoId(game.userId);
-        const username = user?.username ?? `User ${game.userId}`;
+        const username = user.username;
         const roundsPlayed = game.roundsPlayed || 0;
         const accuracy = roundsPlayed > 0 ? (game.correctCount / roundsPlayed) * 100 : 0;
         const descriptionParts = [
@@ -195,8 +196,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             title: `${username}'s score`,
             description: descriptionParts.join(" · "),
             path: `/scores/${game.id.toString()}`,
-            image: user?.avatarUrl ?? "/main_bg.webp",
-            imageAlt: user ? `${username}'s avatar` : "osu!guessr",
+            image: user.avatarUrl,
+            imageAlt: `${username}'s avatar`,
         });
     } catch {
         return createPageMetadata({
@@ -213,11 +214,14 @@ export default async function ScorePage({ params, searchParams }: Props) {
     const lobbyCode = rawLobby && /^[A-Z0-9]{6,8}$/i.test(rawLobby) ? rawLobby.toUpperCase() : null;
 
     const game = await findGameByRouteId(id);
-    if (game && !/^\d+$/.test(id)) redirect(`/scores/${game.id.toString()}${lobbyCode ? `?lobby=${encodeURIComponent(lobbyCode)}` : ""}`);
-
     if (!game) notFound();
 
-    const [user, rounds, cookieStore] = await Promise.all([findUserByBanchoId(game.userId), prisma.gameRound.findMany({ where: { gameId: game.id }, orderBy: { roundNumber: "asc" } }), cookies()]);
+    const user = await findVisibleUser(game.userId);
+    if (!user) notFound();
+
+    if (!/^\d+$/.test(id)) redirect(`/scores/${game.id.toString()}${lobbyCode ? `?lobby=${encodeURIComponent(lobbyCode)}` : ""}`);
+
+    const [rounds, cookieStore] = await Promise.all([prisma.gameRound.findMany({ where: { gameId: game.id }, orderBy: { roundNumber: "asc" } }), cookies()]);
 
     const localeCookie = cookieStore.get("locale")?.value;
     const locale = isLocale(localeCookie) ? localeCookie : "en";
@@ -266,7 +270,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
                                     href={`/user/${game.userId}?mode=${game.gameMode}&variant=${game.variant}`}
                                     className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                                 >
-                                    {user?.username ?? `User ${game.userId}`}
+                                    {user.username}
                                 </Link>
                                 &apos;s score
                             </h1>

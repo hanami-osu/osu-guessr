@@ -38,6 +38,15 @@ export async function consumeMultiplayerSocketToken(token: string): Promise<numb
     return Number.isSafeInteger(userId) && userId > 0 ? userId : null;
 }
 
+export async function revokeMultiplayerSocketTokens(userId: number): Promise<void> {
+    for await (const keys of redisClient.scanIterator({ MATCH: `${SOCKET_TOKEN_PREFIX}*`, COUNT: 100 })) {
+        if (keys.length === 0) continue;
+        const owners = await redisClient.mGet(keys);
+        const owned = keys.filter((_, index) => owners[index] === String(userId));
+        if (owned.length > 0) await redisClient.del(owned);
+    }
+}
+
 export async function publishMultiplayerRealtimeEvent(code: string, event: MultiplayerRealtimeEvent): Promise<void> {
     await redisClient.publish(multiplayerEventChannel(code), JSON.stringify(event));
 }

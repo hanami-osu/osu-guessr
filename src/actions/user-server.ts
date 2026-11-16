@@ -6,6 +6,7 @@ import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { calculateProfilePp } from "@/lib/game/performance-points";
 import { hasPlayedGame } from "@/lib/user-stats";
+import { getHiddenUserIds, isUserVisible, visibleUserWhere } from "@/lib/user-visibility";
 import { authenticatedAction } from "./server";
 import { z } from "zod";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
@@ -131,9 +132,10 @@ async function getBadgesForUsers(userIds: number[]): Promise<Map<number, UserBad
     return result;
 }
 
-async function getGlobalRank(userId: number, variant: GameVariant): Promise<number> {
+async function getGlobalRank(userId: number, variant: GameVariant, hiddenUserIds: number[]): Promise<number> {
     const achievements = await prisma.userAchievement.findMany({
         where: {
+            userId: { notIn: hiddenUserIds },
             variant,
             rulesetVersion: CURRENT_RULESET_VERSION,
             ppVersion: CURRENT_PP_VERSION,
@@ -160,7 +162,7 @@ async function getGlobalRank(userId: number, variant: GameVariant): Promise<numb
 }
 
 export async function getUserByIdAction(banchoId: number): Promise<UserWithStats | null> {
-    const userRow = await prisma.user.findUnique({ where: { banchoId } });
+    const userRow = await prisma.user.findFirst({ where: { banchoId, ...visibleUserWhere } });
     if (!userRow) return null;
 
     const achievementRows = await prisma.userAchievement.findMany({
@@ -172,7 +174,8 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
     });
     const achievements = achievementRows.map(mapAchievement);
     const badgesByUser = await getBadgesForUsers([banchoId]);
-    const globalRanks = await Promise.all(GAME_VARIANTS.map((variant) => getGlobalRank(banchoId, variant)));
+    const hiddenUserIds = await getHiddenUserIds();
+    const globalRanks = await Promise.all(GAME_VARIANTS.map((variant) => getGlobalRank(banchoId, variant, hiddenUserIds)));
     const modeRanks: NonNullable<UserWithStats["ranks"]>["modeRanks"] = {
         [GameMode.Background]: {},
         [GameMode.Audio]: {},
@@ -187,6 +190,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
                 if (!achievement || achievement.gamesPlayed === 0) return;
                 const rank = await prisma.userAchievement.count({
                     where: {
+                        userId: { notIn: hiddenUserIds },
                         gameMode: mode,
                         variant,
                         rulesetVersion: CURRENT_RULESET_VERSION,
@@ -211,6 +215,7 @@ export async function getUserByIdAction(banchoId: number): Promise<UserWithStats
 
 export async function getUserStatsAction(banchoId: number, variant?: GameVariant): Promise<Array<UserAchievement>> {
     const validatedVariant = variant ? gameVariantSchema.parse(variant) : undefined;
+    if (!(await isUserVisible(banchoId))) return [];
     const rows = await prisma.userAchievement.findMany({
         where: {
             userId: banchoId,
@@ -231,6 +236,7 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
             offset: z.number().int().min(0).default(0),
         })
         .parse({ limit, offset });
+    if (!(await isUserVisible(banchoId))) return [];
     const rows = await prisma.game.findMany({
         where: {
             userId: banchoId,
@@ -247,6 +253,7 @@ export async function getUserLatestGamesAction(banchoId: number, gameMode?: Game
 export async function getUserGamesCountAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic"): Promise<number> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validatedVariant = gameVariantSchema.parse(variant);
+    if (!(await isUserVisible(banchoId))) return 0;
     return prisma.game.count({
         where: {
             userId: banchoId,
@@ -260,6 +267,9 @@ export async function getUserGamesCountAction(banchoId: number, gameMode?: GameM
 export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode: GameMode, variant: GameVariant = "classic"): Promise<UserLifetimeModeStats> {
     const validatedMode = gameModeSchema.parse(gameMode);
     const validatedVariant = gameVariantSchema.parse(variant);
+    if (!(await isUserVisible(banchoId))) {
+        return { games_played: 0, total_score: BigInt(0), highest_score: 0, highest_streak: 0, average_streak: 0, last_played: null };
+    }
     const stats = await prisma.game.aggregate({
         where: {
             userId: banchoId,
@@ -293,6 +303,9 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
     const now = new Date();
     const todayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
     const windowStart = new Date(todayStart - (validated.days - 1) * 86_400_000);
+    if (!(await isUserVisible(banchoId))) return [];
+    const hiddenUserIds = await getHiddenUserIds();
+    const hiddenUsers = new Set(hiddenUserIds);
 
     const targetHasPlayedBeforeWindow =
         (await prisma.game.count({
@@ -331,6 +344,7 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
 
     const topRunsByUser = new Map<number, number[]>();
     for (const run of baselineRuns) {
+        if (hiddenUsers.has(run.user_id)) continue;
         const runs = topRunsByUser.get(run.user_id) ?? [];
         runs.push(Number(run.pp));
         topRunsByUser.set(run.user_id, runs);
@@ -343,6 +357,7 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
 
     const events = await prisma.game.findMany({
         where: {
+            userId: { notIn: hiddenUserIds },
             gameMode: validatedMode,
             variant: validated.variant,
             rulesetVersion: CURRENT_RULESET_VERSION,
@@ -398,6 +413,7 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
 export async function getUserTopGamesAction(banchoId: number, gameMode?: GameMode, variant: GameVariant = "classic", limit: number = 5): Promise<Array<Game>> {
     const validatedMode = gameMode ? gameModeSchema.parse(gameMode) : undefined;
     const validated = z.object({ variant: gameVariantSchema, limit: z.number().int().min(1).max(100) }).parse({ variant, limit });
+    if (!(await isUserVisible(banchoId))) return [];
     const rows = await prisma.game.findMany({
         where: {
             userId: banchoId,
@@ -424,6 +440,7 @@ export async function getTopPlayersAction(
         .parse({ gamemode, variant, limit, offset: resolvedOffset });
     const achievements = await prisma.userAchievement.findMany({
         where: {
+            userId: { notIn: await getHiddenUserIds() },
             gameMode: validated.gamemode,
             variant: validated.variant,
             rulesetVersion: CURRENT_RULESET_VERSION,
@@ -459,7 +476,7 @@ export async function getTopPlayersAction(
 export async function searchUsersAction(searchTerm: string, limit: number = 10): Promise<Array<User>> {
     const validated = searchSchema.parse({ term: searchTerm, limit });
     const users = await prisma.user.findMany({
-        where: { username: { contains: validated.term } },
+        where: { username: { contains: validated.term }, ...visibleUserWhere },
         orderBy: [{ username: "asc" }, { banchoId: "asc" }],
         take: validated.limit,
     });
@@ -468,7 +485,7 @@ export async function searchUsersAction(searchTerm: string, limit: number = 10):
 
 export async function searchUsersPageAction(searchTerm: string, limit: number = 10, offset: number = 0): Promise<{ users: Array<User>; total: number }> {
     const validated = searchSchema.parse({ term: searchTerm, limit, offset });
-    const where = { username: { contains: validated.term } };
+    const where = { username: { contains: validated.term }, ...visibleUserWhere };
     const [users, total] = await Promise.all([
         prisma.user.findMany({
             where,
@@ -491,7 +508,7 @@ export async function getHighestStatsAction(variant: GameVariant = "classic"): P
         ranked: true,
     } as const;
     const [totalUsers, totalGames, maxima] = await Promise.all([
-        prisma.user.count(),
+        prisma.user.count({ where: visibleUserWhere }),
         prisma.game.count({ where: { variant: validatedVariant, ranked: true } }),
         prisma.game.aggregate({ where: competitiveWhere, _max: { points: true, streak: true, pp: true } }),
     ]);

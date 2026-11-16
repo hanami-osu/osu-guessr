@@ -33,7 +33,7 @@ export default function Hero() {
                     <p className="mx-auto max-w-xl text-sm sm:text-base text-muted-foreground mb-6 leading-relaxed">{t.home.hero.subtitle}</p>
 
                     <div className="flex flex-col sm:flex-row sm:justify-center gap-3">
-                        {session ? (
+                        {session?.user ? (
                             <Button size="lg" onClick={scrollToGamemodes} className="text-sm px-6 w-full sm:w-auto">
                                 {t.home.hero.startPlaying}
                             </Button>

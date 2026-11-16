@@ -2,8 +2,29 @@ import { expect, mock, test } from "bun:test";
 import type { MultiplayerLobby, MultiplayerPlayer } from "./multiplayer";
 
 const publish = mock<(channel: string, message: string) => Promise<number>>(async () => 1);
-mock.module("@/lib/redis", () => ({ default: { publish } }));
-const { publishMultiplayerLobby } = await import("./multiplayer-realtime");
+const redisValues = new Map<string, string>();
+const redis = {
+    publish,
+    async *scanIterator({ MATCH }: { MATCH: string }) {
+        const prefix = MATCH.replace(/\*$/, "");
+        yield [...redisValues.keys()].filter((key) => key.startsWith(prefix));
+    },
+    mGet: async (keys: string[]) => keys.map((key) => redisValues.get(key) ?? null),
+    del: async (keys: string[]) => keys.filter((key) => redisValues.delete(key)).length,
+};
+mock.module("@/lib/redis", () => ({ default: redis }));
+const { publishMultiplayerLobby, revokeMultiplayerSocketTokens } = await import("./multiplayer-realtime");
+
+test("revokes only the socket tokens that belong to the user", async () => {
+    redisValues.set("multiplayer_socket_token:a", "7");
+    redisValues.set("multiplayer_socket_token:b", "8");
+    redisValues.set("multiplayer_socket_token:c", "7");
+    redisValues.set("multiplayer_user_lobby:7", "ROOM123");
+
+    await revokeMultiplayerSocketTokens(7);
+
+    expect([...redisValues.keys()]).toEqual(["multiplayer_socket_token:b", "multiplayer_user_lobby:7"]);
+});
 
 test("broadcasts indistinguishable pending Score PP outcomes and reveals them after all submissions", async () => {
     const player: MultiplayerPlayer = {

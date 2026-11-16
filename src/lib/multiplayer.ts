@@ -1,7 +1,7 @@
 import type { GameMode, GameVariant } from "@/actions/types";
 import redisClient from "@/lib/redis";
 import { acquireRedisLock, releaseRedisLock } from "@/lib/redis-lock-core";
-import { getPresentMultiplayerUsers, publishMultiplayerBrowserChanged, publishMultiplayerLobby, publishMultiplayerLobbyDeleted } from "@/lib/multiplayer-realtime";
+import { getPresentMultiplayerUsers, publishMultiplayerBrowserChanged, publishMultiplayerLobby, publishMultiplayerLobbyDeleted, revokeMultiplayerSocketTokens } from "@/lib/multiplayer-realtime";
 
 const LOBBY_TTL_SECONDS = 4 * 60 * 60;
 const LOBBY_LOCK_TTL_MS = 5_000;
@@ -424,6 +424,14 @@ export async function leaveCurrentMultiplayerLobby(userId: number, exceptCode?: 
             await removeMultiplayerUserFromLobby(code, userId);
         }
     }
+}
+
+export async function removeMultiplayerUser(userId: number): Promise<void> {
+    await withMultiplayerUserLock(userId, async () => {
+        await leaveCurrentMultiplayerLobby(userId);
+        await redisClient.del(userLobbyKey(userId));
+    });
+    await revokeMultiplayerSocketTokens(userId);
 }
 
 async function requireMultiplayerLobbyAccess(code: string, userId: number, gameMode?: GameMode, variant?: GameVariant): Promise<MultiplayerLobby> {

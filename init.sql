@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) NOT NULL,
     avatar_url TEXT NOT NULL,
     banner_url TEXT,
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+    deletion_scheduled_at DATETIME(3) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

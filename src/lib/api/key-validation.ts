@@ -30,7 +30,13 @@ export async function validateApiKeyValue(apiKey: string | null | undefined, dep
     const hashedKey = hashApiKey(apiKey);
 
     try {
-        const [key] = (await dependencies.query(`SELECT user_id, last_used FROM api_keys WHERE id = ?`, [hashedKey])) as [{ user_id: number; last_used: Date | string | null }?];
+        const [key] = (await dependencies.query(
+            `SELECT k.user_id, k.last_used
+             FROM api_keys k
+             JOIN users u ON u.bancho_id = k.user_id
+             WHERE k.id = ? AND u.deletion_scheduled_at IS NULL`,
+            [hashedKey],
+        )) as [{ user_id: number; last_used: Date | string | null }?];
 
         if (!key) {
             throw new InvalidApiKeyError();

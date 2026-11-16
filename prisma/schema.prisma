@@ -67,12 +67,13 @@ enum ReportStatus {
 }
 
 model User {
-  banchoId  Int      @id @map("bancho_id")
-  username  String   @db.VarChar(255)
-  avatarUrl String   @map("avatar_url") @db.Text
-  bannerUrl String?  @map("banner_url") @db.Text
-  isAdmin   Boolean  @default(false) @map("is_admin")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  banchoId            Int       @id @map("bancho_id")
+  username            String    @db.VarChar(255)
+  avatarUrl           String    @map("avatar_url") @db.Text
+  bannerUrl           String?   @map("banner_url") @db.Text
+  isAdmin             Boolean   @default(false) @map("is_admin")
+  deletionScheduledAt DateTime? @map("deletion_scheduled_at") @db.DateTime(3)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@index([username], map: "idx_username")
   @@map("users")

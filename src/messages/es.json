@@ -683,9 +683,9 @@
                 "action": "Ver política de privacidad"
             },
             "deletion": {
-                "title": "Solicitar eliminación de datos",
-                "description": "Continúa en Hanami para ver las instrucciones y solicitudes de eliminación relacionadas con datos de osu!guessr.",
-                "action": "Continuar a Hanami"
+                "title": "Eliminar tus datos",
+                "description": "Elige en Hanami qué quieres eliminar, como tus datos de osu!guessr o toda tu cuenta de Hanami. Tus datos se ocultan de inmediato y se eliminan a los 14 días; hasta entonces puedes cancelarlo cuando quieras.",
+                "action": "Elegir qué eliminar"
             }
         }
     },

@@ -749,9 +749,9 @@
                 "action": "Zobacz politykę prywatności"
             },
             "deletion": {
-                "title": "Poproś o usunięcie danych",
-                "description": "Przejdź do Hanami, aby zobaczyć instrukcje i złożyć wniosek dotyczący usunięcia danych osu!guessr.",
-                "action": "Przejdź do Hanami"
+                "title": "Usuń swoje dane",
+                "description": "Na Hanami wybierz, co chcesz usunąć, na przykład swoje dane z osu!guessr lub całe konto Hanami. Dane zostaną od razu ukryte i usunięte po 14 dniach. Do tego czasu możesz w każdej chwili anulować usunięcie.",
+                "action": "Wybierz, co usunąć"
             }
         }
     },

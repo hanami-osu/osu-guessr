@@ -329,7 +329,9 @@ async function main(): Promise<void> {
     const handleUpgrade = app.getUpgradeHandler();
     const server = createServer((req, res) => {
         const requestHost = req.headers.host;
-        if (devOrigin && requestHost && requestHost !== devOrigin.host && LOOPBACK_ALIASES.has(requestHost.replace(/:\d+$/, ""))) {
+        // Server-to-server calls carry no auth cookies, and fetch drops their Authorization header on a cross-origin redirect.
+        const isInternalApi = req.url?.startsWith("/api/internal/");
+        if (devOrigin && requestHost && !isInternalApi && requestHost !== devOrigin.host && LOOPBACK_ALIASES.has(requestHost.replace(/:\d+$/, ""))) {
             res.writeHead(307, { Location: new URL(req.url ?? "/", devOrigin).toString() }).end();
             return;
         }

@@ -683,9 +683,9 @@
                 "action": "Gizlilik politikasını görüntüle"
             },
             "deletion": {
-                "title": "Veri silme talebi",
-                "description": "osu!guessr verileriyle ilgili silme talimatları ve talepleri için Hanami'ye devam edin.",
-                "action": "Hanami'ye devam et"
+                "title": "Verilerinizi silin",
+                "description": "Hanami'de neyi sileceğinizi seçin, örneğin osu!guessr verilerinizi veya tüm Hanami hesabınızı. Verileriniz hemen gizlenir ve 14 gün sonra silinir. O zamana kadar silme işlemini istediğiniz zaman iptal edebilirsiniz.",
+                "action": "Silinecekleri seç"
             }
         }
     },
