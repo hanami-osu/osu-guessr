@@ -7,18 +7,6 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-interface ChangelogEntry {
-    description: string;
-    commit?: string;
-    pr?: string;
-}
-
-export interface Changelog {
-    version: string;
-    date: string;
-    changes: Array<ChangelogEntry>;
-}
-
 interface HomeContentProps {
     highStats: {
         total_users: number;

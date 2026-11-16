@@ -13,7 +13,6 @@
 /.server/
 .env*
 !.env.template
-changelog.json
 tsconfig.tsbuildinfo
 
 # data
