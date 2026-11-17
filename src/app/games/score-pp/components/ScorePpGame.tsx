@@ -6,7 +6,7 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { GameMode, type GameVariant } from "@/actions/types";
+import { GameMode, type GameRunType, type GameVariant } from "@/actions/types";
 import { endScorePpRunAction, getScorePpRoundAction, getScorePpRunStateAction, startScorePpRunAction, submitScorePpGuessAction } from "@/actions/score-pp-server";
 import type { ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunEndResult, ScorePpRunState } from "@/lib/score-pp/types";
 import { ReportDialog } from "@/components/ReportDialog";
@@ -19,10 +19,11 @@ import { usePreventUnload } from "../../shared/hooks/usePreventUnload";
 import GameHeader from "../../shared/components/Header";
 import MultiplayerStandings from "../../shared/components/MultiplayerStandings";
 import MultiplayerChat from "../../shared/components/MultiplayerChat";
-import { AUTO_ADVANCE_DELAY_MS, MAX_ROUNDS, ROUND_TIME, isContinuousVariant, isOnLastLife } from "../../config";
+import { AUTO_ADVANCE_DELAY_MS, DAILY_ROUNDS, MAX_ROUNDS, ROUND_TIME, isContinuousVariant, isOnLastLife } from "../../config";
 import ScorePpCard from "./ScorePpCard";
 import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
 import { useLeaveGameGuard } from "@/hooks/useLeaveGameGuard";
+import { readGuestDailyAttempt, writeGuestDailyAttempt } from "@/lib/game/daily-client";
 
 interface Exclusions {
     scoreIds: string[];
@@ -47,7 +48,7 @@ function scorePp(resolution: ScorePpResolution | null, score: ScorePpPublicScore
     return resolution?.scorePp[score.sourceScoreId];
 }
 
-export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gameVariant: GameVariant; multiplayerLobbyCode?: string }) {
+export default function ScorePpGame({ gameVariant, gameRunType = "standard", isGuestDaily = false, multiplayerLobbyCode }: { gameVariant: GameVariant; gameRunType?: GameRunType; isGuestDaily?: boolean; multiplayerLobbyCode?: string }) {
     const router = useRouter();
     const { t } = useTranslationsContext();
     const scoreUrl = useCallback((runSessionId: string) => (multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${runSessionId}`), [multiplayerLobbyCode]);
@@ -119,7 +120,10 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
 
             if (state.terminal && !state.resolution?.terminal) {
                 setTerminalRound(true);
-                router.replace(state.saved ? scoreUrl(runSessionId) : "/");
+                if (isGuestDaily) {
+                    writeGuestDailyAttempt(GameMode.ScorePp, { status: "completed", sessionId: runSessionId });
+                    router.replace(`/daily/result/${runSessionId}`);
+                } else router.replace(state.saved ? scoreUrl(runSessionId) : "/");
                 return;
             }
 
@@ -137,7 +141,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                 setTimeLeft(Math.max(0, Math.ceil((state.deadlineAt - Date.now()) / 1000)));
             }
         },
-        [applyResolution, router, scoreUrl],
+        [applyResolution, isGuestDaily, router, scoreUrl],
     );
 
     const recoverRun = useCallback(
@@ -171,7 +175,10 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                     : await getScorePpRoundAction(runSessionId, roundNumber, exclusions.current);
                 if (loaded.terminal) {
                     setTerminalRound(true);
-                    router.replace(loaded.saved ? scoreUrl(runSessionId) : "/");
+                    if (isGuestDaily) {
+                        writeGuestDailyAttempt(GameMode.ScorePp, { status: "completed", sessionId: runSessionId });
+                        router.replace(`/daily/result/${runSessionId}`);
+                    } else router.replace(loaded.saved ? scoreUrl(runSessionId) : "/");
                     return;
                 }
                 if (!loaded.pair || loaded.deadlineAt === null) {
@@ -195,7 +202,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                 setIsLoading(false);
             }
         },
-        [multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl],
+        [isGuestDaily, multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl],
     );
 
     const startRun = useCallback(async () => {
@@ -215,8 +222,14 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         resolving.current = false;
 
         try {
-            const nextSessionId = multiplayerLobbyCode ? await multiplayerRequest<string>("score_pp.start", { variant: gameVariant }) : await startScorePpRunAction(gameVariant);
+                        const guestAttempt = isGuestDaily ? readGuestDailyAttempt(GameMode.ScorePp) : null;
+                        const nextSessionId = multiplayerLobbyCode
+                                ? await multiplayerRequest<string>("score_pp.start", { variant: gameVariant })
+                                : guestAttempt?.status === "started" && guestAttempt.sessionId
+                                    ? guestAttempt.sessionId
+                                    : await startScorePpRunAction(gameVariant, undefined, gameRunType);
             setSessionId(nextSessionId);
+                        if (isGuestDaily) writeGuestDailyAttempt(GameMode.ScorePp, { status: "started", sessionId: nextSessionId });
             const recovered = await recoverRun(nextSessionId);
             if (!recovered) throw new Error("Could not restore Score PP session");
             if (!recovered.terminal && !recovered.pair) await loadRound(nextSessionId, recovered.round);
@@ -227,7 +240,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         } finally {
             starting.current = false;
         }
-    }, [gameVariant, loadRound, multiplayerLobbyCode, multiplayerRequest, recoverRun]);
+    }, [gameVariant, gameRunType, isGuestDaily, loadRound, multiplayerLobbyCode, multiplayerRequest, recoverRun]);
 
     useEffect(() => {
         void startRun();
@@ -310,11 +323,15 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         if (terminalRound) {
             navigatingToResults.current = true;
             setIsLoading(true);
-            router.replace(scoreUrl(sessionId));
+            if (isGuestDaily) {
+                writeGuestDailyAttempt(GameMode.ScorePp, { status: "completed", sessionId });
+                router.replace(`/daily/result/${sessionId}`);
+            }
+            else router.replace(scoreUrl(sessionId));
             return;
         }
         await loadRound(sessionId, round + 1);
-    }, [isLoading, isSubmitting, loadRound, multiplayerLobbyCode, multiplayerRoundState, resolution, round, router, scoreUrl, sendReady, sessionId, terminalRound]);
+    }, [isGuestDaily, isLoading, isSubmitting, loadRound, multiplayerLobbyCode, multiplayerRoundState, resolution, round, router, scoreUrl, sendReady, sessionId, terminalRound]);
 
     const hasSubmittedRound = submittedRound || Boolean(multiplayerRoundState?.submitted);
     const resultVisible = !multiplayerLobbyCode || Boolean(multiplayerRoundState?.allSubmitted || resolution);
@@ -391,7 +408,7 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         onSkip: pair && !resolution && !hasSubmittedRound && !isLoading && !isSubmitting ? skipRound : undefined,
     });
 
-    usePreventUnload(gameVariant === "classic" && Boolean(sessionId) && !terminalRound && !(round >= MAX_ROUNDS && resolution));
+    usePreventUnload(gameVariant === "classic" && Boolean(sessionId) && !terminalRound && !(round >= (gameRunType === "daily" ? DAILY_ROUNDS : MAX_ROUNDS) && resolution));
 
     const exitConfirmation = isContinuousVariant(gameVariant) ? t.confirmations.exitGame.death : t.confirmations.exitGame.classic;
 
@@ -399,7 +416,10 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
         async (href?: string) => {
             if (!sessionId || isLoading || isSubmitting) return;
             if (terminalRound) {
-                if (href) router.push(href);
+                if (isGuestDaily) {
+                    writeGuestDailyAttempt(GameMode.ScorePp, { status: "completed", sessionId });
+                    router.replace(`/daily/result/${sessionId}`);
+                } else if (href) router.push(href);
                 else router.replace(scoreUrl(sessionId));
                 return;
             }
@@ -408,13 +428,21 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
             setError(null);
             try {
                 const result: ScorePpRunEndResult = multiplayerLobbyCode ? await multiplayerRequest<ScorePpRunEndResult>("score_pp.end", { sessionId }) : await endScorePpRunAction(sessionId);
-                if (typeof result === "object" && result?.pending) {
+                if (typeof result === "object" && result !== null && "pending" in result) {
                     setExitDialogOpen(false);
                     setPendingLeaveHref(null);
                     return;
                 }
+                if (typeof result === "object" && result !== null && "paused" in result) {
+                    if (href) router.push(href);
+                    else router.replace("/");
+                    return;
+                }
                 if (href) router.push(href);
-                else router.replace(result === null ? "/" : scoreUrl(sessionId));
+                else if (isGuestDaily && gameRunType === "daily") {
+                    writeGuestDailyAttempt(GameMode.ScorePp, { status: "completed", sessionId });
+                    router.replace(`/daily/result/${sessionId}`);
+                } else router.replace(result === null ? "/" : scoreUrl(sessionId));
             } catch {
                 const recovered = await recoverRun(sessionId);
                 if (!recovered?.terminal) setError("end");
@@ -422,16 +450,17 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                 setIsLoading(false);
             }
         },
-        [isLoading, isSubmitting, multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl, sessionId, terminalRound],
+        [gameRunType, isGuestDaily, isLoading, isSubmitting, multiplayerLobbyCode, multiplayerRequest, recoverRun, router, scoreUrl, sessionId, terminalRound],
     );
 
     const requestExit = useCallback(() => {
         if (terminalRound && sessionId) {
-            router.replace(scoreUrl(sessionId));
+            if (isGuestDaily) router.replace(`/daily/result/${sessionId}`);
+            else router.replace(scoreUrl(sessionId));
             return;
         }
         setExitDialogOpen(true);
-    }, [router, scoreUrl, sessionId, terminalRound]);
+    }, [isGuestDaily, router, scoreUrl, sessionId, terminalRound]);
 
     const requestRouteLeave = useCallback((href: string) => setPendingLeaveHref(href), []);
     useLeaveGameGuard(Boolean(sessionId && !terminalRound), requestRouteLeave);
@@ -447,9 +476,10 @@ export default function ScorePpGame({ gameVariant, multiplayerLobbyCode }: { gam
                 points={publicStats?.points ?? points}
                 timeLeft={showAdvanceCountdown ? revealCountdown : timeLeft}
                 currentRound={round}
-                totalRounds={MAX_ROUNDS}
+                totalRounds={gameRunType === "daily" ? DAILY_ROUNDS : MAX_ROUNDS}
                 mode={GameMode.ScorePp}
                 gameVariant={gameVariant}
+                gameRunType={gameRunType}
                 maxStreak={publicStats?.maxStreak ?? maxStreak}
                 mistakes={publicStats?.mistakes ?? mistakes}
                 timerDuration={showAdvanceCountdown ? AUTO_ADVANCE_DELAY_MS / 1000 : ROUND_TIME}

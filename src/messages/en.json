@@ -8,6 +8,7 @@
             "title": "{osu_guessr}",
             "subtitle": "Guess {osu_base} songs from backgrounds or audio, and skins from screenshots.",
             "startPlaying": "Start Playing",
+            "playDaily": "Play Daily",
             "signIn": "Continue with osu!",
             "learnMore": "Learn More",
             "artCredit": "Art by {artist_name}",
@@ -361,6 +362,10 @@
                 "oneLife": {
                     "continuous": "Keep going until your first mistake",
                     "lives": "One wrong guess, skip, or timeout ends the run"
+                },
+                "daily": {
+                    "rounds": "{count} rounds",
+                    "seeded": "The same five items are shared by everyone and reset daily"
                 }
             },
             "scoring": {
@@ -386,6 +391,10 @@
                     "title": "Classic Mode",
                     "description": "{count} rounds"
                 },
+                "daily": {
+                    "title": "Daily Challenge",
+                    "description": "New challenge every day"
+                },
                 "death": {
                     "title": "Survival Mode",
                     "description": "{count} lives"
@@ -403,7 +412,8 @@
                 "startGame": "Start Game",
                 "backToHome": "Back to Home"
             },
-            "variantLabel": "Game variant"
+            "variantLabel": "Game variant",
+            "modeLabel": "Daily game mode"
         },
         "modes": {
             "classic": {
@@ -419,6 +429,26 @@
             "loading": "Loading next round...",
             "waitingForPlayers": "Waiting for players ({submitted}/{total})",
             "readyPlayers": "{ready}/{total} ready"
+        },
+        "daily": {
+            "title": "Daily Challenge",
+            "chooseMode": "Choose a game mode for today's shared challenge.",
+            "signInToSave": "Sign in to save results",
+            "saveResults": "Save results to profile",
+            "claimAlreadyPlayed": "This account has already completed today's Daily Challenge for this mode.",
+            "claimFailed": "These results could not be saved to this account.",
+            "checkingStatus": "Checking today's challenge...",
+            "retryStatus": "Retry status check",
+            "continueChallenge": "Continue challenge",
+            "alreadyPlayed": "Today's challenge already played",
+            "resetIn": "Resets in {time} UTC",
+            "share": {
+                "title": "Daily Challenge #{day}",
+                "results": "Daily round results",
+                "round": "Round",
+                "copy": "Copy results",
+                "copied": "Copied"
+            }
         },
         "input": {
             "placeholder": "Song title...",
@@ -587,6 +617,7 @@
                 "score_pp": "Score pp"
             },
             "variant": {
+                "daily": "Daily Challenge",
                 "classic": "Classic Mode",
                 "survival": "Survival Mode",
                 "death": "Death Mode"
@@ -600,7 +631,8 @@
             "hiScore": "Hi-Score",
             "bestStreak": "Best Streak",
             "profilePp": "pp",
-            "bestRunPp": "Top pp Play"
+                "bestRunPp": "Top pp Play",
+                "bestDailyStreak": "Best Daily Streak"
         },
         "empty": "No players found for this game mode and variant.",
         "loading": "Loading...",
@@ -618,6 +650,18 @@
             "totalGamesScope": "{count} ranked games · all modes and variants",
             "viewOsuProfile": "View osu! profile",
             "variantLabel": "Game variant",
+            "daily": {
+                "title": "Daily Challenge",
+                "dailiesPlayed": "Dailies Played",
+                "totalPoints": "Total Points",
+                "bestStreak": "Best Daily Streak",
+                "timeAnswering": "Time Answering",
+                "calendarTitle": "Daily Challenge Calendar",
+                "calendarEmpty": "The first daily challenge starts November 15, 2026.",
+                "played": "Completed",
+                "missed": "Missed",
+                "today": "Today"
+            },
             "allModes": "All modes",
             "modeLabel": "Game mode",
             "runsLabel": "Runs",

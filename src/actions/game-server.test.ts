@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { GameMode, type DatabaseGameSession } from "./types";
 import { NoGameContentError } from "@/lib/game/content-errors";
+import { createGuestDailyAccessToken, getGuestDailyCookieName } from "@/lib/game/guest-daily-access";
 
 const sessionId = "00000000-0000-4000-8000-000000000000";
 const userId = 123;
@@ -28,7 +29,10 @@ const contentStatContributionCreateManyMock = mock(
         return { count: 1 };
     },
 );
-const gameFindUniqueMock = mock(async () => null as { id: bigint } | null);
+const gameFindUniqueMock = mock(async () => null as { id: bigint; runType?: string; endReason?: string | null; roundsPlayed?: number } | null);
+const dailyGameAttemptCreateMock = mock(async (args: { data: Record<string, unknown> }) => args.data);
+const dailyGameAttemptUpsertMock = mock(async (args: { create: Record<string, unknown> }) => args.create);
+const dailyGameAttemptFindUniqueMock = mock(async () => null as { sessionId: string } | null);
 const gameCreateMock = mock(async (args: { data: { pp: number; [key: string]: unknown } }) => ({ id: 1n, endedAt: new Date(), ...args.data }));
 const gameFindManyMock = mock(async () => [{ pp: 50 }]);
 const gameRoundCreateManyMock = mock(async (args: { data: Array<{ difficultySnapshot: number | null; [key: string]: unknown }> }) => {
@@ -57,13 +61,16 @@ const txMock = {
     contentStatContribution: { createMany: contentStatContributionCreateManyMock },
     game: { findUnique: gameFindUniqueMock, create: gameCreateMock, findMany: gameFindManyMock },
     gameRound: { createMany: gameRoundCreateManyMock },
+    dailyGameAttempt: { create: dailyGameAttemptCreateMock, upsert: dailyGameAttemptUpsertMock, findUnique: dailyGameAttemptFindUniqueMock },
     userAchievement: { findUnique: userAchievementFindUniqueMock, upsert: userAchievementUpsertMock },
 };
 const transactionMock = mock(async (operation: (tx: typeof txMock) => Promise<unknown>) => operation(txMock));
 const prismaMock = {
     contentStat: { findMany: contentStatFindManyMock, findUnique: contentStatFindUniqueMock },
+    game: { findUnique: gameFindUniqueMock },
     mapsetData: { findUnique: mapsetDataFindUniqueMock, findMany: mapsetDataFindManyMock },
     skin: { findUnique: skinFindUniqueMock, findMany: skinFindManyMock },
+    dailyGameAttempt: { create: dailyGameAttemptCreateMock, upsert: dailyGameAttemptUpsertMock, findUnique: dailyGameAttemptFindUniqueMock },
     $transaction: transactionMock,
 };
 const getRandomActionMock = mock(async () => ({
@@ -105,6 +112,14 @@ const updateMultiplayerProgressMock = mock(
 );
 
 const redisValues = new Map<string, string>();
+const cookieValues = new Map<string, string>();
+const cookiesMock = mock(async () => ({
+    get: (name: string) => {
+        const value = cookieValues.get(name);
+        return value ? { value } : undefined;
+    },
+    set: (name: string, value: string) => cookieValues.set(name, value),
+}));
 const redisSetMock = mock(async (key: string, value: string, options?: { condition?: string }) => {
     if (options?.condition === "NX" && redisValues.has(key)) return null;
     redisValues.set(key, value);
@@ -121,7 +136,11 @@ const redisClientMock = {
 };
 
 mock.module("./server", () => ({ getAuthSession: authSessionMock }));
+mock.module("next/headers", () => ({ cookies: cookiesMock }));
 mock.module("@/lib/game/mapsets", () => ({
+    getDailyAudio: getRandomActionMock,
+    getDailyBackground: getRandomActionMock,
+    getDailySkin: getRandomActionMock,
     getRandomAudio: getRandomActionMock,
     getRandomBackground: getRandomActionMock,
     getRandomSkin: getRandomActionMock,
@@ -139,7 +158,7 @@ mock.module("@/lib/multiplayer", () => ({
 }));
 mock.module("server-only", () => ({}));
 
-const { endGameAction, getGameStateAction, startGameAction, submitGuessAction } = await import("./game-server");
+const { claimGuestDailyResultAction, endGameAction, getGameStateAction, getGuestDailyResultAction, startGameAction, submitGuessAction } = await import("./game-server");
 
 function makeSession(overrides: Partial<DatabaseGameSession> = {}): DatabaseGameSession {
     return {
@@ -186,11 +205,15 @@ function putSession(session: DatabaseGameSession): void {
 
 beforeEach(() => {
     redisValues.clear();
+    cookieValues.clear();
     contentStatFindManyMock.mockReset().mockResolvedValue([]);
     contentStatFindUniqueMock.mockReset().mockResolvedValue(null);
     contentStatUpsertMock.mockReset().mockResolvedValue({});
     contentStatContributionCreateManyMock.mockReset().mockResolvedValue({ count: 1 });
     gameFindUniqueMock.mockReset().mockResolvedValue(null);
+    dailyGameAttemptCreateMock.mockReset().mockImplementation(async (args) => args.data);
+    dailyGameAttemptUpsertMock.mockReset().mockImplementation(async (args) => args.create);
+    dailyGameAttemptFindUniqueMock.mockReset().mockResolvedValue(null);
     gameCreateMock.mockReset().mockImplementation(async (args) => ({ id: 1n, endedAt: new Date(), ...args.data }));
     gameFindManyMock.mockReset().mockResolvedValue([{ pp: 50 }]);
     gameRoundCreateManyMock.mockReset().mockImplementation(async () => ({ count: 1 }));
@@ -289,6 +312,75 @@ describe("game server lifecycle", () => {
     test("rejects invalid game settings before creating a session", async () => {
         await expect(startGameAction("invalid" as GameMode, "classic")).rejects.toThrow();
         expect(getRandomActionMock).not.toHaveBeenCalled();
+    });
+
+    test("starts a five-round daily run and claims the user-mode attempt", async () => {
+        const started = await startGameAction(GameMode.Background, "classic", undefined, "daily");
+        const stored = JSON.parse(redisValues.get(`game_session:${started.sessionId}`)!);
+
+        expect(started.rounds.total).toBe(5);
+        expect(started.runType).toBe("daily");
+        expect(stored.run_type).toBe("daily");
+        expect(stored.ranked).toBe(false);
+        expect(dailyGameAttemptCreateMock.mock.calls[0]?.[0].data).toMatchObject({ userId, gameMode: GameMode.Background, sessionId: started.sessionId });
+    });
+
+    test("issues a browser-bound cookie for an unauthenticated daily run", async () => {
+        authSessionMock.mockRejectedValueOnce(new Error("Unauthorized"));
+
+        const started = await startGameAction(GameMode.Background, "classic", undefined, "daily");
+
+        expect(cookieValues.has(getGuestDailyCookieName(started.sessionId))).toBe(true);
+    });
+
+    test("denies guest daily result access without its browser cookie", async () => {
+        await expect(getGuestDailyResultAction(sessionId)).rejects.toThrow("Game session not found or expired");
+    });
+
+    test("resumes an existing active daily session instead of claiming another attempt", async () => {
+        const existing = makeSession({ run_type: "daily", daily_day: 1, current_round: 3, has_guessed_current_round: false });
+        putSession(existing);
+        dailyGameAttemptFindUniqueMock.mockResolvedValue({ sessionId });
+
+        const resumed = await startGameAction(GameMode.Background, "classic", undefined, "daily");
+
+        expect(resumed.sessionId).toBe(sessionId);
+        expect(resumed.rounds.current).toBe(3);
+        expect(dailyGameAttemptCreateMock).not.toHaveBeenCalled();
+        expect(getRandomActionMock).not.toHaveBeenCalled();
+    });
+
+    test("returns the existing completed daily score when a guest claim conflicts", async () => {
+        putSession(makeSession({ user_id: 0, run_type: "daily", is_active: false, current_round: 5, has_guessed_current_round: true }));
+        cookieValues.set(getGuestDailyCookieName(sessionId), createGuestDailyAccessToken(sessionId));
+        dailyGameAttemptCreateMock.mockRejectedValueOnce({ code: "P2002" });
+        dailyGameAttemptFindUniqueMock.mockResolvedValueOnce({ sessionId: "previous-daily-session" });
+        gameFindUniqueMock.mockResolvedValueOnce({ id: 42n, runType: "daily", endReason: "completed", roundsPlayed: 5 });
+
+        await expect(claimGuestDailyResultAction(sessionId)).resolves.toBe("42");
+    });
+
+    test("does not redirect a conflicting guest claim to an incomplete daily attempt", async () => {
+        putSession(makeSession({ user_id: 0, run_type: "daily", is_active: false, current_round: 5, has_guessed_current_round: true }));
+        cookieValues.set(getGuestDailyCookieName(sessionId), createGuestDailyAccessToken(sessionId));
+        dailyGameAttemptCreateMock.mockRejectedValueOnce({ code: "P2002" });
+        dailyGameAttemptFindUniqueMock.mockResolvedValueOnce({ sessionId: "incomplete-daily-session" });
+        gameFindUniqueMock.mockResolvedValueOnce({ id: 42n, runType: "daily", endReason: "completed", roundsPlayed: 4 });
+
+        await expect(claimGuestDailyResultAction(sessionId)).rejects.toThrow("DAILY_CHALLENGE_ALREADY_PLAYED");
+    });
+
+    test("counts an interrupted daily round as a skip and preserves the next round", async () => {
+        putSession(makeSession({ run_type: "daily", daily_day: 1, current_round: 2, total_points: 150 }));
+
+        const result = await endGameAction(sessionId);
+        const continued = JSON.parse(redisValues.get(`game_session:${sessionId}`)!);
+
+        expect(result).toBeNull();
+        expect(continued.is_active).toBe(true);
+        expect(continued.current_round).toBe(3);
+        expect(continued.round_history).toHaveLength(1);
+        expect(continued.round_history[0]).toMatchObject({ result_type: "skip", correct: false, round_number: 2 });
     });
 
     test("shares multiplayer first-round start time and reuses the active session", async () => {

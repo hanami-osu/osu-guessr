@@ -138,3 +138,16 @@ export async function selectStoredScorePpPair(
     const selected = candidates[Math.floor(rng() * candidates.length)] ?? null;
     return selected && rng() < 0.5 ? flipPair(selected) : selected;
 }
+
+export async function getStoredScorePpPairsByIds(batchId: string, ids: number[]): Promise<ScorePpPairSnapshot[]> {
+    const rows = await prisma.scorePpPair.findMany({
+        where: { batchId, active: true, id: { in: ids } },
+        orderBy: { id: "asc" },
+        select: scorePpPairSelect,
+    });
+    const byId = new Map(rows.map((row) => [row.id, mapStoredPair(row)]));
+    return ids.flatMap((id) => {
+        const pair = byId.get(id);
+        return pair ? [pair] : [];
+    });
+}

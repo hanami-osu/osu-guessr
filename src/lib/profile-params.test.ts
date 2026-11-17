@@ -10,7 +10,7 @@ describe("parseProfileFilters", () => {
     });
 
     test("falls back when profile filters are missing or invalid", () => {
-        expect(parseProfileFilters()).toEqual({ mode: GameMode.Background, variant: "classic" });
-        expect(parseProfileFilters("invalid", "endless")).toEqual({ mode: GameMode.Background, variant: "classic" });
+        expect(parseProfileFilters()).toEqual({ mode: GameMode.Background, variant: "daily" });
+        expect(parseProfileFilters("invalid", "endless")).toEqual({ mode: GameMode.Background, variant: "daily" });
     });
 });

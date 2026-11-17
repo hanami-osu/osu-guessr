@@ -1,4 +1,5 @@
-import { GameMode, type GameVariant } from "@/actions/types";
+import { GameMode, type GameRunType, type GameVariant } from "@/actions/types";
+import { DAILY_ROUNDS } from "@/lib/game/daily";
 
 export { GAME_VARIANTS, type GameVariant } from "@/actions/types";
 
@@ -8,6 +9,7 @@ export const BASE_POINTS = 100;
 export const STREAK_BONUS = 25;
 export const TIME_BONUS_MULTIPLIER = 2;
 export const MAX_ROUNDS = 15;
+export { DAILY_ROUNDS };
 export const AUTO_ADVANCE_DELAY_MS = 8000;
 /** English variant names for the places that are not translated yet (multiplayer). */
 export const VARIANT_LABELS: Record<GameVariant, string> = { classic: "Classic", survival: "Survival", death: "Death" };
@@ -22,6 +24,11 @@ export function isContinuousVariant(variant: GameVariant): boolean {
 
 export function getVariantLives(variant: GameVariant): number {
     return variant === "death" ? DEATH_LIVES : SURVIVAL_LIVES;
+}
+
+export function getGameRoundLimit(runType: GameRunType, variant: GameVariant): number {
+    if (runType === "daily") return DAILY_ROUNDS;
+    return variant === "classic" ? MAX_ROUNDS : Infinity;
 }
 
 /** True when one more mistake ends a survival or death run. */

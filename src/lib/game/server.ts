@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/database/prisma";
 import redisClient from "@/lib/redis";
 import { z } from "zod";
-import { GAME_VARIANTS, MAX_ROUNDS, ROUND_TIME, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
-import { getRandomAudio, getRandomBackground, getRandomSkin } from "@/lib/game/mapsets";
-import { GameMode, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "@/actions/types";
+import { GAME_VARIANTS, ROUND_TIME, getGameRoundLimit, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
+import { getDailyAudio, getDailyBackground, getDailySkin, getRandomAudio, getRandomBackground, getRandomSkin } from "@/lib/game/mapsets";
+import { GameMode, type GameRunType, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "@/actions/types";
 import { getMediaData } from "@/actions/media";
 import { checkGuess, GuessDifficulty } from "@/lib/guess-checker";
 import { calculateArcadeScore } from "@/lib/game/arcade-score";
@@ -14,6 +14,8 @@ import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp, type 
 import { Prisma } from "@/generated/prisma/client";
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer";
+import { DAILY_CHALLENGE_ALREADY_PLAYED, DAILY_ROUNDS, getDailyChallengeDay, getDailyDate, getNextDailyReset } from "@/lib/game/daily";
+import { env } from "@/lib/env";
 
 const GRACE_PERIOD = 1;
 const ROUND_TIME_MS = ROUND_TIME * 1000;
@@ -43,7 +45,9 @@ const gameSchema = z.object({
         .transform((g) => (typeof g === "string" ? g.trim() : g)),
 });
 const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin]);
+const dailyGameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp]);
 const gameVariantSchema = z.enum(GAME_VARIANTS);
+const gameRunTypeSchema = z.enum(["standard", "daily"]);
 
 function toPrismaJson(value: Record<string, unknown> | null): Prisma.InputJsonValue | undefined {
     return value ? (JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue) : undefined;
@@ -65,8 +69,24 @@ type GuessRoundItem = {
     skinData?: string;
 };
 
-async function getGuessRoundItem(gameMode: GameMode, sessionId: string, lobbyCode?: string, round: number = 1, multiplayerMatchId?: string): Promise<GuessRoundItem> {
+async function getGuessRoundItem(gameMode: GameMode, sessionId: string, lobbyCode?: string, round = 1, multiplayerMatchId?: string, runType: GameRunType = "standard", dailyDay?: number): Promise<GuessRoundItem> {
     if (!lobbyCode) {
+        if (runType === "daily") {
+            if (dailyDay === undefined) throw new Error("Daily challenge date is missing");
+            if (gameMode === GameMode.Audio) {
+                const audio = await getDailyAudio(dailyDay, round);
+                return { data: audio.data, audioData: audio.audioData };
+            }
+            if (gameMode === GameMode.Background) {
+                const background = await getDailyBackground(dailyDay, round);
+                return { data: background.data, backgroundData: background.backgroundData };
+            }
+            if (gameMode === GameMode.Skin) {
+                const skin = await getDailySkin(dailyDay, round);
+                return { data: skin.data, skinData: skin.skinData };
+            }
+            throw new Error("Unsupported daily game mode");
+        }
         if (gameMode === GameMode.Audio) {
             const audio = await getRandomAudio(sessionId);
             return { data: audio.data, audioData: audio.audioData };
@@ -125,7 +145,7 @@ async function getGameSession(sessionId: string, userId: number): Promise<Databa
 
 async function validateGameSession(sessionId: string, userId: number): Promise<DatabaseGameSession> {
     const session = await getGameSession(sessionId, userId);
-    if (!gameModeSchema.safeParse(session.game_mode).success || !session.is_active || session.end_pending) {
+    if (!gameModeSchema.safeParse(session.game_mode).success || (userId === 0 && session.run_type !== "daily") || !session.is_active || session.end_pending) {
         throw new Error("Game session not found or expired");
     }
     return session;
@@ -133,7 +153,7 @@ async function validateGameSession(sessionId: string, userId: number): Promise<D
 
 function resolveEndReason(gameState: DatabaseGameSession, requestedReason?: GameEndReason): GameEndReason {
     if (gameState.end_reason) return gameState.end_reason;
-    if (requestedReason === "quit" && gameState.variant === "classic" && gameState.current_round === MAX_ROUNDS && gameState.has_guessed_current_round) {
+    if (requestedReason === "quit" && gameState.variant === "classic" && gameState.current_round === getGameRoundLimit(gameState.run_type ?? "standard", gameState.variant) && gameState.has_guessed_current_round) {
         return "completed";
     }
     if (requestedReason) return requestedReason;
@@ -190,7 +210,7 @@ export async function finishGameSession(sessionId: string, userId: number, reque
                 currentRound: gameState.current_round,
                 hasGuessedCurrentRound: gameState.has_guessed_current_round,
             },
-            MAX_ROUNDS,
+            getGameRoundLimit(gameState.run_type ?? "standard", gameState.variant),
         )
     ) {
         await writeGameSession({ ...pendingState, end_pending: false }, 120);
@@ -220,6 +240,11 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     const runPp = calculateRunPp(gameState.variant === "classic" ? await withItemStats(gameState.game_mode, roundHistory, rulesetVersion, ppVersion) : roundHistory, gameState.variant);
     const finalizingState = { ...pendingState, round_history: roundHistory, pp: runPp };
     await writeGameSession(finalizingState);
+
+    if (userId === 0 && gameState.run_type === "daily") {
+        await writeGameSession({ ...finalizingState, end_pending: false }, 7 * 24 * 60 * 60);
+        return runPp;
+    }
 
     const persistedPp = await withTransactionRetry(() =>
         prisma.$transaction(
@@ -406,7 +431,7 @@ export async function finishGameSession(sessionId: string, userId: number, reque
         ),
     );
 
-    await writeGameSession({ ...finalizingState, pp: persistedPp, end_pending: false }, 120);
+    await writeGameSession({ ...finalizingState, pp: persistedPp, end_pending: false }, gameState.run_type === "daily" ? 7 * 24 * 60 * 60 : 120);
     if (gameState.multiplayer_lobby_id) {
         await updateMultiplayerProgress(
             gameState.multiplayer_lobby_id,
@@ -430,9 +455,11 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     return persistedPp;
 }
 
-export async function startGameForUser(userId: number, gameMode: GameMode, variant: GameVariant = "classic", multiplayerLobbyCode?: string): Promise<GameState> {
+export async function startGameForUser(userId: number, gameMode: GameMode, variant: GameVariant = "classic", multiplayerLobbyCode?: string, requestedRunType: GameRunType = "standard"): Promise<GameState> {
     gameMode = gameModeSchema.parse(gameMode);
     variant = gameVariantSchema.parse(variant);
+    const runType = gameRunTypeSchema.parse(requestedRunType);
+    if (runType === "daily" && (variant !== "classic" || multiplayerLobbyCode)) throw new Error("Daily challenges are available in single-player Classic mode only");
     const lobbyCode = multiplayerLobbyCode ? normalizeLobbyCode(multiplayerLobbyCode) : undefined;
     const lobby = lobbyCode ? await requireActiveMultiplayerLobby(lobbyCode, userId, gameMode, variant) : null;
     const lobbyPlayer = lobby?.players.find((player) => player.userId === userId);
@@ -444,8 +471,28 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
     }
     if (lobbyPlayer?.finished) throw new Error("You have already finished this match");
     const sessionId = crypto.randomUUID();
+    const now = new Date();
+    const dailyDate = runType === "daily" ? getDailyDate(now, env.DEBUG_DAILY_DAY_OFFSET) : undefined;
+    const contentDay = dailyDate ? getDailyChallengeDay(dailyDate) : undefined;
+    const dailyDay = contentDay;
 
-    const item = await getGuessRoundItem(gameMode, sessionId, lobbyCode, 1, lobby?.matchId);
+    if (dailyDate && userId !== 0) {
+        const existingAttempt = await prisma.dailyGameAttempt.findUnique({
+            where: { userId_dailyDate_gameMode: { userId, dailyDate, gameMode } },
+        });
+        if (existingAttempt && !env.DEBUG_DAILY_UNLIMITED_ATTEMPTS) {
+            try {
+                const existingState = await getGameStateForUser(userId, existingAttempt.sessionId);
+                if (existingState.gameStatus === "active" && existingState.runType === "daily") return existingState;
+            } catch {}
+
+            const existingGame = await prisma.game.findUnique({ where: { sessionId: existingAttempt.sessionId }, select: { id: true } });
+            if (existingGame) throw new Error(DAILY_CHALLENGE_ALREADY_PLAYED);
+            throw new Error(DAILY_CHALLENGE_ALREADY_PLAYED);
+        }
+    }
+
+    const item = await getGuessRoundItem(gameMode, sessionId, lobbyCode, 1, lobby?.matchId, runType, contentDay);
 
     const itemId = gameMode === GameMode.Skin ? (item.data as SkinData).id : (item.data as MapsetDataWithTags).mapset_id;
     const itemType = gameMode === GameMode.Skin ? "skin" : "mapset";
@@ -479,11 +526,11 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         total_response_time_ms: 0,
         is_active: true,
         variant: variant,
-        run_type: "standard",
+        run_type: runType,
         challenge_id: null,
-        seed: null,
-        config_snapshot: lobby ? { multiplayer: { matchId: lobby.matchId } } : null,
-        ranked: true,
+        seed: dailyDate ? `daily:${dailyDate.toISOString().slice(0, 10)}:${gameMode}` : null,
+        config_snapshot: dailyDate ? { dailyDay, dailyDate: dailyDate.toISOString().slice(0, 10), debugUnlimitedAttempts: env.DEBUG_DAILY_UNLIMITED_ATTEMPTS } : lobby ? { multiplayer: { matchId: lobby.matchId } } : null,
+        ranked: runType !== "daily",
         ruleset_version: CURRENT_RULESET_VERSION,
         pp_version: CURRENT_PP_VERSION,
         started_at: startedAt,
@@ -496,8 +543,28 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         has_guessed_current_round: false,
         multiplayer_lobby_id: lobbyCode ?? null,
         multiplayer_match_id: lobby?.matchId ?? null,
+        ...(dailyDate && { daily_date: dailyDate.toISOString(), daily_day: dailyDay }),
         last_action_at: startedAt,
-    });
+    }, runType === "daily" ? 24 * 60 * 60 : undefined);
+
+    if (dailyDate && userId !== 0) {
+        try {
+            const attemptKey = { userId, dailyDate, gameMode };
+            if (env.DEBUG_DAILY_UNLIMITED_ATTEMPTS) {
+                await prisma.dailyGameAttempt.upsert({
+                    where: { userId_dailyDate_gameMode: attemptKey },
+                    create: { ...attemptKey, sessionId },
+                    update: { sessionId, startedAt: new Date() },
+                });
+            } else {
+                await prisma.dailyGameAttempt.create({ data: { ...attemptKey, sessionId } });
+            }
+        } catch (error) {
+            await Promise.all([deleteGameSession(sessionId), redisClient.del(`session_items:${sessionId}:mapset`), redisClient.del(`session_items:${sessionId}:skin`)]);
+            if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") throw new Error(DAILY_CHALLENGE_ALREADY_PLAYED);
+            throw error;
+        }
+    }
 
     if (lobbyCode) {
         await updateMultiplayerProgress(lobbyCode, userId, { points: 0, round: 1, scoreSessionId: sessionId, finished: false }, lobby!.matchId).catch((error) =>
@@ -523,7 +590,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         },
         rounds: {
             current: 1,
-            total: variant === "classic" ? MAX_ROUNDS : Infinity,
+            total: getGameRoundLimit(runType, variant),
             correctGuesses: 0,
             totalTimeUsed: 0,
             mistakes: 0,
@@ -531,7 +598,61 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         timeLeft: initialTimeLeft,
         gameStatus: "active",
         variant,
+        runType,
+        dailyDay,
     };
+}
+
+export async function getGuestDailyResult(sessionId: string) {
+    const state = await getGameSession(z.string().uuid().parse(sessionId), 0);
+    if (state.run_type !== "daily" || state.is_active || state.end_pending || state.current_round < DAILY_ROUNDS || !state.has_guessed_current_round) {
+        throw new Error("Daily result is unavailable");
+    }
+    return {
+        sessionId,
+        gameMode: state.game_mode,
+        day: state.daily_day ?? getDailyChallengeDay(new Date()),
+        points: state.total_points,
+        correct: state.correct_guesses,
+        highestStreak: state.highest_streak,
+        totalResponseTimeMs: state.total_response_time_ms,
+        endedAt: new Date(state.last_action_at).toISOString(),
+        outcomes: state.round_history.map((round) => ({ correct: round.correct, resultType: round.result_type, answer: round.answer_snapshot, guess: round.submitted_guess })),
+    };
+}
+
+export async function claimGuestDailyResult(userId: number, sessionId: string): Promise<string> {
+    const guestState = await getGameSession(z.string().uuid().parse(sessionId), 0);
+    if (guestState.run_type !== "daily" || guestState.is_active || guestState.end_pending || guestState.current_round < DAILY_ROUNDS || !guestState.has_guessed_current_round) {
+        throw new Error("Daily result is unavailable");
+    }
+    const dailyDate = getDailyDate(new Date(guestState.daily_date ?? Date.now()), 0);
+    const key = { userId, dailyDate, gameMode: guestState.game_mode };
+
+    try {
+        await prisma.dailyGameAttempt.create({ data: { ...key, sessionId } });
+    } catch (error) {
+        if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+            const existing = await prisma.dailyGameAttempt.findUnique({ where: { userId_dailyDate_gameMode: key } });
+            if (existing?.sessionId === sessionId) return sessionId;
+            if (existing) {
+                const existingGame = await prisma.game.findUnique({
+                    where: { sessionId: existing.sessionId },
+                    select: { id: true, runType: true, endReason: true, roundsPlayed: true },
+                });
+                if (existingGame?.runType === "daily" && existingGame.endReason === "completed" && existingGame.roundsPlayed === DAILY_ROUNDS) {
+                    return existingGame.id.toString();
+                }
+            }
+            throw new Error(DAILY_CHALLENGE_ALREADY_PLAYED);
+        }
+        throw error;
+    }
+
+    const ownedState = { ...guestState, user_id: userId, is_active: true, end_pending: false, end_reason: undefined };
+    await writeGameSession(ownedState, 7 * 24 * 60 * 60);
+    await finishGameSession(sessionId, userId, "completed");
+    return sessionId;
 }
 
 export async function submitGuessForUser(userId: number, sessionId: string, guess?: string | null): Promise<GameState> {
@@ -557,7 +678,8 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
 
         const isContinuousMode = isContinuousVariant(gameState.variant);
 
-        if (!isContinuousMode && gameState.current_round > MAX_ROUNDS) {
+        const roundLimit = getGameRoundLimit(gameState.run_type ?? "standard", gameState.variant);
+        if (!isContinuousMode && gameState.current_round > roundLimit) {
             throw new Error("Game is complete");
         }
 
@@ -639,6 +761,8 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
                     gameState.multiplayer_lobby_id ?? undefined,
                     gameState.current_round + 1,
                     gameState.multiplayer_match_id ?? undefined,
+                    gameState.run_type,
+                    gameState.daily_date ? getDailyChallengeDay(new Date(gameState.daily_date)) : gameState.daily_day,
                 );
             } catch (error) {
                 if (!isContinuousMode || !isNoGameContentError(error)) throw error;
@@ -671,6 +795,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
                     timeLeft: 0,
                     gameStatus: "finished",
                     variant: gameState.variant,
+                    runType: gameState.run_type ?? "standard",
                 };
             }
         }
@@ -747,7 +872,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
             }),
         };
 
-        await writeGameSession(updatedGameState);
+        await writeGameSession(updatedGameState, gameState.run_type === "daily" ? 24 * 60 * 60 : undefined);
 
         if (gameState.multiplayer_lobby_id) {
             await updateMultiplayerProgress(
@@ -803,7 +928,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
             },
             rounds: {
                 current: gameState.current_round + (isNextRound ? 1 : 0),
-                total: gameState.variant === "classic" ? MAX_ROUNDS : runFailed ? gameState.current_round : Infinity,
+                total: runFailed ? gameState.current_round : roundLimit,
                 correctGuesses: gameState.correct_guesses + (isCorrect ? 1 : 0),
                 totalTimeUsed: gameState.total_time_used + (!isNextRound ? ROUND_TIME - timeLeft : 0),
                 mistakes,
@@ -811,6 +936,8 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
             timeLeft: runFailed ? 0 : nextBeatmap ? ROUND_TIME : timeLeft,
             gameStatus: runFailed ? "finished" : "active",
             variant: gameState.variant as GameVariant,
+            runType: gameState.run_type ?? "standard",
+            dailyDay: gameState.daily_day,
             lastGuess: !isNextRound
                 ? {
                       correct: isCorrect,
@@ -829,6 +956,7 @@ export async function getGameStateForUser(userId: number, sessionId: string): Pr
 
     let gameState = await getGameSession(sessionId, userId);
     if (!gameModeSchema.safeParse(gameState.game_mode).success) throw new Error("Game session not found or expired");
+    if (userId === 0 && gameState.run_type !== "daily") throw new Error("Game session not found or expired");
     if (gameState.end_pending) {
         const lock = await acquireGameSessionLock(sessionId);
         if (!lock) throw new Error("Action in progress, please wait");
@@ -873,7 +1001,7 @@ export async function getGameStateForUser(userId: number, sessionId: string): Pr
         },
         rounds: {
             current: gameState.current_round,
-            total: gameState.variant === "classic" ? MAX_ROUNDS : Infinity,
+            total: getGameRoundLimit(gameState.run_type ?? "standard", gameState.variant),
             correctGuesses: gameState.correct_guesses,
             totalTimeUsed: gameState.total_time_used,
             mistakes: (gameState.round_history ?? []).filter((round) => !round.correct).length,
@@ -881,6 +1009,8 @@ export async function getGameStateForUser(userId: number, sessionId: string): Pr
         timeLeft,
         gameStatus: gameState.is_active ? "active" : "finished",
         variant: gameState.variant as GameVariant,
+        runType: gameState.run_type ?? "standard",
+        dailyDay: gameState.daily_day,
         lastGuess: gameState.last_guess
             ? {
                   correct: gameState.last_guess_correct === 1,
@@ -893,6 +1023,19 @@ export async function getGameStateForUser(userId: number, sessionId: string): Pr
 
 export async function endGameForUser(userId: number, sessionId: string): Promise<number | null> {
     sessionId = z.string().uuid().parse(sessionId);
+    const session = await getGameSession(sessionId, userId);
+    if (session.run_type === "daily" && session.is_active) {
+        if (!session.has_guessed_current_round) {
+            await submitGuessForUser(userId, sessionId, null);
+        }
+
+        const afterSubmission = await getGameSession(sessionId, userId);
+        const roundLimit = getGameRoundLimit("daily", afterSubmission.variant);
+        if (afterSubmission.current_round >= roundLimit) return finishGameSession(sessionId, userId, "quit");
+        if (afterSubmission.has_guessed_current_round) await submitGuessForUser(userId, sessionId);
+        return null;
+    }
+
     const lock = await acquireGameSessionLock(sessionId);
     if (!lock) throw new Error("Action in progress, please wait");
 
@@ -903,6 +1046,38 @@ export async function endGameForUser(userId: number, sessionId: string): Promise
     } finally {
         await releaseSessionLock(lock);
     }
+}
+
+export function getDailyChallengeInfo() {
+    const now = new Date();
+    return {
+        day: getDailyChallengeDay(now, env.DEBUG_DAILY_DAY_OFFSET),
+        serverNow: now.getTime(),
+        resetAt: getNextDailyReset(now).getTime(),
+        debugUnlimitedAttempts: env.DEBUG_DAILY_UNLIMITED_ATTEMPTS,
+    };
+}
+
+export async function getDailyStatusForUser(userId: number, gameMode: GameMode) {
+    gameMode = dailyGameModeSchema.parse(gameMode);
+    const now = new Date();
+    const dailyDate = getDailyDate(now, env.DEBUG_DAILY_DAY_OFFSET);
+    const attempt = await prisma.dailyGameAttempt.findUnique({
+        where: { userId_dailyDate_gameMode: { userId, dailyDate, gameMode } },
+    });
+    const day = getDailyChallengeDay(dailyDate);
+    if (!attempt) return { attempted: false as const, resumable: false, scoreId: null, day };
+
+    const game = await prisma.game.findUnique({ where: { sessionId: attempt.sessionId }, select: { id: true, runType: true, endReason: true, roundsPlayed: true } });
+    const scoreId = game?.runType === "daily" && game.endReason === "completed" && game.roundsPlayed === DAILY_ROUNDS ? game.id.toString() : null;
+    let resumable = false;
+    if (!scoreId && !game) {
+        try {
+            const state = await getGameSession(attempt.sessionId, userId);
+            resumable = state.is_active && !state.end_pending && state.run_type === "daily";
+        } catch {}
+    }
+    return { attempted: true as const, resumable, scoreId, day };
 }
 
 export async function getSuggestions(str: string, gamemode: GameMode): Promise<string[]> {

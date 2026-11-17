@@ -3,12 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Users } from "lucide-react";
 
 export default function Hero() {
     const { data: session } = useSession();
     const { t } = useTranslationsContext();
+    const router = useRouter();
 
     const titleParts = t.home.hero.title.split("osu!guessr");
 
@@ -42,6 +44,9 @@ export default function Hero() {
                                 <Link href="/signin">{t.home.hero.signIn}</Link>
                             </Button>
                         )}
+                        <Button size="lg" variant="secondary" onClick={() => router.push("/?daily=true", { scroll: false })} className="text-sm px-6 w-full sm:w-auto bg-background/60">
+                            {t.home.hero.playDaily}
+                        </Button>
                         <Button asChild variant="secondary" size="lg" className="text-sm px-6 w-full sm:w-auto bg-background/60">
                             <Link href="/multiplayer">
                                 <Users className="size-4" />

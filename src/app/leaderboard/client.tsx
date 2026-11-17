@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getTopPlayersAction } from "@/actions/user-server";
+import { getDailyTopPlayersAction, getTopPlayersAction } from "@/actions/user-server";
 import { GameMode, type TopPlayer } from "@/actions/types";
 import { GAME_VARIANTS, type GameVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
@@ -17,15 +17,17 @@ import { createLatestRequestGate } from "@/lib/latest-request";
 interface LeaderboardClientProps {
     initialData: TopPlayer[];
     initialMode: GameMode;
-    initialVariant: GameVariant;
+    initialVariant: LeaderboardVariant;
     initialError?: string | null;
 }
+
+type LeaderboardVariant = GameVariant | "daily";
 
 export default function LeaderboardClient({ initialData, initialMode, initialVariant, initialError = null }: LeaderboardClientProps) {
     const { t, locale } = useTranslationsContext();
     const { data: session } = useSession();
     const [selectedMode, setSelectedMode] = useState<GameMode>(initialMode);
-    const [selectedVariant, setSelectedVariant] = useState<GameVariant>(initialVariant);
+    const [selectedVariant, setSelectedVariant] = useState<LeaderboardVariant>(initialVariant);
     const [leaderboardData, setLeaderboardData] = useState<Array<TopPlayer>>(initialData);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(initialError);
@@ -36,7 +38,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
 
     const errorMessage = t.notifications.error;
 
-    function syncFilters(mode: GameMode, variant: GameVariant) {
+    function syncFilters(mode: GameMode, variant: LeaderboardVariant) {
         const url = new URL(window.location.href);
         url.searchParams.set("mode", mode);
         url.searchParams.set("variant", variant);
@@ -57,7 +59,9 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
 
             try {
                 const offset = (page - 1) * pageSize;
-                const data = await getTopPlayersAction(selectedMode, selectedVariant, pageSize, offset);
+                const data = selectedVariant === "daily"
+                    ? await getDailyTopPlayersAction(selectedMode, pageSize, offset)
+                    : await getTopPlayersAction(selectedMode, selectedVariant, pageSize, offset);
                 if (request.isCurrent()) {
                     setLeaderboardData(data);
                 }
@@ -113,7 +117,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                     <div>
                         <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.variantLabel}</p>
                         <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.variantLabel}>
-                            {GAME_VARIANTS.map((variant) => (
+                            {(["daily", ...GAME_VARIANTS] as LeaderboardVariant[]).map((variant) => (
                                 <button
                                     key={variant}
                                     type="button"
@@ -126,7 +130,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                     }}
                                     className={`border-b-2 px-2 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedVariant === variant ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
                                 >
-                                    {t.leaderboard.filters.variant[variant]}
+                                    {variant === "daily" ? t.game.daily.title : t.leaderboard.filters.variant[variant]}
                                 </button>
                             ))}
                         </div>
@@ -159,13 +163,18 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                             <th scope="col" className="px-2 py-2.5 text-left sm:px-5">
                                                 {t.leaderboard.table.player}
                                             </th>
-                                            <th scope="col" className="w-24 px-3 py-2.5 text-right sm:w-auto sm:px-5">
-                                                {t.leaderboard.table.profilePp}
-                                            </th>
-                                            <th scope="col" className="hidden px-5 py-2.5 text-right lg:table-cell">
-                                                {t.leaderboard.table.bestRunPp}
-                                            </th>
-                                            {selectedVariant !== "classic" && (
+                                            {selectedVariant === "daily" ? (
+                                                <>
+                                                    <th scope="col" className="px-3 py-2.5 text-right sm:px-5">{t.leaderboard.table.bestDailyStreak}</th>
+                                                    <th scope="col" className="hidden px-5 py-2.5 text-right md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <th scope="col" className="w-24 px-3 py-2.5 text-right sm:w-auto sm:px-5">{t.leaderboard.table.profilePp}</th>
+                                                    <th scope="col" className="hidden px-5 py-2.5 text-right lg:table-cell">{t.leaderboard.table.bestRunPp}</th>
+                                                </>
+                                            )}
+                                            {selectedVariant !== "classic" && selectedVariant !== "daily" && (
                                                 <th scope="col" className="hidden px-3 py-2.5 text-right sm:table-cell sm:px-5">
                                                     {t.leaderboard.table.bestStreak}
                                                 </th>
@@ -215,13 +224,18 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                                         </div>
                                                     </Link>
                                                 </td>
-                                                <td className="px-3 py-3 text-right font-mono text-sm font-bold tabular-nums text-primary sm:px-5 sm:py-3.5">
-                                                    {Number(player.profile_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}
-                                                </td>
-                                                <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground lg:table-cell">
-                                                    {Number(player.best_run_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}
-                                                </td>
-                                                {selectedVariant !== "classic" && (
+                                                {selectedVariant === "daily" ? (
+                                                    <>
+                                                        <td className="px-3 py-3 text-right font-mono text-sm font-bold tabular-nums text-primary sm:px-5 sm:py-3.5">{(player.best_daily_streak ?? 0).toLocaleString(locale)}</td>
+                                                        <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground md:table-cell">{player.games_played.toLocaleString(locale)}</td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="px-3 py-3 text-right font-mono text-sm font-bold tabular-nums text-primary sm:px-5 sm:py-3.5">{Number(player.profile_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}</td>
+                                                        <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground lg:table-cell">{Number(player.best_run_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}</td>
+                                                    </>
+                                                )}
+                                                {selectedVariant !== "classic" && selectedVariant !== "daily" && (
                                                     <td className="hidden px-5 py-3.5 text-right text-sm font-semibold tabular-nums text-foreground sm:table-cell">
                                                         {player.highest_streak.toLocaleString(locale)}
                                                     </td>

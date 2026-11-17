@@ -83,6 +83,8 @@ export interface GameState {
     gameStatus: "active" | "finished";
     lastGuess?: GuessResult;
     variant: GameVariant;
+    runType: GameRunType;
+    dailyDay?: number;
 }
 
 export interface UserBadge {
@@ -154,6 +156,14 @@ export interface UserLifetimeModeStats {
     last_played: Date | null;
 }
 
+export interface UserDailyStats {
+    dailies_played: number;
+    total_points: bigint;
+    best_streak: number;
+    total_response_time_ms: bigint;
+    calendar: Array<{ date: string; status: "played" | "missed" | "today" }>;
+}
+
 export interface UserRankHistoryPoint {
     rank: number;
     recorded_at: Date;
@@ -168,6 +178,7 @@ export interface TopPlayer extends Omit<User, "badges"> {
     best_run_pp: string | number;
     profile_pp: string | number;
     last_played: Date;
+    best_daily_streak?: number;
 }
 
 export interface HighestStats {
@@ -219,6 +230,8 @@ export interface DatabaseGameSession {
     end_reason?: GameEndReason;
     variant: GameVariant;
     run_type: GameRunType;
+    daily_day?: number;
+    daily_date?: string;
     challenge_id: string | null;
     seed: string | null;
     config_snapshot: Record<string, unknown> | null;

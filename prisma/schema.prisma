@@ -232,6 +232,17 @@ model GameChallengeRound {
   @@map("game_challenge_rounds")
 }
 
+model DailyGameAttempt {
+  userId    Int      @map("user_id")
+  dailyDate DateTime @map("daily_date") @db.Date
+  gameMode  GameMode @map("game_mode")
+  sessionId String   @unique(map: "unique_daily_game_session") @map("session_id") @db.Char(36)
+  startedAt DateTime @default(now()) @map("started_at") @db.DateTime(3)
+
+  @@id([userId, dailyDate, gameMode])
+  @@map("daily_game_attempts")
+}
+
 model ContentStat {
   gameMode            GameMode     @map("game_mode")
   itemType            GameItemType @map("item_type")

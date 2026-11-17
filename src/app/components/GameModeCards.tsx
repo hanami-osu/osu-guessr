@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { GAME_MODES } from "@/app/games/config";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import PreGameMenu from "@/app/games/shared/pages/PreGameMenu";
 import { GameMode } from "@/actions/types";
 
@@ -36,7 +36,10 @@ export default function GameModeCards() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const openedFromCard = useRef(false);
+    const [dailyGameMode, setDailyGameMode] = useState<GameMode>(GameMode.Background);
     const selectedGame = GAME_MODES.find((mode) => mode.id === searchParams.get("game"));
+    const dailyPickerOpen = searchParams.get("daily") === "true";
+    const pickerGameMode = selectedGame?.id ?? dailyGameMode;
 
     const closeGameModal = () => {
         if (openedFromCard.current) {
@@ -86,11 +89,23 @@ export default function GameModeCards() {
                 </div>
             </div>
 
-            <Dialog open={!!selectedGame} onOpenChange={(open) => !open && closeGameModal()}>
-                {selectedGame && (
-                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border-border bg-card p-0 sm:max-w-2xl">
-                        <DialogTitle className="sr-only">{t.game.preGame.title[selectedGame.id]}</DialogTitle>
-                        <PreGameMenu gameMode={selectedGame.id} onCancel={closeGameModal} onStart={(variant) => router.push(`${selectedGame.url}?variant=${variant}`)} />
+            <Dialog open={Boolean(selectedGame) || dailyPickerOpen} onOpenChange={(open) => !open && closeGameModal()}>
+                {(selectedGame || dailyPickerOpen) && (
+                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border-border bg-card p-0 sm:max-w-4xl">
+                        <DialogTitle className="sr-only">{dailyPickerOpen ? t.game.daily.title : t.game.preGame.title[pickerGameMode]}</DialogTitle>
+                        <DialogDescription className="sr-only">{dailyPickerOpen ? t.game.daily.chooseMode : t.game.preGame.description[pickerGameMode]}</DialogDescription>
+                        <PreGameMenu
+                            key={dailyPickerOpen ? "daily-picker" : selectedGame?.id}
+                            gameMode={pickerGameMode}
+                            dailyModePicker={dailyPickerOpen}
+                            onCancel={closeGameModal}
+                            onStart={(variant, runType, selectedMode) => {
+                                const targetMode = selectedMode ?? selectedGame?.id ?? dailyGameMode;
+                                setDailyGameMode(targetMode);
+                                const target = GAME_MODES.find((mode) => mode.id === targetMode);
+                                if (target) router.push(`${target.url}?variant=${variant}${runType === "daily" ? "&run=daily" : ""}`);
+                            }}
+                        />
                     </DialogContent>
                 )}
             </Dialog>

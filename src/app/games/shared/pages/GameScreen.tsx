@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { GameClient } from "@/lib/game/client";
-import { GameState, GameMode } from "@/actions/types";
+import { GameState, GameMode, type GameRunType } from "@/actions/types";
 
-import { AUTO_ADVANCE_DELAY_MS, GameVariant, MAX_ROUNDS, isContinuousVariant } from "../../config";
+import { AUTO_ADVANCE_DELAY_MS, GameVariant, getGameRoundLimit, isContinuousVariant } from "../../config";
 import GuessInput from "../components/GuessInput";
 import LoadingScreen from "../components/LoadingScreen";
 import GameHeader from "../components/Header";
@@ -17,6 +17,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import type { GameMediaProps } from "@/lib/game/types";
 import { canPersistGameResult, isClassicGameIncomplete } from "@/lib/game/completion";
+import { DAILY_CHALLENGE_ALREADY_PLAYED } from "@/lib/game/daily";
+import { getDailyStatusAction } from "@/actions/game-server";
 import GameActionButton from "../components/GameActionButton";
 import GameShortcuts from "../components/GameShortcuts";
 import GameStartError from "../components/GameStartError";
@@ -26,16 +28,20 @@ import { useGameKeyboardShortcuts } from "../hooks/useGameKeyboardShortcuts";
 import { usePreventUnload } from "../hooks/usePreventUnload";
 import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
 import { useLeaveGameGuard } from "@/hooks/useLeaveGameGuard";
+import { writeGuestDailyAttempt } from "@/lib/game/daily-client";
+import { readGuestDailyAttempt } from "@/lib/game/daily-client";
 
 interface GameScreenProps {
     onExit(): void;
     gameVariant: GameVariant;
+    gameRunType: GameRunType;
+    isGuestDaily?: boolean;
     gameMode: GameMode;
     GameMedia: React.ComponentType<GameMediaProps>;
     multiplayerLobbyCode?: string;
 }
 
-export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, multiplayerLobbyCode }: GameScreenProps) {
+export default function GameScreen({ onExit, gameVariant, gameRunType, gameMode, GameMedia, multiplayerLobbyCode, isGuestDaily = false }: GameScreenProps) {
     const { t } = useTranslationsContext();
     const router = useRouter();
 
@@ -100,22 +106,44 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 {},
                 multiplayerLobbyCode,
                 multiplayerRequest,
+                gameRunType,
             );
 
-            const resumed = await gameClient.current.resumeStoredGame();
+            const guestAttempt = isGuestDaily ? readGuestDailyAttempt(gameMode) : null;
+            const resumed = await gameClient.current.resumeStoredGame(guestAttempt?.status === "started" ? guestAttempt.sessionId : undefined);
             if (!resumed) {
+                if (isGuestDaily && guestAttempt?.status === "started" && guestAttempt.sessionId) throw new Error(t.game.daily.guestSessionExpired);
                 await gameClient.current.startGame();
+            }
+
+            if (isGuestDaily && gameClient.current.currentSessionId) {
+                writeGuestDailyAttempt(gameMode, { status: "started", sessionId: gameClient.current.currentSessionId });
             }
 
             setCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
             setActionError(null);
         } catch (error) {
             console.error("Failed to restart game:", error);
-            setStartupError(error instanceof Error ? error.message : t.errors.game.unknown);
+            const message = error instanceof Error ? error.message : t.errors.game.unknown;
+            if (gameRunType === "daily" && message.includes(DAILY_CHALLENGE_ALREADY_PLAYED)) {
+                try {
+                    const status = await getDailyStatusAction(gameMode);
+                    if (status.scoreId) {
+                        router.replace(`/scores/${status.scoreId}`);
+                        return;
+                    }
+                    setStartupError(t.game.daily.alreadyPlayed);
+                } catch (statusError) {
+                    console.error("Failed to recover the daily challenge status:", statusError);
+                    setStartupError(message);
+                }
+            } else {
+                setStartupError(message);
+            }
         } finally {
             setIsLoading(false);
         }
-    }, [gameMode, gameVariant, multiplayerLobbyCode, multiplayerRequest, t.errors.game.unknown]);
+    }, [gameMode, gameVariant, gameRunType, isGuestDaily, multiplayerLobbyCode, multiplayerRequest, router, t.errors.game.unknown, t.game.daily.alreadyPlayed, t.game.daily.guestSessionExpired]);
 
     useEffect(() => {
         handleStartGame();
@@ -151,14 +179,19 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
         setActionError(null);
         try {
             await gameClient.current!.endGame();
-            router.replace(scoreUrl(gameState.sessionId));
+            if (isGuestDaily) {
+                writeGuestDailyAttempt(gameMode, { status: "completed", sessionId: gameState.sessionId });
+                router.replace(`/daily/result/${gameState.sessionId}`);
+            } else {
+                router.replace(scoreUrl(gameState.sessionId));
+            }
         } catch (error) {
             navigatingToResults.current = false;
             setIsLoading(false);
             console.error("Failed to end game:", error);
             setActionError(error instanceof Error ? error.message : t.errors.game.unknown);
         }
-    }, [gameState, router, scoreUrl, t.errors.game.unknown]);
+    }, [gameMode, gameState, isGuestDaily, router, scoreUrl, t.errors.game.unknown]);
 
     const handleGuess = useCallback(() => {
         if (!gameClient.current || !guess.trim() || gameState?.currentBeatmap.revealed) return;
@@ -248,10 +281,15 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                         currentRound: gameState.rounds.current,
                         hasGuessedCurrentRound: gameState.currentBeatmap.revealed,
                     },
-                    MAX_ROUNDS,
+                    getGameRoundLimit(gameRunType, gameVariant),
                 );
                 if (href) {
                     router.push(href);
+                } else if (isGuestDaily && gameRunType === "daily" && gameState.rounds.current >= gameState.rounds.total) {
+                    writeGuestDailyAttempt(gameMode, { status: "completed", sessionId: gameState.sessionId });
+                    router.replace(`/daily/result/${gameState.sessionId}`);
+                } else if (gameRunType === "daily" && gameState.rounds.current >= gameState.rounds.total) {
+                    router.replace(scoreUrl(gameState.sessionId));
                 } else if (hasSavedScore) {
                     router.replace(scoreUrl(gameState.sessionId));
                 } else {
@@ -266,7 +304,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 setIsLoading(false);
             }
         },
-        [gameState, onExit, gameVariant, router, scoreUrl, t.errors.game.unknown],
+        [gameMode, gameState, onExit, gameVariant, gameRunType, isGuestDaily, router, scoreUrl, t.errors.game.unknown],
     );
 
     const requestExit = useCallback(() => {
@@ -358,6 +396,7 @@ export default function GameScreen({ onExit, gameVariant, gameMode, GameMedia, m
                 totalRounds={gameState.rounds.total}
                 mode={gameMode}
                 gameVariant={gameVariant}
+                gameRunType={gameRunType}
                 maxStreak={publicStats?.highestStreak ?? gameState.score.highestStreak}
                 mistakes={publicStats?.mistakes ?? gameState.rounds.mistakes}
                 timerDuration={showAdvanceCountdown ? AUTO_ADVANCE_DELAY_MS / 1000 : undefined}

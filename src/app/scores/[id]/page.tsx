@@ -10,6 +10,9 @@ import { createPageMetadata } from "@/lib/social-metadata";
 import { visibleUserWhere } from "@/lib/user-visibility";
 import { getTranslations, isLocale } from "@/lib/translations";
 import { cache } from "react";
+import DailyScoreSummary from "@/app/scores/DailyScoreSummary";
+import ScoreResultCard from "@/app/scores/ScoreResultCard";
+import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +20,6 @@ interface Props {
     params: Promise<{ id: string }>;
     searchParams: Promise<{ lobby?: string | string[] }>;
 }
-
 function asSnapshot(value: unknown): Record<string, unknown> {
     return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
@@ -182,6 +184,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             });
         }
 
+        if (game.runType === "daily") {
+            const session = await auth();
+            if (session?.user?.banchoId !== game.userId) {
+                return createPageMetadata({ title: "Score", description: "Daily score.", path: `/scores/${id}` });
+            }
+        }
+
         const username = user.username;
         const roundsPlayed = game.roundsPlayed || 0;
         const accuracy = roundsPlayed > 0 ? (game.correctCount / roundsPlayed) * 100 : 0;
@@ -216,6 +225,12 @@ export default async function ScorePage({ params, searchParams }: Props) {
     const game = await findGameByRouteId(id);
     if (!game) notFound();
 
+    if (game.runType === "daily") {
+        const session = await auth();
+        if (!session?.user?.banchoId) redirect(`/signin?callbackUrl=${encodeURIComponent(`/scores/${game.id.toString()}`)}`);
+        if (session.user.banchoId !== game.userId) notFound();
+    }
+
     const user = await findVisibleUser(game.userId);
     if (!user) notFound();
 
@@ -229,12 +244,39 @@ export default async function ScorePage({ params, searchParams }: Props) {
     const roundsPlayed = game.roundsPlayed || rounds.length;
     const accuracy = roundsPlayed > 0 ? (game.correctCount / roundsPlayed) * 100 : 0;
     const averageResponseSeconds = roundsPlayed > 0 ? Number(game.totalResponseTimeMs) / roundsPlayed / 1000 : 0;
-    const hasPp = game.ppVersion > 0;
+    const isDaily = game.runType === "daily";
+    const hasPp = game.ppVersion > 0 && !isDaily;
     const isDeath = game.variant === "death";
     const isSurvival = game.variant === "survival";
     const isScorePp = game.gameMode === "score_pp";
     const modeLabel = isScorePp ? t.game.preGame.title.score_pp : formatMode(game.gameMode);
+    const dailyDay = snapshotNumber(asSnapshot(game.configSnapshot), "dailyDay");
+    const dailyDebugUnlimited = asSnapshot(game.configSnapshot).debugUnlimitedAttempts === true;
     const mistakes = Math.max(0, roundsPlayed - game.correctCount);
+    const scoreStatsClassName = isDeath
+        ? "grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+        : "grid grid-cols-2 divide-x divide-y divide-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0";
+    const scoreStats = isDeath
+        ? [
+              { label: "Total Points", value: game.points.toLocaleString() },
+              { label: "Best Streak", value: `${game.streak}x` },
+              { label: "Avg. Response", value: `${averageResponseSeconds.toFixed(1)}s` },
+          ]
+        : isSurvival
+          ? [
+                { label: "Total Points", value: game.points.toLocaleString() },
+                { label: "Correct", value: `${game.correctCount}/${roundsPlayed}` },
+                { label: "Lives Lost", value: mistakes.toString() },
+                { label: "Best Streak", value: `${game.streak}x` },
+                { label: "Avg. Response", value: `${averageResponseSeconds.toFixed(1)}s` },
+            ]
+          : [
+                { label: "Total Points", value: game.points.toLocaleString() },
+                { label: "Correct", value: `${game.correctCount}/${roundsPlayed}` },
+                { label: "Accuracy", value: `${accuracy.toFixed(1)}%` },
+                { label: "Best Streak", value: `${game.streak}x` },
+                { label: "Avg. Response", value: `${averageResponseSeconds.toFixed(1)}s` },
+            ];
 
     return (
         <div className="page-container py-6 md:py-10">
@@ -258,56 +300,40 @@ export default async function ScorePage({ params, searchParams }: Props) {
                 <div className="text-xs text-muted-foreground">Score #{game.id.toString()}</div>
             </div>
 
-            <section className="overflow-hidden rounded-lg border border-border bg-card/60">
-                <div className="border-b border-border/60 px-5 py-5 sm:px-7">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                            <div className="text-sm text-muted-foreground">
-                                {modeLabel} · {formatMode(game.variant)} · {game.endedAt.toLocaleString(locale)}
-                            </div>
-                            <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-                                <Link
-                                    href={`/user/${game.userId}?mode=${game.gameMode}&variant=${game.variant}`}
-                                    className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                                >
-                                    {user.username}
-                                </Link>
-                                &apos;s score
-                            </h1>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-xs uppercase tracking-wider text-muted-foreground">{isScorePp ? t.game.scorePp.pp : "pp"}</div>
-                            <div className={`mt-1 text-3xl font-bold tabular-nums ${hasPp ? "text-primary" : "text-muted-foreground"}`}>
-                                {hasPp ? `${Number(game.pp).toLocaleString(undefined, { maximumFractionDigits: 1 })} pp` : "Legacy"}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <ScoreResultCard
+                subtitle={
+                    <>
+                        {modeLabel} · {isDaily ? t.game.preGame.modes.daily.title : formatMode(game.variant)} · {game.endedAt.toLocaleString(locale)}
+                    </>
+                }
+                title={
+                    <>
+                        <Link
+                            href={`/user/${game.userId}?mode=${game.gameMode}&variant=${game.variant}`}
+                            className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                        >
+                            {user?.username ?? `User ${game.userId}`}
+                        </Link>
+                        &apos;s score
+                    </>
+                }
+                pointsLabel={isDaily ? t.game.stats.classic.totalPoints : isScorePp ? t.game.scorePp.pp : "pp"}
+                points={isDaily ? game.points.toLocaleString(locale) : hasPp ? `${Number(game.pp).toLocaleString(undefined, { maximumFractionDigits: 1 })} pp` : "Legacy"}
+                highlightedPoints={hasPp}
+                stats={scoreStats}
+                statsClassName={scoreStatsClassName}
+            />
 
-                {isDeath ? (
-                    <dl className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                        <ScoreStat label="Total Points" value={game.points.toLocaleString()} />
-                        <ScoreStat label="Best Streak" value={`${game.streak}x`} />
-                        <ScoreStat label="Avg. Response" value={`${averageResponseSeconds.toFixed(1)}s`} />
-                    </dl>
-                ) : isSurvival ? (
-                    <dl className="grid grid-cols-2 divide-x divide-y divide-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
-                        <ScoreStat label="Total Points" value={game.points.toLocaleString()} />
-                        <ScoreStat label="Correct" value={`${game.correctCount}/${roundsPlayed}`} />
-                        <ScoreStat label="Lives Lost" value={mistakes.toString()} />
-                        <ScoreStat label="Best Streak" value={`${game.streak}x`} />
-                        <ScoreStat label="Avg. Response" value={`${averageResponseSeconds.toFixed(1)}s`} />
-                    </dl>
-                ) : (
-                    <dl className="grid grid-cols-2 divide-x divide-y divide-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
-                        <ScoreStat label="Total Points" value={game.points.toLocaleString()} />
-                        <ScoreStat label="Correct" value={`${game.correctCount}/${roundsPlayed}`} />
-                        <ScoreStat label="Accuracy" value={`${accuracy.toFixed(1)}%`} />
-                        <ScoreStat label="Best Streak" value={`${game.streak}x`} />
-                        <ScoreStat label="Avg. Response" value={`${averageResponseSeconds.toFixed(1)}s`} />
-                    </dl>
-                )}
-            </section>
+            {isDaily && dailyDay !== undefined && (
+                <DailyScoreSummary
+                    gameMode={game.gameMode}
+                    day={dailyDay}
+                    points={game.points}
+                    responseTimeMs={Number(game.totalResponseTimeMs)}
+                    debugUnlimitedAttempts={dailyDebugUnlimited}
+                    outcomes={rounds.map((round) => ({ correct: round.correct, resultType: round.resultType }))}
+                />
+            )}
 
             <section className="mt-8">
                 <div className="mb-3 px-1">
@@ -412,7 +438,6 @@ export default async function ScorePage({ params, searchParams }: Props) {
         </div>
     );
 }
-
 function ScorePpReviewRound({
     roundNumber,
     resultType,
@@ -504,14 +529,5 @@ function ScorePpReviewCard({ score, side, selected, winner, locale, t }: { score
                 </div>
             </div>
         </article>
-    );
-}
-
-function ScoreStat({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="px-4 py-4 sm:px-5">
-            <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="mt-1 text-lg font-semibold tabular-nums text-foreground">{value}</dd>
-        </div>
     );
 }

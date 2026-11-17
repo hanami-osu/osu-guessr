@@ -1,12 +1,14 @@
 "use client";
 
-import { Game, GameMode, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "@/actions/types";
+import { Game, GameMode, UserDailyStats, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "@/actions/types";
 import { GAME_VARIANTS, GameVariant, isContinuousVariant } from "@/app/games/config";
+import type { ProfileVariant } from "@/lib/profile-params";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { ArrowUpRight, ChevronDown, ChevronRight, Clock3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown, ChevronRight, Clock3, Expand } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import UserNotFound from "./NotFound";
 import { SectionLabel } from "@/components/page-heading";
 import type { Translations } from "@/lib/translations";
@@ -15,10 +17,11 @@ const gamemodes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Ski
 
 interface UserProfileClientProps {
     currentMode: GameMode;
-    currentVariant: GameVariant;
+    currentVariant: ProfileVariant;
     banchoId: string;
     user?: UserWithStats | null;
     lifetimeModeStats?: UserLifetimeModeStats;
+    dailyStats?: UserDailyStats | null;
     bestScores?: Game[];
     recentScores?: Game[];
     rankHistory?: UserRankHistoryPoint[];
@@ -32,6 +35,7 @@ export default function UserProfileClient({
     banchoId,
     user = null,
     lifetimeModeStats,
+    dailyStats,
     bestScores = [],
     recentScores = [],
     rankHistory = [],
@@ -55,7 +59,8 @@ export default function UserProfileClient({
     if (!user) return <UserNotFound />;
 
     const findStats = (mode: GameMode, variant: GameVariant) => user.achievements?.find((stat) => stat.game_mode === mode && stat.variant === variant);
-    const modeStats = findStats(currentMode, currentVariant);
+    const isDaily = currentVariant === "daily";
+    const modeStats = isDaily ? undefined : findStats(currentMode, currentVariant);
     const modePp = Number(modeStats?.profile_pp ?? 0);
     const activeTimeMs = modeStats?.total_response_time_ms ?? 0n;
     const roundsPlayed = modeStats?.rounds_played ?? 0;
@@ -88,6 +93,7 @@ export default function UserProfileClient({
                                 className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${currentMode === mode ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             >
                                 {t.leaderboard.filters.mode[mode]}
+                                <TabPp value={isDaily ? null : tabPp(mode, currentVariant)} />
                             </Link>
                         ))}
                     </nav>
@@ -95,7 +101,7 @@ export default function UserProfileClient({
                     <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-border sm:block" />
 
                     <nav aria-label={t.user.profile.variantLabel} className="-mx-2.5 flex items-center gap-1.5 overflow-x-auto px-2.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
-                        {GAME_VARIANTS.map((variant) => (
+                        {(["daily", ...GAME_VARIANTS] as ProfileVariant[]).map((variant) => (
                             <Link
                                 key={variant}
                                 href={`/user/${banchoId}?mode=${currentMode}&variant=${variant}`}
@@ -103,8 +109,8 @@ export default function UserProfileClient({
                                 aria-current={currentVariant === variant ? "page" : undefined}
                                 className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${currentVariant === variant ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             >
-                                {t.leaderboard.filters.variant[variant]}
-                                <TabPp value={tabPp(currentMode, variant)} />
+                                {variant === "daily" ? t.user.profile.daily.title : t.leaderboard.filters.variant[variant]}
+                                <TabPp value={variant === "daily" ? null : tabPp(currentMode, variant)} />
                             </Link>
                         ))}
                     </nav>
@@ -160,33 +166,41 @@ export default function UserProfileClient({
                             </div>
 
                             <div className="mt-6 sm:mt-8">
-                                <dl className="grid grid-cols-3 divide-x divide-border/60">
-                                    <SummaryMetric label={t.user.profile.stats.globalRank} value={formatRank(user.ranks?.modeRanks[currentMode]?.[currentVariant])} />
-                                    <SummaryMetric label={t.user.profile.gameStats.profilePp} value={`${modePp.toLocaleString(locale, { maximumFractionDigits: 1 })} pp`} />
-                                    <SummaryMetric label={t.user.profile.gameStats.accuracy} value={`${accuracy.toLocaleString(locale, { maximumFractionDigits: 1 })}%`} />
-                                </dl>
+                                {isDaily ? (
+                                    <DailyProfileCalendar stats={dailyStats} locale={locale} t={t.user.profile.daily} />
+                                ) : (
+                                    <>
+                                        <dl className="grid grid-cols-3 divide-x divide-border/60">
+                                            <SummaryMetric label={t.user.profile.stats.globalRank} value={formatRank(user.ranks?.modeRanks[currentMode]?.[currentVariant])} />
+                                            <SummaryMetric label={t.user.profile.gameStats.profilePp} value={`${modePp.toLocaleString(locale, { maximumFractionDigits: 1 })} pp`} />
+                                            <SummaryMetric label={t.user.profile.gameStats.accuracy} value={`${accuracy.toLocaleString(locale, { maximumFractionDigits: 1 })}%`} />
+                                        </dl>
+                                        <RankHistory title={t.user.profile.stats.rankHistory} peakTemplate={t.user.profile.stats.peakRank} points={rankHistory} locale={locale} />
+                                    </>
+                                )}
                             </div>
-
-                            <RankHistory title={t.user.profile.stats.rankHistory} peakTemplate={t.user.profile.stats.peakRank} points={rankHistory} locale={locale} />
                         </section>
 
                         <div aria-hidden="true" className="hidden bg-border/70 lg:block" />
-
-                        <section aria-label={t.user.profile.gameStats.title} className="lg:self-center">
-                            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 rounded-xl bg-muted/45 p-4 text-sm sm:p-5">
-                                <DetailMetric label={t.user.profile.gameStats.gamesPlayed} value={lifetime.games_played.toLocaleString(locale)} />
-                                <DetailMetric label={t.user.profile.gameStats.roundsPlayed} value={roundsPlayed.toLocaleString(locale)} />
-                                <DetailMetric label={t.user.profile.gameStats.totalScore} value={lifetime.total_score.toLocaleString(locale)} />
-                                <DetailMetric label={t.user.profile.gameStats.bestStreak} value={lifetime.highest_streak.toLocaleString(locale)} />
-                                <DetailMetric label={t.user.profile.gameStats.averageStreak} value={lifetime.average_streak.toLocaleString(locale, { maximumFractionDigits: 1 })} />
-                                <DetailMetric label={t.user.profile.stats.playtime} value={formatDuration(activeTimeMs, locale)} />
-                            </dl>
+                        <section aria-label={isDaily ? t.user.profile.daily.title : t.user.profile.gameStats.title} className="mt-6 min-w-0 lg:mt-8 lg:self-start">
+                            {isDaily ? (
+                                <DailyProfileStats stats={dailyStats} locale={locale} t={t.user.profile.daily} />
+                            ) : (
+                                <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 rounded-xl bg-muted/45 p-4 text-sm sm:p-5">
+                                    <DetailMetric label={t.user.profile.gameStats.gamesPlayed} value={lifetime.games_played.toLocaleString(locale)} />
+                                    <DetailMetric label={t.user.profile.gameStats.roundsPlayed} value={roundsPlayed.toLocaleString(locale)} />
+                                    <DetailMetric label={t.user.profile.gameStats.totalScore} value={lifetime.total_score.toLocaleString(locale)} />
+                                    <DetailMetric label={t.user.profile.gameStats.bestStreak} value={lifetime.highest_streak.toLocaleString(locale)} />
+                                    <DetailMetric label={t.user.profile.gameStats.averageStreak} value={lifetime.average_streak.toLocaleString(locale, { maximumFractionDigits: 1 })} />
+                                    <DetailMetric label={t.user.profile.stats.playtime} value={formatDuration(activeTimeMs, locale)} />
+                                </dl>
+                            )}
                         </section>
                     </div>
                 </div>
             </div>
 
-            <div className="mt-6 rounded-lg border border-border bg-card/60 p-4 sm:p-5">
+            {!isDaily && <div className="mt-6 rounded-lg border border-border bg-card/60 p-4 sm:p-5">
                 <ScoreSection
                     title={t.user.profile.topGames.title}
                     emptyText={t.user.profile.topGames.empty}
@@ -208,7 +222,7 @@ export default function UserProfileClient({
                     relativeDates
                     generatedAt={generatedAt}
                 />
-            </div>
+            </div>}
         </div>
     );
 }
@@ -344,6 +358,149 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
     );
 }
 
+function DailyProfileStats({ stats, locale, t }: { stats?: UserDailyStats | null; locale: string; t: Translations["user"]["profile"]["daily"] }) {
+    return (
+        <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 rounded-xl bg-muted/45 p-4 text-sm sm:p-5">
+            <DetailMetric label={t.dailiesPlayed} value={(stats?.dailies_played ?? 0).toLocaleString(locale)} />
+            <DetailMetric label={t.totalPoints} value={(stats?.total_points ?? 0n).toLocaleString(locale)} />
+            <DetailMetric label={t.bestStreak} value={(stats?.best_streak ?? 0).toLocaleString(locale)} />
+            <DetailMetric label={t.timeAnswering} value={formatDuration(stats?.total_response_time_ms ?? 0n, locale)} />
+        </dl>
+    );
+}
+
+function DailyProfileCalendar({ stats, locale, t }: { stats?: UserDailyStats | null; locale: string; t: Translations["user"]["profile"]["daily"] }) {
+    const calendar = stats?.calendar ?? [];
+    const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+    const getWeekKey = (date: string) => {
+        const weekStart = new Date(`${date}T00:00:00Z`);
+        weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+        return weekStart.toISOString().slice(0, 10);
+    };
+    const weeks = new Map<string, UserDailyStats["calendar"]>();
+    for (const day of calendar) {
+        const week = getWeekKey(day.date);
+        weeks.set(week, [...(weeks.get(week) ?? []), day]);
+    }
+    const weekKeys = [...weeks.keys()].sort();
+    const currentDate = calendar.find((day) => day.status === "today")?.date ?? calendar.at(-1)?.date;
+    const currentWeek = currentDate ? getWeekKey(currentDate) : "";
+    const currentMonth = currentDate?.slice(0, 7) ?? new Date().toISOString().slice(0, 7);
+    const monthKeys = [...new Set(calendar.map((day) => day.date.slice(0, 7)))].sort();
+    const visibleMonth = selectedMonth && monthKeys.includes(selectedMonth) ? selectedMonth : currentMonth;
+    const visibleMonthIndex = monthKeys.indexOf(visibleMonth);
+    const visibleWeek = selectedWeek && weeks.has(selectedWeek) ? selectedWeek : currentWeek;
+    const visibleWeekIndex = weekKeys.indexOf(visibleWeek);
+    const visibleWeekDays: Array<UserDailyStats["calendar"][number] | undefined> = Array.from({ length: 7 }, () => undefined);
+    for (const day of weeks.get(visibleWeek) ?? []) {
+        visibleWeekDays[new Date(`${day.date}T00:00:00Z`).getUTCDay()] = day;
+    }
+    const lastVisibleDate = [...visibleWeekDays].reverse().find((day) => day !== undefined)?.date ?? visibleWeek;
+    const visibleWeekDate = new Date(`${lastVisibleDate}T00:00:00Z`);
+    const weekdays = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, index + 4))));
+    const visibleMonthDate = new Date(`${visibleMonth}-01T00:00:00Z`);
+    const monthDays = new Map((calendar.filter((day) => day.date.startsWith(visibleMonth))).map((day) => [Number(day.date.slice(-2)), day]));
+    const daysInMonth = new Date(Date.UTC(visibleMonthDate.getUTCFullYear(), visibleMonthDate.getUTCMonth() + 1, 0)).getUTCDate();
+    const monthStartOffset = visibleMonthDate.getUTCDay();
+    const calendarDayClass = (status: UserDailyStats["calendar"][number]["status"] | undefined) =>
+        status === "played" ? "bg-emerald-500 text-white" : status === "missed" ? "bg-rose-500/15 text-white" : status === "today" ? "bg-background text-muted-foreground ring-1 ring-inset ring-border" : "text-muted-foreground/50";
+
+    return (
+        <div className="min-w-0 rounded-xl bg-muted/35 p-3 sm:p-4">
+            {calendar.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t.calendarEmpty}</p>
+            ) : (
+                <>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <span className="text-[0.7rem] font-medium text-muted-foreground">{visibleWeekDate.toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" })}</span>
+                        <Dialog open={isFullscreenOpen} onOpenChange={setIsFullscreenOpen}>
+                            <DialogTrigger asChild>
+                                <button type="button" aria-label="Open fullscreen calendar" title="Open fullscreen calendar" className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                                    <Expand aria-hidden="true" className="size-3.5" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="w-[calc(100%-2rem)] max-w-2xl gap-5">
+                                <div className="pr-8">
+                                    <DialogTitle className="text-base">{t.calendarTitle}</DialogTitle>
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                    <button
+                                        type="button"
+                                        aria-label="Previous month"
+                                        title="Previous month"
+                                        disabled={visibleMonthIndex <= 0}
+                                        onClick={() => setSelectedMonth(monthKeys[visibleMonthIndex - 1] ?? null)}
+                                        className="grid size-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+                                    >
+                                        <ArrowLeft aria-hidden="true" className="size-4" />
+                                    </button>
+                                    <h3 className="text-sm font-medium text-foreground">{visibleMonthDate.toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" })}</h3>
+                                    <button
+                                        type="button"
+                                        aria-label="Next month"
+                                        title="Next month"
+                                        disabled={visibleMonthIndex < 0 || visibleMonthIndex >= monthKeys.indexOf(currentMonth)}
+                                        onClick={() => setSelectedMonth(monthKeys[visibleMonthIndex + 1] ?? null)}
+                                        className="grid size-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+                                    >
+                                        <ArrowRight aria-hidden="true" className="size-4" />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-7 gap-2" role="grid" aria-label={visibleMonthDate.toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" })}>
+                                    {weekdays.map((weekday, index) => <span key={`${weekday}-${index}`} className="pb-1 text-center text-xs text-muted-foreground">{weekday}</span>)}
+                                    {Array.from({ length: monthStartOffset }, (_, index) => <span key={`month-blank-${index}`} aria-hidden="true" />)}
+                                    {Array.from({ length: daysInMonth }, (_, index) => {
+                                        const dayNumber = index + 1;
+                                        const day = monthDays.get(dayNumber);
+                                        const date = `${visibleMonth}-${String(dayNumber).padStart(2, "0")}`;
+                                        const statusLabel = day ? (day.status === "played" ? t.played : day.status === "today" ? t.today : t.missed) : null;
+                                        const dateLabel = new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, { dateStyle: "full", timeZone: "UTC" });
+                                        const label = statusLabel ? `${dateLabel}: ${statusLabel}` : dateLabel;
+                                        return <span key={date} role="gridcell" aria-label={label} title={label} className={`mx-auto grid size-9 place-items-center rounded-full text-sm font-medium tabular-nums ${calendarDayClass(day?.status)}`}>{dayNumber}</span>;
+                                    })}
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                    <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_1.75rem] items-center gap-1">
+                        <button
+                            type="button"
+                            aria-label="Previous week"
+                            title="Previous week"
+                            disabled={visibleWeekIndex <= 0}
+                            onClick={() => setSelectedWeek(weekKeys[visibleWeekIndex - 1] ?? null)}
+                            className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+                        >
+                            <ArrowLeft aria-hidden="true" className="size-3.5" />
+                        </button>
+                        <div className="grid grid-cols-7 gap-x-0.5" role="grid" aria-label="Daily challenge week">
+                            {weekdays.map((weekday, index) => <span key={`${weekday}-${index}`} className="truncate pb-1 text-center text-[0.55rem] text-muted-foreground">{weekday}</span>)}
+                            {visibleWeekDays.map((day, index) => {
+                                if (!day) return <span key={`empty-${index}`} aria-hidden="true" />;
+                                const statusLabel = day.status === "played" ? t.played : day.status === "today" ? t.today : t.missed;
+                                const dayNumber = Number(day.date.slice(-2));
+                                return <span key={day.date} role="gridcell" aria-label={`${new Date(`${day.date}T00:00:00Z`).toLocaleDateString(locale, { dateStyle: "full", timeZone: "UTC" })}: ${statusLabel}`} title={`${day.date}: ${statusLabel}`} className={`mx-auto grid size-6 place-items-center rounded-full text-[0.65rem] font-medium tabular-nums ${calendarDayClass(day.status)}`}>{dayNumber}</span>;
+                            })}
+                        </div>
+                        <button
+                            type="button"
+                            aria-label="Next week"
+                            title="Next week"
+                            disabled={visibleWeekIndex < 0 || visibleWeekIndex >= weekKeys.indexOf(currentWeek)}
+                            onClick={() => setSelectedWeek(weekKeys[visibleWeekIndex + 1] ?? null)}
+                            className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+                        >
+                            <ArrowRight aria-hidden="true" className="size-3.5" />
+                        </button>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
 function RankHistory({ title, peakTemplate, points, locale }: { title: string; peakTemplate: string; points: UserRankHistoryPoint[]; locale: string }) {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -414,10 +571,8 @@ function RankHistory({ title, peakTemplate, points, locale }: { title: string; p
 }
 
 function formatDuration(milliseconds: bigint, locale: string): string {
-    const totalMinutes = Number(milliseconds / 60_000n);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours === 0) return `${minutes.toLocaleString(locale)}m`;
-    return `${hours.toLocaleString(locale)}h ${minutes.toLocaleString(locale)}m`;
+    const totalMilliseconds = Number(milliseconds);
+    const value = totalMilliseconds < 60_000 ? totalMilliseconds / 1_000 : totalMilliseconds < 3_600_000 ? totalMilliseconds / 60_000 : totalMilliseconds / 3_600_000;
+    const unit = totalMilliseconds < 60_000 ? "s" : totalMilliseconds < 3_600_000 ? "m" : "h";
+    return `${value.toLocaleString(locale, { maximumFractionDigits: 1 })}${unit}`;
 }

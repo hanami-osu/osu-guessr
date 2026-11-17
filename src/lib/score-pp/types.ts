@@ -1,4 +1,4 @@
-import type { GameRoundResult } from "@/actions/types";
+import type { GameRoundResult, GameRunType } from "@/actions/types";
 
 export interface ScorePpPlayerSnapshot {
     userId: number;
@@ -102,6 +102,7 @@ export interface ScorePpRunState {
     saved: boolean;
     submitted: boolean;
     round: number;
+    runType?: GameRunType;
     pair: ScorePpPublicPair | null;
     deadlineAt: number | null;
     resolution: ScorePpResolution | null;
@@ -112,4 +113,4 @@ export interface ScorePpRunState {
     runPp?: number;
 }
 
-export type ScorePpRunEndResult = number | null | { pending: true };
+export type ScorePpRunEndResult = number | null | { pending: true } | { paused: true };
