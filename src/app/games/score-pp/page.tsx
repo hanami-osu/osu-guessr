@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { createPageMetadata } from "@/lib/social-metadata";
 import { GAME_VARIANTS, type GameVariant } from "@/actions/types";
-import SignInPrompt from "../shared/SignInPrompt";
+import SignInPrompt from "@/app/games/shared/SignInPrompt";
 import ScorePpGame from "./components/ScorePpGame";
 
 export const dynamic = "force-dynamic";

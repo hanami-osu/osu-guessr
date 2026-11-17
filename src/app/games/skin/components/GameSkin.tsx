@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { ResultMessage } from "../../shared/components/Result";
-import MediaReveal from "../../shared/components/MediaReveal";
+import { ResultMessage } from "@/app/games/shared/components/Result";
+import MediaReveal from "@/app/games/shared/components/MediaReveal";
 import type { GameMediaProps } from "@/lib/game/types";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Button } from "@/components/ui/button";

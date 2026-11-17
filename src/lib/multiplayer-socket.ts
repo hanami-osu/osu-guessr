@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createMultiplayerSocketTokenAction } from "@/actions/multiplayer-server";
-import type { MultiplayerLobby, MultiplayerRoundState } from "@/lib/multiplayer";
-import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcAction, type MultiplayerRpcError, type MultiplayerRpcResult } from "@/lib/multiplayer-protocol";
+import type { MultiplayerLobby, MultiplayerRoundState } from "./multiplayer";
+import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcAction, type MultiplayerRpcError, type MultiplayerRpcResult } from "./multiplayer-protocol";
 
 type LobbyEvent = { type: "lobby"; lobby: MultiplayerLobby };
 type DeletedEvent = { type: "deleted"; code: string };

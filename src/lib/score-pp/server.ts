@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { finishGameSession, getRoundDifficultySnapshot } from "@/lib/game/server";
 import { GameMode, type DatabaseGameSession, type GameRoundResult, type GameRunType, type GameVariant, type PersistedGameRound } from "@/actions/types";
-import type { ScorePpPairSnapshot, ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunEndResult, ScorePpRunState, ScorePpScoreSnapshot } from "@/lib/score-pp/types";
-import { getBeatmapMaxCombo } from "@/lib/score-pp/beatmap-max-combo";
-import { getStoredScorePpPairsByIds, selectStoredScorePpPair } from "@/lib/score-pp/store";
+import type { ScorePpPairSnapshot, ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunEndResult, ScorePpRunState, ScorePpScoreSnapshot } from "./types";
+import { getBeatmapMaxCombo } from "./beatmap-max-combo";
+import { getStoredScorePpPairsByIds, selectStoredScorePpPair } from "./store";
 import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { DAILY_ROUNDS, GAME_VARIANTS, MAX_ROUNDS, ROUND_TIME, getVariantLives, isContinuousVariant } from "@/app/games/config";
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
-import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer";
+import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "../multiplayer";
 import { prisma } from "@/lib/database/prisma";
 import { env } from "@/lib/env";
 import { DAILY_CHALLENGE_ALREADY_PLAYED, DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, createDailyRandom, getDailyChallengeDay, getDailyDate } from "@/lib/game/daily";

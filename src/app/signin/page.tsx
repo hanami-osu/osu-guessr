@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import SignInPrompt from "../games/shared/SignInPrompt";
+import SignInPrompt from "@/app/games/shared/SignInPrompt";
 
 export const metadata: Metadata = {
     title: "Sign in",

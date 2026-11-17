@@ -1,4 +1,4 @@
-import { ROUND_TIME, getVariantLives } from "../../config";
+import { ROUND_TIME, getVariantLives } from "@/app/games/config";
 import { GameMode, type GameRunType, type GameVariant } from "@/actions/types";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Heart, HeartCrack } from "lucide-react";

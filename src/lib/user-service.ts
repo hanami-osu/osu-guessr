@@ -1,6 +1,6 @@
 import "server-only";
 
-import { query } from "@/lib/database";
+import { query } from "./database";
 
 export async function upsertUser(banchoId: number, username: string, avatarUrl: string): Promise<void> {
     await query(

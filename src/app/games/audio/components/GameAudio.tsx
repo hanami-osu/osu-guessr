@@ -2,7 +2,7 @@
 
 import { Headphones, Loader2 } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
-import { MapsetResult } from "../../shared/components/MapsetResult";
+import { MapsetResult } from "@/app/games/shared/components/MapsetResult";
 import { useTranslationsContext } from "@/context/translations-provider";
 import type { GameMediaProps } from "@/lib/game/types";
 import { Button } from "@/components/ui/button";

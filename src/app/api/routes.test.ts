@@ -38,11 +38,11 @@ const request = (path: string, withKey = true) =>
 
 beforeAll(async () => {
     [{ GET: leaderboardGet }, { GET: searchGet }, { GET: userGet }, { GET: userStatsGet }, { GET: userGamesGet }] = await Promise.all([
-        import("./games/leaderboard/route"),
-        import("./users/search/route"),
-        import("./users/[userId]/route"),
-        import("./users/[userId]/stats/route"),
-        import("./users/[userId]/games/route"),
+        import("@/app/api/games/leaderboard/route"),
+        import("@/app/api/users/search/route"),
+        import("@/app/api/users/[userId]/route"),
+        import("@/app/api/users/[userId]/stats/route"),
+        import("@/app/api/users/[userId]/games/route"),
     ]);
 });
 

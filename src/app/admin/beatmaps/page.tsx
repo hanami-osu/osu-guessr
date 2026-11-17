@@ -1,9 +1,9 @@
 import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 
-import NotFound from "../../not-found";
+import NotFound from "@/app/not-found";
 import BeatmapsAdmin from "./ui";
-import { listMapsets } from "../actions/mapsets";
+import { listMapsets } from "@/app/admin/actions/mapsets";
 
 export const dynamic = "force-dynamic";
 

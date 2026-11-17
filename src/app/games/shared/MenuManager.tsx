@@ -2,9 +2,9 @@
 
 import { GameMode, type GameRunType, type GameVariant, type GuessGameMode } from "@/actions/types";
 import { useRouter } from "next/navigation";
-import GameAudio from "../audio/components/GameAudio";
-import GameImage from "../background/components/GameImage";
-import GameSkin from "../skin/components/GameSkin";
+import GameAudio from "@/app/games/audio/components/GameAudio";
+import GameImage from "@/app/games/background/components/GameImage";
+import GameSkin from "@/app/games/skin/components/GameSkin";
 import GameScreen from "./pages/GameScreen";
 
 const GAME_MEDIA: Record<GuessGameMode, typeof GameAudio | typeof GameImage | typeof GameSkin> = {

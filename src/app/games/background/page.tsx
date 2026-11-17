@@ -1,5 +1,5 @@
 import { GameMode } from "@/actions/types";
-import GamePage from "../shared/GamePage";
+import GamePage from "@/app/games/shared/GamePage";
 import type { Metadata } from "next";
 import { createPageMetadata } from "@/lib/social-metadata";
 

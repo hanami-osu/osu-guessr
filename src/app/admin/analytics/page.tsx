@@ -7,7 +7,7 @@ import { getAnalytics } from "@/lib/analytics/queries";
 import { ANALYTICS_RANGES, parseAnalyticsRange, type AnalyticsRange } from "@/lib/analytics/range";
 import { auth } from "@/lib/auth";
 
-import NotFound from "../../not-found";
+import NotFound from "@/app/not-found";
 import { ChallengesSection, ContentSection, MultiplayerSection, OverviewSection, PlayersSection, RoundsSection, RunsSection } from "./sections";
 
 export const dynamic = "force-dynamic";

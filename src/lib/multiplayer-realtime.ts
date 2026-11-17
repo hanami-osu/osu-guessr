@@ -1,5 +1,5 @@
-import redisClient from "@/lib/redis";
-import { toPublicMultiplayerLobby, type MultiplayerLobby } from "@/lib/multiplayer";
+import redisClient from "./redis";
+import { toPublicMultiplayerLobby, type MultiplayerLobby } from "./multiplayer";
 
 const SOCKET_TOKEN_TTL_SECONDS = 60;
 const SOCKET_TOKEN_PREFIX = "multiplayer_socket_token:";

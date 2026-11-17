@@ -2,7 +2,7 @@
 
 import { query } from "@/lib/database";
 import { Announcement } from "./types";
-import { requireAdmin } from "@/actions/require-admin";
+import { requireAdmin } from "./require-admin";
 
 export async function listAnnouncements(): Promise<Announcement[]> {
     try {

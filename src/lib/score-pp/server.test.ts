@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { GameMode, type DatabaseGameSession, type PersistedGameRound } from "@/actions/types";
-import type { ScorePpPairSnapshot } from "@/lib/score-pp/types";
+import type { ScorePpPairSnapshot } from "./types";
 
 const sessionId = "00000000-0000-4000-8000-000000000001";
 const peerSessionId = "00000000-0000-4000-8000-000000000002";
@@ -34,7 +34,7 @@ const releaseGameSessionLockMock = mock(async (lock: { key: string }) => {
     sessionLocks.delete(lock.key);
 });
 const getMultiplayerRoundStateMock = mock(async () => ({ allSubmitted, submitted: true, ready: false, allReady: false, submittedCount: 1, readyCount: 0, participantCount: 2 }));
-const updateMultiplayerProgressMock = mock<typeof import("@/lib/multiplayer").updateMultiplayerProgress>(async () => {});
+const updateMultiplayerProgressMock = mock<typeof import("../multiplayer").updateMultiplayerProgress>(async () => {});
 const dailyAttemptCreateMock = mock(async (args: { data: Record<string, unknown> }) => args.data);
 const dailyAttemptUpsertMock = mock(async (args: { create: Record<string, unknown> }) => args.create);
 const dailyAttemptFindUniqueMock = mock(async () => null as { sessionId: string } | null);

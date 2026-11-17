@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { auth } from "@/lib/auth";
-import SignInPrompt from "../games/shared/SignInPrompt";
+import SignInPrompt from "@/app/games/shared/SignInPrompt";
 import SettingsClient from "./SettingsClient";
 import { listApiKeysAction } from "@/actions/api-keys-server";
 import { getProfileBannerAction } from "@/actions/user-server";

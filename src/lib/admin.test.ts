@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { OWNER_ID } from "@/lib";
+import { OWNER_ID } from "../lib";
 
 const queryMock = mock(async (sql: string, values?: unknown[]) => {
     void sql;

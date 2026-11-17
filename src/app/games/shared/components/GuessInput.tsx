@@ -1,7 +1,7 @@
 import GameActionButton from "./GameActionButton";
 import { useState, useEffect, useId, useRef } from "react";
 import { GameMode, type GameVariant } from "@/actions/types";
-import { isOnLastLife } from "../../config";
+import { isOnLastLife } from "@/app/games/config";
 import { GameClient } from "@/lib/game/client";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { createLatestRequestGate } from "@/lib/latest-request";

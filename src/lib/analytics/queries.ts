@@ -1,6 +1,6 @@
 import "server-only";
 
-import { query } from "@/lib/database";
+import { query } from "../database";
 
 import { classifyWrongGuess, type WrongGuessKind } from "./guesses";
 import { listBuckets, resolveRange, type AnalyticsRange, type BucketSize, type ResolvedRange } from "./range";

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { GameVariant, getVariantLives, isContinuousVariant } from "../../config";
+import { GameVariant, getVariantLives, isContinuousVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 
 interface GameStatsProps {

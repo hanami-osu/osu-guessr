@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TranslationsProvider } from "@/context/translations-provider";
 import { auth } from "@/lib/auth";
 import { getLockInfo } from "@/lib/lockdown";
-import { OWNER_ID } from "@/lib";
+import { OWNER_ID } from "../lib";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
 import { normalizePublicOrigin } from "@/lib/public-url";

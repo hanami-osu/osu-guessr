@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
-import { GameMode } from "@/actions/types";
+import { GameMode } from "./types";
 import type { MultiplayerLobby, MultiplayerPlayer } from "@/lib/multiplayer";
 
 type AuthSession = {

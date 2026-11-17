@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getAuthSession } from "@/actions/server";
+import { getAuthSession } from "./server";
 
 export async function requireAdmin() {
     const session = await getAuthSession();

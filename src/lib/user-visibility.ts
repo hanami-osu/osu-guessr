@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/database/prisma";
+import { prisma } from "./database/prisma";
 
 // Users with a scheduled deletion stay in the database during the grace period but must not appear anywhere public.
 export const visibleUserWhere = { deletionScheduledAt: null };

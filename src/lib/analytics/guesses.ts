@@ -1,4 +1,4 @@
-import { levenshteinSimilarity } from "@/lib/string-computing";
+import { levenshteinSimilarity } from "../string-computing";
 
 export type WrongGuessKind = "near_miss" | "artist" | "other";
 

@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { GAME_VARIANTS, GameMode, type GameVariant } from "@/actions/types";
-import { getAuthSession } from "@/actions/server";
+import { GAME_VARIANTS, GameMode, type GameVariant } from "./types";
+import { getAuthSession } from "./server";
 import {
     createMultiplayerLobby,
     cleanupDisconnectedMultiplayerPlayer,

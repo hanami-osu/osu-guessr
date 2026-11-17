@@ -6,7 +6,7 @@ import { ArrowLeft, ExternalLink, Loader2, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { fetchBackgroundImage, listMapsets, removeMapset, Mapset } from "../actions/mapsets";
+import { fetchBackgroundImage, listMapsets, removeMapset, Mapset } from "@/app/admin/actions/mapsets";
 
 interface BeatmapsAdminProps {
     initialMapsets: Mapset[];

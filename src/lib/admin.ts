@@ -1,7 +1,7 @@
 import "server-only";
 
-import { OWNER_ID } from "@/lib";
-import { query } from "@/lib/database";
+import { OWNER_ID } from "../lib";
+import { query } from "./database";
 
 export async function getSessionUserAccess(userId?: number): Promise<{ active: boolean; isAdmin: boolean }> {
     if (!userId) return { active: false, isAdmin: false };

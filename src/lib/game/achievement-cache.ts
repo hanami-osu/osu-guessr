@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/database/prisma";
-import { calculateProfilePp } from "@/lib/game/performance-points";
+import { calculateProfilePp } from "./performance-points";
 
 function achievementKey(parts: { userId: number; gameMode: string; variant: string; rulesetVersion: number; ppVersion: number }): string {
     return [parts.userId, parts.gameMode, parts.variant, parts.rulesetVersion, parts.ppVersion].join(":");

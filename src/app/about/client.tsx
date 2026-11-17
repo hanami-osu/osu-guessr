@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslationsContext } from "@/context/translations-provider";
-import { BASE_POINTS, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIVAL_LIVES, TIME_BONUS_MULTIPLIER } from "../games/config";
+import { BASE_POINTS, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIVAL_LIVES, TIME_BONUS_MULTIPLIER } from "@/app/games/config";
 import React from "react";
 import Link from "next/link";
 

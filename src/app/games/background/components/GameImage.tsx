@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { MapsetResult } from "../../shared/components/MapsetResult";
-import MediaReveal from "../../shared/components/MediaReveal";
+import { MapsetResult } from "@/app/games/shared/components/MapsetResult";
+import MediaReveal from "@/app/games/shared/components/MediaReveal";
 import type { GameMediaProps } from "@/lib/game/types";
 import { useTranslationsContext } from "@/context/translations-provider";
 

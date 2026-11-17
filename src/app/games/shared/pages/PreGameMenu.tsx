@@ -5,13 +5,13 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { BASE_POINTS, DAILY_ROUNDS, GAME_MODES, GameVariant, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIVAL_LIVES, TIME_BONUS_MULTIPLIER, isContinuousVariant } from "../../config";
+import { BASE_POINTS, DAILY_ROUNDS, GAME_MODES, GameVariant, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIVAL_LIVES, TIME_BONUS_MULTIPLIER, isContinuousVariant } from "@/app/games/config";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { SectionLabel } from "@/components/page-heading";
 import { GameMode, type GameRunType } from "@/actions/types";
 import { ChevronDown } from "lucide-react";
 import { getDailyStatusAction } from "@/actions/game-server";
-import DailyResetCountdown from "../components/DailyResetCountdown";
+import DailyResetCountdown from "@/app/games/shared/components/DailyResetCountdown";
 import { readGuestDailyAttempt, writeGuestDailyAttempt } from "@/lib/game/daily-client";
 
 interface PreGameMenuProps {

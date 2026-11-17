@@ -1,14 +1,14 @@
-import { query } from "@/lib/database";
-import { env } from "@/lib/env";
-import redisClient from "@/lib/redis";
+import { query } from "../database";
+import { env } from "../env";
+import redisClient from "../redis";
 import { getMediaData } from "@/actions/media";
 
 import { GameMode, type MapsetTags, type MapsetData, type MapsetDataWithTags, type SkinData } from "@/actions/types";
 import { NoGameContentError } from "@/lib/game/content-errors";
 import { DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, DAILY_EPOCH_UTC, DAILY_ROUNDS, getDailyItemId } from "@/lib/game/daily";
 import { prisma } from "@/lib/database/prisma";
-import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
-import { acquireRedisLock, releaseRedisLock } from "@/lib/redis-lock-core";
+import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "./versioning";
+import { acquireRedisLock, releaseRedisLock } from "../redis-lock-core";
 import { z } from "zod";
 
 export async function getRandomAudio(sessionId?: string) {
