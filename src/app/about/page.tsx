@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 import { BASE_POINTS, MAX_ROUNDS, ROUND_TIME, SKIP_PENALTY, STREAK_BONUS, SURVIVAL_LIVES, TIME_BONUS_MULTIPLIER } from "@/app/games/config";
 import React from "react";
 import { cookies } from "next/headers";
-import { getTranslations, isLocale } from "@/lib/translations";
+import { getTranslations, isLocale } from "@/lib/i18n/translations";
 import Link from "next/link";
 
 const SectionHeading = ({ children }: { children: React.ReactNode }) => <h2 className="mb-3 text-base font-semibold tracking-tight text-foreground">{children}</h2>;

@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs/promises";
 import { GameMode } from "./types";
-import { getMediaMimeType, MediaUnavailableError } from "@/lib/media-format";
+import { getMediaMimeType, MediaUnavailableError } from "@/lib/media/media-format";
 
 export async function getMediaData(gameMode: GameMode, filename: string | null): Promise<string> {
     if (!filename || filename.includes("\\") || filename.includes("\0") || path.basename(filename) !== filename) {

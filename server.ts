@@ -1,12 +1,12 @@
 import { createServer } from "node:http";
 import next from "next";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
-import redisClient from "@/lib/redis";
+import redisClient from "./src/lib/infra/redis";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { endGameForUser, getGameStateForUser, getSuggestions, startGameForUser, submitGuessForUser } from "@/lib/game/server";
 import { readOwnedGameSession } from "@/lib/game/session-storage";
 import { endScorePpRunForUser, getScorePpRoundForUser, getScorePpRunStateForUser, startScorePpRunForUser, submitScorePpGuessForUser } from "@/lib/score-pp/server";
-import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcRequest } from "@/lib/multiplayer-protocol";
+import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcRequest } from "./src/lib/multiplayer/multiplayer-protocol";
 import {
     addMultiplayerMessage,
     cleanupDisconnectedMultiplayerPlayer,
@@ -17,7 +17,7 @@ import {
     readMultiplayerLobby,
     toPublicMultiplayerLobby,
     type MultiplayerLobby,
-} from "@/lib/multiplayer";
+} from "./src/lib/multiplayer/multiplayer";
 import {
     consumeMultiplayerSocketToken,
     getPresentMultiplayerUsers,
@@ -26,7 +26,7 @@ import {
     publishMultiplayerRealtimeEvent,
     PRESENCE_TTL_MS,
     type MultiplayerRealtimeEvent,
-} from "@/lib/multiplayer-realtime";
+} from "./src/lib/multiplayer/multiplayer-realtime";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "0.0.0.0";

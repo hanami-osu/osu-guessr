@@ -4,9 +4,9 @@ import { query } from "@/lib/database";
 import fs from "fs/promises";
 import path from "path";
 import { z } from "zod";
-import { env } from "@/lib/env";
+import { env } from "@/lib/infra/env";
 import { requireAdmin } from "@/actions/require-admin";
-import { parseSkinApiResponse, type SkinImportData } from "@/lib/skin-import";
+import { parseSkinApiResponse, type SkinImportData } from "@/lib/media/skin-import";
 import sharp from "sharp";
 
 const DIRECTORIES = {

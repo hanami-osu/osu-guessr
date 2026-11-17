@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/database/prisma";
-import redisClient from "@/lib/redis";
+import redisClient from "@/lib/infra/redis";
 import { refreshScorePpPairPool, SCORE_PP_PAIR_TARGET } from "@/lib/score-pp/pool";
 
 function readCount(): number {

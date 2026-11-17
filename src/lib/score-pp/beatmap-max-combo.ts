@@ -1,4 +1,4 @@
-import { env } from "../env";
+import { env } from "@/lib/infra/env";
 
 export async function getBeatmapMaxCombo(beatmapId: number): Promise<number | null> {
     try {

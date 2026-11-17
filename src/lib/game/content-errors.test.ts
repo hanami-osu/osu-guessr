@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { MediaUnavailableError } from "../media-format";
+import { MediaUnavailableError } from "@/lib/media/media-format";
 import { isNoGameContentError, NoGameContentError } from "./content-errors";
 
 describe("content exhaustion errors", () => {

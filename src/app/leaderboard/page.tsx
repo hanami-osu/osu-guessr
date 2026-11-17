@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import LeaderboardClient from "./client";
 import { getDailyTopPlayersAction, getTopPlayersAction } from "@/actions/user-server";
 import { GAME_VARIANTS, GameMode } from "@/actions/types";
-import { createPageMetadata } from "@/lib/social-metadata";
+import { createPageMetadata } from "@/lib/seo/social-metadata";
 
 export const dynamic = "force-dynamic";
 

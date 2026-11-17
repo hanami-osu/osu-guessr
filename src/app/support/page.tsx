@@ -9,7 +9,7 @@ import { SectionLabel } from "@/components/page-heading";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, Check, Heart, Info } from "lucide-react";
 import { cookies } from "next/headers";
-import { getTranslations, isLocale } from "@/lib/translations";
+import { getTranslations, isLocale } from "@/lib/i18n/translations";
 
 export default async function SupportPage() {
     const cookieStore = await cookies();

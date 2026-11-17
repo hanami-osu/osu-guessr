@@ -3,7 +3,7 @@
 import { FormEvent, useLayoutEffect, useRef, useState } from "react";
 import { Send, Users } from "lucide-react";
 import Link from "next/link";
-import type { MultiplayerLobby } from "@/lib/multiplayer";
+import type { MultiplayerLobby } from "@/lib/multiplayer/multiplayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

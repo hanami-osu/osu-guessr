@@ -1,5 +1,5 @@
 import { GAME_VARIANTS, type GameRunType, type GameVariant, type GuessGameMode } from "@/actions/types";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
 import MenuManager from "./MenuManager";
 import SignInPrompt from "./SignInPrompt";

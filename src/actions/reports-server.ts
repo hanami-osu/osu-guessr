@@ -3,11 +3,11 @@
 import { query } from "@/lib/database";
 import { authenticatedAction } from "./server";
 import { ReportType } from "./types";
-import redisClient from "@/lib/redis";
+import redisClient from "@/lib/infra/redis";
 
-import { env } from "@/lib/env";
-import { reportSchema } from "@/lib/report-validation";
-import { createReportRecord } from "@/lib/report-service";
+import { env } from "@/lib/infra/env";
+import { reportSchema } from "@/lib/reports/report-validation";
+import { createReportRecord } from "@/lib/reports/report-service";
 
 export type { ReportType };
 

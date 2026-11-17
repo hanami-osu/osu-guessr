@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import MultiplayerBrowser from "./MultiplayerBrowser";
 import { listMultiplayerLobbiesAction } from "@/actions/multiplayer-server";
-import type { MultiplayerLobbySummary } from "@/lib/multiplayer";
+import type { MultiplayerLobbySummary } from "@/lib/multiplayer/multiplayer";
 
 export const dynamic = "force-dynamic";
 

@@ -7,11 +7,11 @@ const runMock = mock(async (action: string, userId: number) => {
     void userId;
 });
 
-mock.module("@/lib/env", () => ({ env }));
+mock.module("@/lib/infra/env", () => ({ env }));
 mock.module("@/lib/database/prisma", () => ({ prisma: {} }));
-mock.module("@/lib/redis", () => ({ default: { del: mock(async () => 1) } }));
-mock.module("@/lib/multiplayer", () => ({ removeMultiplayerUser: mock(async () => {}) }));
-mock.module("@/lib/account-deletion", () => ({ createAccountDeletionService: () => ({ run: runMock }) }));
+mock.module("@/lib/infra/redis", () => ({ default: { del: mock(async () => 1) } }));
+mock.module("@/lib/multiplayer/multiplayer", () => ({ removeMultiplayerUser: mock(async () => {}) }));
+mock.module("@/lib/users/account-deletion", () => ({ createAccountDeletionService: () => ({ run: runMock }) }));
 
 const { POST } = await import("./route");
 

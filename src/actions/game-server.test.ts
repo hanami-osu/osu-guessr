@@ -147,8 +147,8 @@ mock.module("@/lib/game/mapsets", () => ({
 }));
 mock.module("./media", () => ({ getMediaData: getMediaDataMock }));
 mock.module("@/lib/database/prisma", () => ({ prisma: prismaMock }));
-mock.module("@/lib/redis", () => ({ default: redisClientMock }));
-mock.module("@/lib/multiplayer", () => ({
+mock.module("@/lib/infra/redis", () => ({ default: redisClientMock }));
+mock.module("@/lib/multiplayer/multiplayer", () => ({
     getMultiplayerRoundState: getMultiplayerRoundStateMock,
     getOrCreateMultiplayerRound: getOrCreateMultiplayerRoundMock,
     normalizeLobbyCode: (code: string) => code.trim().toUpperCase(),

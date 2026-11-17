@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { OWNER_ID } from "../lib";
+import { OWNER_ID } from "@/lib/users/owner";
 
 const queryMock = mock(async (sql: string, values?: unknown[]) => {
     void sql;
@@ -10,7 +10,7 @@ const queryMock = mock(async (sql: string, values?: unknown[]) => {
 mock.module("server-only", () => ({}));
 mock.module("@/lib/database", () => ({ query: queryMock }));
 
-const { getSessionUserAccess, clearSessionUserAccessCache } = await import("./admin");
+const { getSessionUserAccess, clearSessionUserAccessCache } = await import("./access");
 
 beforeEach(() => {
     queryMock.mockReset();

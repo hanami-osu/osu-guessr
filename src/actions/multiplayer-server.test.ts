@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { GameMode } from "./types";
-import type { MultiplayerLobby, MultiplayerPlayer } from "@/lib/multiplayer";
+import type { MultiplayerLobby, MultiplayerPlayer } from "@/lib/multiplayer/multiplayer";
 
 type AuthSession = {
     expires: string;
@@ -60,12 +60,12 @@ const redisClientMock = {
 
 mock.module("server-only", () => ({}));
 mock.module("@/actions/server", () => ({ getAuthSession: authSessionMock }));
-mock.module("@/lib/redis", () => ({ default: redisClientMock }));
-mock.module("@/lib/redis-lock-core", () => ({
+mock.module("@/lib/infra/redis", () => ({ default: redisClientMock }));
+mock.module("@/lib/infra/redis-lock-core", () => ({
     acquireRedisLock: acquireRedisLockMock,
     releaseRedisLock: releaseRedisLockMock,
 }));
-mock.module("@/lib/multiplayer-realtime", () => ({
+mock.module("@/lib/multiplayer/multiplayer-realtime", () => ({
     createMultiplayerSocketToken: mock(async () => "socket-token"),
     getPresentMultiplayerUsers: getPresentMultiplayerUsersMock,
     publishMultiplayerBrowserChanged: publishMultiplayerBrowserChangedMock,
@@ -86,7 +86,7 @@ const {
     readMultiplayerLobby,
     removeMultiplayerUser,
     updateMultiplayerProgress,
-} = await import("@/lib/multiplayer");
+} = await import("@/lib/multiplayer/multiplayer");
 
 function sessionFor(userId: number): AuthSession {
     return {

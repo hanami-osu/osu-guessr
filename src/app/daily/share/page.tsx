@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import DailyScoreSummary from "@/app/scores/DailyScoreSummary";
-import { createPageMetadata } from "@/lib/social-metadata";
+import { createPageMetadata } from "@/lib/seo/social-metadata";
 import { getDailySharePath } from "@/lib/game/daily";
-import { env } from "@/lib/env";
+import { env } from "@/lib/infra/env";
 import { dailyShareSchema } from "./result";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };

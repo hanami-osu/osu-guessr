@@ -8,13 +8,13 @@ import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { AUTO_ADVANCE_DELAY_MS, DAILY_ROUNDS, GAME_VARIANTS, MAX_ROUNDS, getRoundTime, getVariantLives, isContinuousVariant } from "@/app/games/config";
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
-import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "../multiplayer";
+import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer/multiplayer";
 import { prisma } from "@/lib/database/prisma";
-import { env } from "../env";
+import { env } from "@/lib/infra/env";
 import { DAILY_CHALLENGE_ALREADY_PLAYED, DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, getDailyChallengeDay, getDailyDate, DAILY_ROUND_TIME } from "@/lib/game/daily";
 
 import { Prisma } from "@/generated/prisma/client";
-import { acquireRedisLock, releaseRedisLock } from "../redis-lock-core";
+import { acquireRedisLock, releaseRedisLock } from "@/lib/infra/redis-lock-core";
 const DAILY_SESSION_TTL_SECONDS = 24 * 60 * 60;
 
 function writeScorePpSession(run: DatabaseGameSession): Promise<void> {

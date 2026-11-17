@@ -7,13 +7,13 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { TranslationsProvider } from "@/context/translations-provider";
-import { auth } from "@/lib/auth";
-import { getLockInfo } from "@/lib/lockdown";
-import { OWNER_ID } from "../lib";
+import { auth } from "@/lib/auth/auth";
+import { getLockInfo } from "@/lib/infra/lockdown";
+import { OWNER_ID } from "@/lib/users/owner";
 import { cookies } from "next/headers";
-import { env } from "@/lib/env";
-import { normalizePublicOrigin } from "@/lib/public-url";
-import { getTranslations, isLocale } from "@/lib/translations";
+import { env } from "@/lib/infra/env";
+import { normalizePublicOrigin } from "@/lib/infra/public-url";
+import { getTranslations, isLocale } from "@/lib/i18n/translations";
 
 const publicSans = Public_Sans({
     subsets: ["latin"],

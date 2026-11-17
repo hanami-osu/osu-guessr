@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAnalytics } from "@/lib/analytics/queries";
 import { ANALYTICS_RANGES, parseAnalyticsRange, type AnalyticsRange } from "@/lib/analytics/range";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 
 import NotFound from "@/app/not-found";
 import { ChallengesSection, ContentSection, MultiplayerSection, OverviewSection, PlayersSection, RoundsSection, RunsSection } from "./sections";

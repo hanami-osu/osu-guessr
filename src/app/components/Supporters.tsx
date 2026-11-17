@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { cookies } from "next/headers";
-import { getTranslations, isLocale } from "@/lib/translations";
+import { getTranslations, isLocale } from "@/lib/i18n/translations";
 import Link from "next/link";
 import type { SupporterListEntry } from "@/actions/user-server";
 import { SupportPageLink } from "@/components/SupportDialogWrapper";

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import redisClient from "@/lib/redis";
+import redisClient from "@/lib/infra/redis";
 import { query } from "@/lib/database";
-import { getApplicationHealth } from "@/lib/health";
+import { getApplicationHealth } from "@/lib/infra/health";
 
 export async function GET() {
     const health = await getApplicationHealth(

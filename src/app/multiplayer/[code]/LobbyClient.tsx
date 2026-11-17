@@ -24,8 +24,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { MultiplayerLobby, MultiplayerPlayer } from "@/lib/multiplayer";
-import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
+import type { MultiplayerLobby, MultiplayerPlayer } from "@/lib/multiplayer/multiplayer";
+import { useMultiplayerSocket } from "@/lib/multiplayer/multiplayer-socket";
 
 type LobbyAction = "start" | "cancel-start" | "ready" | "room-settings" | "reset" | "leave" | "copy" | `kick:${number}` | `host:${number}`;
 

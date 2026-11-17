@@ -26,7 +26,7 @@ import MultiplayerStandings from "@/app/games/shared/components/MultiplayerStand
 import MultiplayerChat from "@/app/games/shared/components/MultiplayerChat";
 import { useGameKeyboardShortcuts } from "@/app/games/shared/hooks/useGameKeyboardShortcuts";
 import { usePreventUnload } from "@/app/games/shared/hooks/usePreventUnload";
-import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
+import { useMultiplayerSocket } from "@/lib/multiplayer/multiplayer-socket";
 import { useLeaveGameGuard } from "@/hooks/useLeaveGameGuard";
 import { writeGuestDailyAttempt } from "@/lib/game/daily-client";
 import { readGuestDailyAttempt } from "@/lib/game/daily-client";

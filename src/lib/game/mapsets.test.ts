@@ -38,10 +38,10 @@ mock.module("@/lib/database/prisma", () => ({
         $transaction: transactionMock,
     },
 }));
-mock.module("@/lib/redis", () => ({ default: { sMembers: mock(async () => []) } }));
+mock.module("@/lib/infra/redis", () => ({ default: { sMembers: mock(async () => []) } }));
 mock.module("@/actions/media", () => ({ getMediaData: mock(async () => "media") }));
-mock.module("@/lib/env", () => ({ env: { DEBUG_DAILY_REUSE_CHECK: false, OSU_API_KEY: "" } }));
-mock.module("@/lib/redis-lock-core", () => ({ acquireRedisLock: mock(async () => ({ key: "lock", token: "token" })), releaseRedisLock: mock(async () => {}) }));
+mock.module("@/lib/infra/env", () => ({ env: { DEBUG_DAILY_REUSE_CHECK: false, OSU_API_KEY: "" } }));
+mock.module("@/lib/infra/redis-lock-core", () => ({ acquireRedisLock: mock(async () => ({ key: "lock", token: "token" })), releaseRedisLock: mock(async () => {}) }));
 mock.module("@/lib/game/versioning", () => ({ CURRENT_PP_VERSION: 1, CURRENT_RULESET_VERSION: 1 }));
 
 const { createManualDailyChallenge, getDailySkin } = await import("./mapsets");

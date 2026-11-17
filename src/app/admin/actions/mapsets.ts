@@ -10,9 +10,9 @@ import type { ReadableStream as NodeReadableStream } from "stream/web";
 import unzipper from "unzipper";
 import sharp from "sharp";
 import { z } from "zod";
-import { env } from "@/lib/env";
+import { env } from "@/lib/infra/env";
 import { requireAdmin } from "@/actions/require-admin";
-import { isMp3File, selectAudioImportFile, type AudioImportCandidate } from "@/lib/importer-validation";
+import { isMp3File, selectAudioImportFile, type AudioImportCandidate } from "@/lib/media/importer-validation";
 
 const DIRECTORIES = {
     audio: path.join(process.cwd(), "mapsets", "audio"),

@@ -2,7 +2,7 @@ import { StatsCard } from "./components/StatsCard";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { getTranslations, isLocale } from "@/lib/translations";
+import { getTranslations, isLocale } from "@/lib/i18n/translations";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 

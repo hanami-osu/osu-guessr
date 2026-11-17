@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 import UserProfileClient from "./client";
-import { parseProfileFilters } from "@/lib/profile-params";
+import { parseProfileFilters } from "@/lib/users/profile-params";
 import { getUserByIdAction, getUserDailyStatsAction, getUserLatestGamesAction, getUserLifetimeModeStatsAction, getUserRankHistoryAction, getUserTopGamesAction } from "@/actions/user-server";
-import { createPageMetadata } from "@/lib/social-metadata";
+import { createPageMetadata } from "@/lib/seo/social-metadata";
 import { cache } from "react";
 
 export const dynamic = "force-dynamic";

@@ -1,5 +1,5 @@
-import redisClient from "../redis";
-import { acquireRedisLock, releaseRedisLock, type RedisLock } from "../redis-lock-core";
+import redisClient from "@/lib/infra/redis";
+import { acquireRedisLock, releaseRedisLock, type RedisLock } from "@/lib/infra/redis-lock-core";
 
 const SESSION_KEY_PREFIX = "game_session:";
 const SESSION_LOCK_KEY_PREFIX = "game_session_lock:";

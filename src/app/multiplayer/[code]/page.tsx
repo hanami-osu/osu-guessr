@@ -1,7 +1,7 @@
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 import SignInPrompt from "@/app/games/shared/SignInPrompt";
 import LobbyClient from "./LobbyClient";
-import { normalizeLobbyCode, readMultiplayerLobby, toPublicMultiplayerLobby } from "@/lib/multiplayer";
+import { normalizeLobbyCode, readMultiplayerLobby, toPublicMultiplayerLobby } from "@/lib/multiplayer/multiplayer";
 
 export const dynamic = "force-dynamic";
 

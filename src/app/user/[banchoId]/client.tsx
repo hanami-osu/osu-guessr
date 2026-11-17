@@ -2,7 +2,7 @@
 
 import { Game, GameMode, UserDailyStats, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "@/actions/types";
 import { GAME_VARIANTS, GameVariant, isContinuousVariant } from "@/app/games/config";
-import type { ProfileVariant } from "@/lib/profile-params";
+import type { ProfileVariant } from "@/lib/users/profile-params";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown, ChevronRight, Clock3, Expand } from "lucide-react";
 import Image from "next/image";
@@ -11,7 +11,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import UserNotFound from "./NotFound";
 import { SectionLabel } from "@/components/page-heading";
-import type { Translations } from "@/lib/translations";
+import type { Translations } from "@/lib/i18n/translations";
 
 const gamemodes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp];
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { getTranslations, isLocale } from "@/lib/translations";
+import { getTranslations, isLocale } from "@/lib/i18n/translations";
 import { SectionLabel } from "@/components/page-heading";
 import type { Release } from "@/actions/changelogs";
 import { formatReleaseDate, ReleaseNotes } from "@/components/release-notes";

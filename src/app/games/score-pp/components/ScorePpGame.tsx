@@ -21,7 +21,7 @@ import MultiplayerStandings from "@/app/games/shared/components/MultiplayerStand
 import MultiplayerChat from "@/app/games/shared/components/MultiplayerChat";
 import { AUTO_ADVANCE_DELAY_MS, DAILY_ROUNDS, MAX_ROUNDS, ROUND_TIME, isContinuousVariant, isOnLastLife } from "@/app/games/config";
 import ScorePpCard from "./ScorePpCard";
-import { useMultiplayerSocket } from "@/lib/multiplayer-socket";
+import { useMultiplayerSocket } from "@/lib/multiplayer/multiplayer-socket";
 import { useLeaveGameGuard } from "@/hooks/useLeaveGameGuard";
 import { readGuestDailyAttempt, writeGuestDailyAttempt } from "@/lib/game/daily-client";
 

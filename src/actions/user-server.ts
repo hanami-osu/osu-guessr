@@ -5,14 +5,14 @@ import { query } from "@/lib/database/database";
 import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { calculateProfilePp } from "@/lib/game/performance-points";
-import { hasPlayedGame } from "@/lib/user-stats";
-import { getHiddenUserIds, isUserVisible, visibleUserWhere } from "@/lib/user-visibility";
-import { SUPPORTER_BADGE } from "@/lib/supporter";
+import { hasPlayedGame } from "@/lib/users/user-stats";
+import { getHiddenUserIds, isUserVisible, visibleUserWhere } from "@/lib/users/user-visibility";
+import { SUPPORTER_BADGE } from "@/lib/users/supporter";
 import { authenticatedAction } from "./server";
 import { z } from "zod";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserDailyStats, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
 import { DAILY_ROUNDS, getDailyDate, getDailyStreaks } from "@/lib/game/daily";
-import { env } from "@/lib/env";
+import { env } from "@/lib/infra/env";
 
 const gameModeSchema = z.nativeEnum(GameMode);
 const gameVariantSchema = z.enum(GAME_VARIANTS);

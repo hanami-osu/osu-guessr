@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/database/prisma";
-import { env } from "../env";
-import type { RedisLock } from "../redis-lock";
+import { env } from "@/lib/infra/env";
+import type { RedisLock } from "@/lib/infra/redis-lock";
 import { getScorePpMaxRelativeGap, getScorePpRelativeGap } from "./difficulty";
 import { OsuApiScoreSource } from "./osu-api-source";
 import { storeScorePpPair } from "./store";
 import type { ScorePpPairCandidate, ScorePpScoreSnapshot } from "./types";
-import { acquireRedisLock, releaseRedisLock } from "../redis-lock";
+import { acquireRedisLock, releaseRedisLock } from "@/lib/infra/redis-lock";
 import { shuffle } from "./random";
 
 export const SCORE_PP_PAIR_TARGET = 10_000;

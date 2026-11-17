@@ -3,7 +3,7 @@
 import { query } from "@/lib/database";
 import { Report } from "@/actions/types";
 import { requireAdmin } from "@/actions/require-admin";
-import { reportStatusUpdateSchema } from "@/lib/report-validation";
+import { reportStatusUpdateSchema } from "@/lib/reports/report-validation";
 
 export async function listReports(): Promise<Report[]> {
     try {

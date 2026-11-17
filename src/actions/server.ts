@@ -1,8 +1,8 @@
 import "server-only";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 import { Session } from "next-auth";
-import { isLockedForUser } from "@/lib/lockdown";
+import { isLockedForUser } from "@/lib/infra/lockdown";
 
 export type AuthenticatedSession = Session & { user: NonNullable<Session["user"]> };
 

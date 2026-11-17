@@ -12,7 +12,7 @@ const redis = {
     mGet: async (keys: string[]) => keys.map((key) => redisValues.get(key) ?? null),
     del: async (keys: string[]) => keys.filter((key) => redisValues.delete(key)).length,
 };
-mock.module("@/lib/redis", () => ({ default: redis }));
+mock.module("@/lib/infra/redis", () => ({ default: redis }));
 const { publishMultiplayerLobby, revokeMultiplayerSocketTokens } = await import("./multiplayer-realtime");
 
 test("revokes only the socket tokens that belong to the user", async () => {

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiUserIdSchema } from "@/app/api/_lib/schemas";
 import { prisma } from "@/lib/database/prisma";
-import { env } from "@/lib/env";
-import { hasValidInternalSecret } from "@/lib/internal-auth";
-import { applySupporterBadge } from "@/lib/supporter";
+import { env } from "@/lib/infra/env";
+import { hasValidInternalSecret } from "@/lib/auth/internal-auth";
+import { applySupporterBadge } from "@/lib/users/supporter";
 
 const bodySchema = z.object({
     banchoId: apiUserIdSchema,

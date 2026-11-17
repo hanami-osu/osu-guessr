@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 import SignInPrompt from "@/app/games/shared/SignInPrompt";
 import SettingsClient from "./SettingsClient";
 import { listApiKeysAction } from "@/actions/api-keys-server";

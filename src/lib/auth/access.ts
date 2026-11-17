@@ -1,7 +1,7 @@
 import "server-only";
 
-import { OWNER_ID } from "../lib";
-import { query } from "./database";
+import { OWNER_ID } from "@/lib/users/owner";
+import { query } from "@/lib/database/index";
 
 // Access checks run on every authenticated request, so results are cached briefly.
 // Admin and deletion changes propagate within the TTL window.

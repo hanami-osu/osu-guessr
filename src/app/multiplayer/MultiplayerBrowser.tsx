@@ -8,7 +8,7 @@ import Link from "next/link";
 import { createMultiplayerLobbyAction, listMultiplayerLobbiesAction } from "@/actions/multiplayer-server";
 import { GameMode, type GameVariant } from "@/actions/types";
 import { GAME_MODES, GAME_VARIANTS, VARIANT_LABELS } from "@/app/games/config";
-import type { MultiplayerLobbySummary } from "@/lib/multiplayer";
+import type { MultiplayerLobbySummary } from "@/lib/multiplayer/multiplayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

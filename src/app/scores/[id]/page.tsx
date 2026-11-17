@@ -6,14 +6,14 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { createPageMetadata } from "@/lib/social-metadata";
-import { visibleUserWhere } from "@/lib/user-visibility";
-import { getTranslations, isLocale } from "@/lib/translations";
+import { createPageMetadata } from "@/lib/seo/social-metadata";
+import { visibleUserWhere } from "@/lib/users/user-visibility";
+import { getTranslations, isLocale } from "@/lib/i18n/translations";
 import { cache } from "react";
 import DailyScoreSummary from "../DailyScoreSummary";
 import ScoreResultCard from "../ScoreResultCard";
 import { getDailyDate } from "@/lib/game/daily";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 
 export const dynamic = "force-dynamic";
 

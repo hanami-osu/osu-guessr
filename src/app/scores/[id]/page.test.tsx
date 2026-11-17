@@ -11,7 +11,7 @@ mock.module("@/lib/database/prisma", () => ({ prisma: {
     gameRound: { findMany: async () => [] },
     user: { findFirst: async () => ({ banchoId: 1, username: "Player", avatarUrl: "", bannerUrl: null }) },
 } }));
-mock.module("@/lib/auth", () => ({ auth: async () => viewer ? { user: { banchoId: viewer } } : null }));
+mock.module("@/lib/auth/auth", () => ({ auth: async () => viewer ? { user: { banchoId: viewer } } : null }));
 mock.module("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 mock.module("next/navigation", () => ({ notFound: () => { throw new Error("notfound"); }, redirect: () => { throw new Error("redirect"); } }));
 const { default: ScorePage } = await import("./page");

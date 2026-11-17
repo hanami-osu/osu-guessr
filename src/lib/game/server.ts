@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/database/prisma";
-import redisClient from "../redis";
+import redisClient from "@/lib/infra/redis";
 import { z } from "zod";
 import { AUTO_ADVANCE_DELAY_MS, GAME_VARIANTS, getRoundTime, getGameRoundLimit, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
 import { getDailyAudio, getDailyBackground, getDailySkin, getRandomAudio, getRandomBackground, getRandomSkin } from "./mapsets";
 import { GameMode, type GameRunType, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "@/actions/types";
 import { getMediaData } from "@/actions/media";
-import { checkGuess, GuessDifficulty } from "../guess-checker";
+import { checkGuess, GuessDifficulty } from "./guess-checker";
 import { calculateArcadeScore } from "./arcade-score";
 import { isNoGameContentError } from "./content-errors";
 import { canPersistGameResult } from "./completion";
@@ -13,9 +13,9 @@ import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "./versioning";
 import { calculateEmpiricalDifficulty, calculateProfilePp, calculateRunPp, type ContentPerformanceStats } from "./performance-points";
 import { Prisma } from "@/generated/prisma/client";
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "./session-storage";
-import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "../multiplayer";
+import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer/multiplayer";
 import { DAILY_CHALLENGE_ALREADY_PLAYED, DAILY_ROUNDS, getDailyChallengeDay, getDailyDate, getNextDailyReset } from "./daily";
-import { env } from "../env";
+import { env } from "@/lib/infra/env";
 
 const GRACE_PERIOD = 1;
 const TRANSACTION_RETRY_LIMIT = 4;

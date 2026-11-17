@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { createPageMetadata } from "@/lib/social-metadata";
+import { auth } from "@/lib/auth/auth";
+import { createPageMetadata } from "@/lib/seo/social-metadata";
 import { GAME_VARIANTS, type GameVariant } from "@/actions/types";
 import SignInPrompt from "@/app/games/shared/SignInPrompt";
 import ScorePpGame from "./components/ScorePpGame";

@@ -36,14 +36,14 @@ type TestAuthConfig = {
 };
 let authConfig: TestAuthConfig;
 
-mock.module("@/lib/env", () => ({
+mock.module("@/lib/infra/env", () => ({
     env: {
         HANAMI_ISSUER: "https://hanami.example.com/api/auth",
         HANAMI_CLIENT_ID: "client-id",
     },
 }));
-mock.module("@/lib/user-service", () => ({ upsertUser: upsertUserMock }));
-mock.module("@/lib/admin", () => ({ getSessionUserAccess: getSessionUserAccessMock }));
+mock.module("@/lib/users/user-service", () => ({ upsertUser: upsertUserMock }));
+mock.module("./access", () => ({ getSessionUserAccess: getSessionUserAccessMock }));
 mock.module("next-auth", () => ({
     default: (config: TestAuthConfig) => {
         authConfig = config;

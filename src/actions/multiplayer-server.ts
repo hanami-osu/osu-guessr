@@ -21,8 +21,8 @@ import {
     withMultiplayerLobbyLock,
     withMultiplayerUserLock,
     writeMultiplayerLobby,
-} from "@/lib/multiplayer";
-import { createMultiplayerSocketToken, getPresentMultiplayerUsers } from "@/lib/multiplayer-realtime";
+} from "@/lib/multiplayer/multiplayer";
+import { createMultiplayerSocketToken, getPresentMultiplayerUsers } from "@/lib/multiplayer/multiplayer-realtime";
 
 const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp]);
 const variantSchema = z.enum(GAME_VARIANTS);

@@ -1,6 +1,6 @@
 import { query } from "../database";
-import { env } from "../env";
-import redisClient from "../redis";
+import { env } from "@/lib/infra/env";
+import redisClient from "@/lib/infra/redis";
 import { getMediaData } from "@/actions/media";
 
 import { GameMode, type MapsetTags, type MapsetData, type MapsetDataWithTags, type SkinData } from "@/actions/types";
@@ -8,10 +8,10 @@ import { NoGameContentError } from "./content-errors";
 import { DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, DAILY_EPOCH_UTC, DAILY_ROUNDS, DAILY_ROUND_TIME, getDailyItemId } from "./daily";
 import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "./versioning";
-import { acquireRedisLock, releaseRedisLock } from "../redis-lock-core";
+import { acquireRedisLock, releaseRedisLock } from "@/lib/infra/redis-lock-core";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
-import { normalizeString as normalizeSongTitle } from "../guess-checker";
+import { normalizeString as normalizeSongTitle } from "./guess-checker";
 
 export async function getRandomAudio(sessionId?: string) {
     const audio = await getRandomMapset("audio_filename", sessionId);

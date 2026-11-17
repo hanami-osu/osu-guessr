@@ -1,9 +1,9 @@
-import { env } from "./env";
+import { env } from "@/lib/infra/env";
 import { HanamiProvider, parseHanamiProfile } from "./hanami-auth";
-import { getSessionUserAccess } from "./admin";
-import { upsertUser } from "./user-service";
-import { prisma } from "./database/prisma";
-import { applySupporterBadge, parseSupporterBadge } from "./supporter";
+import { getSessionUserAccess } from "./access";
+import { upsertUser } from "@/lib/users/user-service";
+import { prisma } from "@/lib/database/prisma";
+import { applySupporterBadge, parseSupporterBadge } from "@/lib/users/supporter";
 import NextAuth, { DefaultSession } from "next-auth";
 
 const developmentCookies =

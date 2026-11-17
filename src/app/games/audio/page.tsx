@@ -1,7 +1,7 @@
 import { GameMode } from "@/actions/types";
 import GamePage from "@/app/games/shared/GamePage";
 import type { Metadata } from "next";
-import { createPageMetadata } from "@/lib/social-metadata";
+import { createPageMetadata } from "@/lib/seo/social-metadata";
 
 export const dynamic = "force-dynamic";
 

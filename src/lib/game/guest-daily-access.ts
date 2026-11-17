@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { env } from "../env";
+import { env } from "@/lib/infra/env";
 import { cookies } from "next/headers";
 
 const GUEST_DAILY_COOKIE_PREFIX = "osu-guessr.guest-daily.";

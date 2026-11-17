@@ -1,6 +1,6 @@
 import { beginDailyGameAction, endGameAction, getGameStateAction, getSuggestionsAction, startGameAction, submitGuessAction } from "@/actions/game-server";
 import { GameMode, type GameRunType, type GameState, type GameVariant } from "@/actions/types";
-import type { MultiplayerRpcAction } from "../multiplayer-protocol";
+import type { MultiplayerRpcAction } from "@/lib/multiplayer/multiplayer-protocol";
 import { preloadDailyMedia } from "./daily-client";
 import { GameError, handleGameError } from "./errors";
 import type { GameClientConfig, GameClientEvents, GameSession } from "./types";

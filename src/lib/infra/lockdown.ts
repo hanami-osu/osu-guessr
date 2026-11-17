@@ -1,5 +1,5 @@
 import redisClient from "./redis";
-import { OWNER_ID } from "./index";
+import { OWNER_ID } from "@/lib/users/owner";
 
 const LOCK_KEY = "server:lockdown";
 const LOCK_CACHE_TTL_MS = 5_000;

@@ -34,7 +34,7 @@ const releaseGameSessionLockMock = mock(async (lock: { key: string }) => {
     sessionLocks.delete(lock.key);
 });
 const getMultiplayerRoundStateMock = mock(async () => ({ allSubmitted, submitted: true, ready: false, allReady: false, submittedCount: 1, readyCount: 0, participantCount: 2 }));
-const updateMultiplayerProgressMock = mock<typeof import("../multiplayer").updateMultiplayerProgress>(async () => {});
+const updateMultiplayerProgressMock = mock<typeof import("@/lib/multiplayer/multiplayer").updateMultiplayerProgress>(async () => {});
 const dailyAttemptCreateMock = mock(async (args: { data: Record<string, unknown> }) => args.data);
 const dailyAttemptUpsertMock = mock(async (args: { create: Record<string, unknown> }) => args.create);
 const dailyAttemptFindUniqueMock = mock(async () => null as { sessionId: string } | null);
@@ -91,8 +91,8 @@ const pair: ScorePpPairSnapshot = {
 };
 const getStoredScorePpPairsByIdsMock = mock(async (_batchId: string, ids: number[]) => ids.map((id) => ({ ...pair, id })));
 
-mock.module("@/lib/redis-lock-core", () => ({ acquireRedisLock: async () => ({ key: "daily", token: "daily" }), releaseRedisLock: async () => {} }));
-mock.module("@/lib/env", () => ({ env: { DEBUG_DAILY_REUSE_CHECK: false, DEBUG_DAILY_DAY_OFFSET: 0 } }));
+mock.module("@/lib/infra/redis-lock-core", () => ({ acquireRedisLock: async () => ({ key: "daily", token: "daily" }), releaseRedisLock: async () => {} }));
+mock.module("@/lib/infra/env", () => ({ env: { DEBUG_DAILY_REUSE_CHECK: false, DEBUG_DAILY_DAY_OFFSET: 0 } }));
 mock.module("@/lib/game/server", () => ({ finishGameSession: finishGameSessionMock, getRoundDifficultySnapshot: getRoundDifficultySnapshotMock }));
 mock.module("@/lib/game/session-storage", () => ({
     acquireGameSessionLock: acquireGameSessionLockMock,
@@ -110,7 +110,7 @@ mock.module("@/lib/database/prisma", () => ({
         $transaction: transactionMock,
     },
 }));
-mock.module("@/lib/multiplayer", () => ({
+mock.module("@/lib/multiplayer/multiplayer", () => ({
     getMultiplayerRoundState: getMultiplayerRoundStateMock,
     getOrCreateMultiplayerRound: getOrCreateMultiplayerRoundMock,
     normalizeLobbyCode: (code: string) => code.trim().toUpperCase(),

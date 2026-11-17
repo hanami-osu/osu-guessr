@@ -13,7 +13,7 @@ import { signOut } from "next-auth/react";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { languages, Locale } from "@/lib/translations";
+import { languages, Locale } from "@/lib/i18n/translations";
 import {
     AUDIO_AUTOPLAY_STORAGE_KEY,
     AUDIO_VOLUME_STORAGE_KEY,

@@ -2,8 +2,8 @@
 
 import { z } from "zod";
 import { requireAdmin } from "@/actions/require-admin";
-import { OWNER_ID } from "@/lib";
-import { clearSessionUserAccessCache } from "@/lib/admin";
+import { OWNER_ID } from "@/lib/users/owner";
+import { clearSessionUserAccessCache } from "@/lib/auth/access";
 import { query } from "@/lib/database";
 
 const userIdSchema = z.number().int().positive();

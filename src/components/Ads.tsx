@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Translations } from "@/lib/translations";
+import type { Translations } from "@/lib/i18n/translations";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { AtSign, Gamepad2, Heart, MessagesSquare, type LucideIcon } from "lucide-react";
 

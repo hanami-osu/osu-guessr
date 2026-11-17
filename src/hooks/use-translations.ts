@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getTranslations, isLocale, Locale } from "@/lib/translations";
+import { getTranslations, isLocale, Locale } from "@/lib/i18n/translations";
 
-export { languages } from "@/lib/translations";
-export type { Locale, Translations } from "@/lib/translations";
+export { languages } from "@/lib/i18n/translations";
+export type { Locale, Translations } from "@/lib/i18n/translations";
 
 export function useTranslations(initialLocale: Locale = "en", migrateStoredLocale = false) {
     const [locale, setLocale] = useState<Locale>(initialLocale);

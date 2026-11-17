@@ -1,6 +1,6 @@
 import type { GameMode, GameVariant } from "@/actions/types";
-import redisClient from "./redis";
-import { acquireRedisLock, releaseRedisLock } from "./redis-lock-core";
+import redisClient from "@/lib/infra/redis";
+import { acquireRedisLock, releaseRedisLock } from "@/lib/infra/redis-lock-core";
 import { getPresentMultiplayerUsers, publishMultiplayerBrowserChanged, publishMultiplayerLobby, publishMultiplayerLobbyDeleted, revokeMultiplayerSocketTokens } from "./multiplayer-realtime";
 
 const LOBBY_TTL_SECONDS = 4 * 60 * 60;

@@ -1,6 +1,6 @@
 import "server-only";
 
-import redisClient from "../redis";
+import redisClient from "@/lib/infra/redis";
 import { query } from "../database";
 import { validateApiKeyValue } from "./key-validation";
 

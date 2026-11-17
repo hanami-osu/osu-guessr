@@ -1,4 +1,4 @@
-import redisClient from "./redis";
+import redisClient from "@/lib/infra/redis";
 import { toPublicMultiplayerLobby, type MultiplayerLobby } from "./multiplayer";
 
 const SOCKET_TOKEN_TTL_SECONDS = 60;

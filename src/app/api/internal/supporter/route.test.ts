@@ -8,9 +8,9 @@ const applyMock = mock(async (database: unknown, banchoId: number, state: unknow
     void state;
 });
 
-mock.module("@/lib/env", () => ({ env }));
+mock.module("@/lib/infra/env", () => ({ env }));
 mock.module("@/lib/database/prisma", () => ({ prisma: {} }));
-mock.module("@/lib/supporter", () => ({ applySupporterBadge: applyMock }));
+mock.module("@/lib/users/supporter", () => ({ applySupporterBadge: applyMock }));
 
 const { POST } = await import("./route");
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/actions/require-admin";
-import { setLock, unlock, getLockInfo } from "@/lib/lockdown";
+import { setLock, unlock, getLockInfo } from "@/lib/infra/lockdown";
 
 export async function adminSetLock(minutes: number) {
     const session = await requireAdmin();

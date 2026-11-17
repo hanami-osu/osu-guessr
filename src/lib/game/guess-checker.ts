@@ -1,4 +1,4 @@
-import { gestaltPattern, levenshteinSimilarity } from "./string-computing";
+import { gestaltPattern, levenshteinSimilarity } from "../string-computing";
 
 export enum GuessDifficulty {
     Easy = 0.5,

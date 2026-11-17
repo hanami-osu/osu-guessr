@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Check, SkipForward, Users, X } from "lucide-react";
-import type { MultiplayerLobby } from "@/lib/multiplayer";
+import type { MultiplayerLobby } from "@/lib/multiplayer/multiplayer";
 
 export default function MultiplayerStandings({
     lobby,

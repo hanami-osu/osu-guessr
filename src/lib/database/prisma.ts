@@ -1,6 +1,6 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "@/generated/prisma/client";
-import { env } from "../env";
+import { env } from "@/lib/infra/env";
 
 function buildDatabaseUrl(): string {
     if (env.DATABASE_URL) {

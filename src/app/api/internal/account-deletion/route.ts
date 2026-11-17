@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiUserIdSchema } from "@/app/api/_lib/schemas";
-import { createAccountDeletionService } from "@/lib/account-deletion";
+import { createAccountDeletionService } from "@/lib/users/account-deletion";
 import { prisma } from "@/lib/database/prisma";
-import { env } from "@/lib/env";
-import { hasValidInternalSecret } from "@/lib/internal-auth";
-import { removeMultiplayerUser } from "@/lib/multiplayer";
-import redisClient from "@/lib/redis";
+import { env } from "@/lib/infra/env";
+import { hasValidInternalSecret } from "@/lib/auth/internal-auth";
+import { removeMultiplayerUser } from "@/lib/multiplayer/multiplayer";
+import redisClient from "@/lib/infra/redis";
 
 const bodySchema = z.object({
     banchoId: apiUserIdSchema,
