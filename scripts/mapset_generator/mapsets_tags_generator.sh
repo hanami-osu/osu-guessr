@@ -3,29 +3,34 @@
 # Redefine `OSU_API_KEY` to be your osu! v1 API key.
 # create a `mapsets.txt` file, and fill it with beatmapsets
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR" || exit 1
+
 TEMP_DIR="./tmp"
 AUDIO_DIR="../../mapsets/audio"
 BG_DIR="../../mapsets/backgrounds"
-MAPSET_TAGS_SQL="./mapset_tags.sql"
-MAPSET_DATA_SQL="./mapset_data.sql"
 MAPSETS_CONFIG="./mapsets.txt"
 
-set -a
-source .env
-set +a
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+if [ ! -s "$MAPSETS_CONFIG" ] || [ -z "$OSU_API_KEY" ]; then
+    echo "Set OSU_API_KEY and provide a nonempty $MAPSETS_CONFIG" >&2
+    exit 1
+fi
 
 mkdir -p "$TEMP_DIR" "$AUDIO_DIR" "$BG_DIR"
+IMPORT_FILE=$(mktemp "$TEMP_DIR/mapsets.XXXXXX") || exit 1
+trap 'rm -f "$IMPORT_FILE"' EXIT
 
-echo "SET FOREIGN_KEY_CHECKS = 0;" >"$MAPSET_TAGS_SQL"
-echo "REPLACE INTO mapset_tags (mapset_id, image_filename, audio_filename) VALUES" >>"$MAPSET_TAGS_SQL"
-
-echo "SET FOREIGN_KEY_CHECKS = 0;" >"$MAPSET_DATA_SQL"
-echo "REPLACE INTO mapset_data (mapset_id, title, artist, mapper) VALUES" >>"$MAPSET_DATA_SQL"
-
-total_lines=$(wc -l <mapsets.txt)
+total_lines=$(awk 'END { print NR }' "$MAPSETS_CONFIG")
 current_line=0
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
+    ((current_line++))
     progress=$((current_line * 100 / total_lines))
 
     if [[ $line =~ ([0-9]+) ]]; then
@@ -97,28 +102,20 @@ while IFS= read -r line; do
             continue
         fi
 
-        beatmap_data=$(curl -s "https://osu.ppy.sh/api/get_beatmaps?k=$OSU_API_KEY&s=$mapset_id")
-        title=$(echo "$beatmap_data" | jq -r '.[0].title')
-        artist=$(echo "$beatmap_data" | jq -r '.[0].artist')
-        mapper=$(echo "$beatmap_data" | jq -r '.[0].creator')
-
-        echo "    ($mapset_id, '$image_filename', '$audio_filename')," >>"$MAPSET_TAGS_SQL"
-        echo "    ($mapset_id, '$(echo $title | sed "s/'/''/g")', '$(echo $artist | sed "s/'/''/g")', '$(echo $mapper | sed "s/'/''/g")')," >>"$MAPSET_DATA_SQL"
+        if ! curl -fsS "https://osu.ppy.sh/api/get_beatmaps?k=$OSU_API_KEY&s=$mapset_id" | jq -ce \
+            --argjson id "$mapset_id" --arg image "$image_filename" --arg audio "$audio_filename" \
+            '.[0] | select(.title != null and .artist != null and .creator != null)
+             | {mapsetId: $id, title, artist, mapper: .creator, imageFilename: $image, audioFilename: $audio}' >>"$IMPORT_FILE"; then
+            echo "  Could not load metadata for mapset $mapset_id" >&2
+        fi
 
         rm -rf "$mapset_temp_dir"
     else
         echo "[$progress%] Could not extract mapset ID from line: $line"
     fi
-    ((current_line++))
-done <"mapsets.txt"
+done <"$MAPSETS_CONFIG"
 
-sed -i '$ s/,$/;/' "$MAPSET_TAGS_SQL"
-sed -i '$ s/,$/;/' "$MAPSET_DATA_SQL"
-
-echo "SET FOREIGN_KEY_CHECKS = 1;" >>"$MAPSET_TAGS_SQL"
-echo "SET FOREIGN_KEY_CHECKS = 1;" >>"$MAPSET_DATA_SQL"
-
-mariadb -p osu_guessr <mapset_data.sql
-mariadb -p osu_guessr <mapset_tags.sql
-
+if [ -s "$IMPORT_FILE" ]; then
+    (cd "$SCRIPT_DIR/../.." && bun "$SCRIPT_DIR/save-mapsets.ts" "$SCRIPT_DIR/$IMPORT_FILE") || exit 1
+fi
 echo "Processing complete!"

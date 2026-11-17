@@ -38,7 +38,7 @@ function toDateKey(date: Date): string {
     return date.toISOString().slice(0, 10);
 }
 
-/** Start of the UTC day or ISO week (Monday) containing `date`, as YYYY-MM-DD. Matches the SQL bucket expression. */
+/** Start of the UTC day or ISO week (Monday) containing `date`, as YYYY-MM-DD. */
 export function bucketKey(date: Date, bucket: BucketSize): string {
     const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
     if (bucket === "week") day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));

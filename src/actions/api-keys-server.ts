@@ -1,7 +1,7 @@
 "use server";
 
 import { authenticatedAction } from "./server";
-import { query } from "@/lib/database";
+import { prisma } from "@/lib/database/prisma";
 import crypto from "crypto";
 
 import type { ApiKey } from "./types";
@@ -14,16 +14,16 @@ function hashApiKey(apiKey: string): string {
 
 export async function createApiKeyAction(name: string): Promise<string> {
     return authenticatedAction(async (session) => {
-        const [result] = (await query(`SELECT COUNT(*) as count FROM api_keys WHERE user_id = ?`, [session.user.banchoId])) as [{ count: number }];
+        const count = await prisma.apiKey.count({ where: { userId: session.user.banchoId } });
 
-        if (result.count >= 5) {
+        if (count >= 5) {
             throw new Error("Maximum number of API keys (5) reached");
         }
 
         const apiKey = crypto.randomBytes(32).toString("hex");
         const hashedKey = hashApiKey(apiKey);
 
-        await query(`INSERT INTO api_keys (id, user_id, name) VALUES (?, ?, ?)`, [hashedKey, session.user.banchoId, name]);
+        await prisma.apiKey.create({ data: { id: hashedKey, userId: session.user.banchoId, name } });
 
         return apiKey;
     });
@@ -31,24 +31,17 @@ export async function createApiKeyAction(name: string): Promise<string> {
 
 export async function listApiKeysAction() {
     return authenticatedAction(async (session) => {
-        const keys: Array<ApiKey> = await query(
-            `SELECT id, name, created_at, last_used
-                FROM api_keys
-                WHERE user_id = ?
-                ORDER BY created_at DESC`,
-            [session.user.banchoId],
-        );
-
-        return keys;
+        const keys = await prisma.apiKey.findMany({
+            where: { userId: session.user.banchoId },
+            select: { id: true, name: true, createdAt: true, lastUsed: true },
+            orderBy: { createdAt: "desc" },
+        });
+        return keys.map(({ id, name, createdAt, lastUsed }) => ({ id, name, created_at: createdAt, last_used: lastUsed }));
     });
 }
 
 export async function deleteApiKeyAction(keyId: string): Promise<void> {
     return authenticatedAction(async (session) => {
-        await query(
-            `DELETE FROM api_keys
-            WHERE id = ? AND user_id = ?`,
-            [keyId, session.user.banchoId],
-        );
+        await prisma.apiKey.deleteMany({ where: { id: keyId, userId: session.user.banchoId } });
     });
 }

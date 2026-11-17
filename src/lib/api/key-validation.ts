@@ -5,15 +5,14 @@ const API_RATE_LIMIT_WINDOW_SECONDS = 60;
 const API_RATE_LIMIT_MAX_REQUESTS = 120;
 const API_LAST_USED_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 
-type QueryFunction = (sql: string, values?: Array<unknown>) => Promise<unknown[]>;
-
 interface RateLimitClient {
     incr(key: string): Promise<number>;
     expire(key: string, seconds: number): Promise<unknown>;
 }
 
 interface ApiKeyValidationDependencies {
-    query: QueryFunction;
+    findActiveKey(id: string): Promise<{ userId: number; lastUsed: Date | null } | null>;
+    recordUse(id: string, lastUsed: Date): Promise<unknown>;
     redis: RateLimitClient;
     now?: () => number;
 }
@@ -30,13 +29,7 @@ export async function validateApiKeyValue(apiKey: string | null | undefined, dep
     const hashedKey = hashApiKey(apiKey);
 
     try {
-        const [key] = (await dependencies.query(
-            `SELECT k.user_id, k.last_used
-             FROM api_keys k
-             JOIN users u ON u.bancho_id = k.user_id
-             WHERE k.id = ? AND u.deletion_scheduled_at IS NULL`,
-            [hashedKey],
-        )) as [{ user_id: number; last_used: Date | string | null }?];
+        const key = await dependencies.findActiveKey(hashedKey);
 
         if (!key) {
             throw new InvalidApiKeyError();
@@ -53,12 +46,12 @@ export async function validateApiKeyValue(apiKey: string | null | undefined, dep
         }
 
         const now = dependencies.now?.() ?? Date.now();
-        const lastUsed = key.last_used ? new Date(key.last_used).getTime() : 0;
+        const lastUsed = key.lastUsed?.getTime() ?? 0;
         if (!lastUsed || now - lastUsed >= API_LAST_USED_UPDATE_INTERVAL_MS) {
-            await dependencies.query(`UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE id = ?`, [hashedKey]);
+            await dependencies.recordUse(hashedKey, new Date(now));
         }
 
-        return key.user_id;
+        return key.userId;
     } catch (error) {
         if (error instanceof ApiError) {
             throw error;

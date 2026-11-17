@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/actions/require-admin";
 import { OWNER_ID } from "@/lib/users/owner";
 import { clearSessionUserAccessCache } from "@/lib/auth/access";
-import { query } from "@/lib/database";
+import { prisma } from "@/lib/database/prisma";
 
 const userIdSchema = z.number().int().positive();
 
@@ -16,12 +16,16 @@ export interface AdminUser {
 
 export async function listAdmins(): Promise<AdminUser[]> {
     await requireAdmin();
-    const rows = await query<{ bancho_id: number; username: string }>("SELECT bancho_id, username FROM users WHERE is_admin = TRUE OR bancho_id = ? ORDER BY username", [OWNER_ID]);
+    const rows = await prisma.user.findMany({
+        where: { OR: [{ isAdmin: true }, { banchoId: OWNER_ID }] },
+        select: { banchoId: true, username: true },
+        orderBy: { username: "asc" },
+    });
 
     return rows.map((user) => ({
-        banchoId: user.bancho_id,
+        banchoId: user.banchoId,
         username: user.username,
-        isOwner: user.bancho_id === OWNER_ID,
+        isOwner: user.banchoId === OWNER_ID,
     }));
 }
 
@@ -31,14 +35,14 @@ export async function setAdmin(rawUserId: number, isAdmin: boolean): Promise<str
 
     if (userId === OWNER_ID && !isAdmin) throw new Error("The owner cannot be removed as an admin");
 
-    const [user] = await query<{ username: string; is_admin: number | boolean }>("SELECT username, is_admin FROM users WHERE bancho_id = ? LIMIT 1", [userId]);
+    const user = await prisma.user.findUnique({ where: { banchoId: userId }, select: { username: true, isAdmin: true } });
     if (!user) throw new Error(`User ${userId} not found`);
 
-    if (userId === OWNER_ID || Boolean(user.is_admin) === isAdmin) {
+    if (userId === OWNER_ID || user.isAdmin === isAdmin) {
         return `${user.username} (${userId}) is already ${isAdmin ? "an admin" : "not an admin"}`;
     }
 
-    await query("UPDATE users SET is_admin = ? WHERE bancho_id = ?", [isAdmin, userId]);
+    await prisma.user.updateMany({ where: { banchoId: userId }, data: { isAdmin } });
     clearSessionUserAccessCache();
     return `${isAdmin ? "Granted admin to" : "Removed admin from"} ${user.username} (${userId})`;
 }

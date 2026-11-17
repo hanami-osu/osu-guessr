@@ -4,7 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider     = "mysql"
+  relationMode = "prisma"
 }
 
 enum GameMode {
@@ -74,6 +75,7 @@ model User {
   isAdmin             Boolean   @default(false) @map("is_admin")
   deletionScheduledAt DateTime? @map("deletion_scheduled_at") @db.DateTime(3)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  apiKeys             ApiKey[]
 
   @@index([username], map: "idx_username")
   @@map("users")
@@ -102,6 +104,7 @@ model ApiKey {
   name     String    @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   lastUsed DateTime? @map("last_used") @db.Timestamp(0)
+  user     User      @relation(fields: [userId], references: [banchoId], onDelete: Restrict)
 
   @@index([userId], map: "user_id_idx")
   @@index([lastUsed], map: "idx_api_keys_last_used")
@@ -160,6 +163,7 @@ model Game {
   startedAt           DateTime      @default(now()) @map("started_at") @db.DateTime(3)
   endedAt             DateTime      @default(now()) @map("ended_at") @db.DateTime(3)
   endReason           GameEndReason @default(completed) @map("end_reason")
+  rounds              GameRound[]
 
   @@index([userId, gameMode], map: "idx_games_user_mode")
   @@index([endedAt], map: "idx_games_ended")
@@ -188,6 +192,7 @@ model GameRound {
   streakAfter        Int             @default(0) @map("streak_after") @db.UnsignedInt
   difficultySnapshot Decimal?        @map("difficulty_snapshot") @db.Decimal(8, 4)
   contentSnapshot    Json?           @map("content_snapshot")
+  game               Game            @relation(fields: [gameId], references: [id], onDelete: Restrict)
 
   @@unique([gameId, roundNumber], map: "game_round_number")
   @@index([itemType, itemId], map: "idx_game_rounds_item")
@@ -211,6 +216,7 @@ model GameChallenge {
   ranked         Boolean           @default(true)
   dailyDate      DateTime?         @map("daily_date") @db.Date
   createdAt      DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  rounds         GameChallengeRound[]
 
   @@unique([dailyDate, gameMode, variant], map: "daily_challenge_mode_variant")
   @@index([creatorUserId], map: "idx_game_challenges_creator")
@@ -226,6 +232,8 @@ model GameChallengeRound {
   answerSnapshot    String       @map("answer_snapshot") @db.VarChar(500)
   difficultySnapshot Decimal?    @map("difficulty_snapshot") @db.Decimal(8, 4)
   contentSnapshot   Json?        @map("content_snapshot")
+
+  challenge          GameChallenge @relation(fields: [challengeId], references: [id], onDelete: Restrict)
 
   @@id([challengeId, roundNumber])
   @@index([itemType, itemId], map: "idx_game_challenge_rounds_item")
@@ -283,6 +291,7 @@ model MapsetTag {
   mapsetId      Int     @id @map("mapset_id")
   imageFilename String? @map("image_filename") @db.VarChar(255)
   audioFilename String? @map("audio_filename") @db.VarChar(255)
+  data          MapsetData @relation(fields: [mapsetId], references: [mapsetId], onDelete: Restrict)
 
   @@map("mapset_tags")
 }
@@ -295,6 +304,7 @@ model MapsetData {
   rankedAt      DateTime? @map("ranked_at") @db.DateTime(3)
   starRatingMin Decimal?  @map("star_rating_min") @db.Decimal(6, 3)
   starRatingMax Decimal?  @map("star_rating_max") @db.Decimal(6, 3)
+  tag           MapsetTag?
 
   @@index([title], map: "idx_mapset_data_title")
   @@index([artist], map: "idx_mapset_data_artist")

@@ -19,7 +19,6 @@ export interface ApiKey {
     name: string;
     created_at: Date;
     last_used: Date | null;
-    user_id: number;
 }
 
 export interface MapsetTags {
@@ -195,7 +194,7 @@ export interface Report {
     user_id: number;
     mapset_id: number;
     report_type: ReportType;
-    description: string;
+    description: string | null;
     status: ReportStatus;
     created_at: Date;
     updated_at: Date;

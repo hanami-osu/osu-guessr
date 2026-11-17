@@ -1,6 +1,6 @@
 "use server";
 
-import { query } from "@/lib/database";
+import { prisma } from "@/lib/database/prisma";
 import fs from "fs/promises";
 import path from "path";
 import { z } from "zod";
@@ -31,7 +31,8 @@ interface DatabaseSkin {
     id: number;
     name: string;
     image_filename: string;
-    created_at: string;
+    created_at: Date;
+    updated_at: Date;
 }
 
 async function ensureDirectories(): Promise<void> {
@@ -88,15 +89,11 @@ function resolveSkinPath(filename: string): string {
 }
 
 async function saveSkinToDatabase(skinData: SkinImportData, imageFilename: string): Promise<void> {
-    await query(
-        `INSERT INTO skins (id, name, image_filename)
-     VALUES (?, ?, ?)`,
-        [skinData.id, skinData.name, imageFilename],
-    );
+    await prisma.skin.create({ data: { id: skinData.id, name: skinData.name, imageFilename } });
 }
 
 async function removeSkinFromDatabase(id: number): Promise<void> {
-    await query("DELETE FROM skins WHERE id = ?", [id]);
+    await prisma.skin.deleteMany({ where: { id } });
 }
 
 async function importSkin(id: number): Promise<{ skinId: number; image: string }> {
@@ -172,12 +169,10 @@ export async function addSkinsFromList(rawIds: number[]): Promise<Array<{ id: nu
 export async function listSkins(): Promise<DatabaseSkin[]> {
     try {
         await requireAdmin();
-        const skins = await query(`
-      SELECT * FROM skins 
-      ORDER BY created_at DESC
-    `);
-
-        return skins as DatabaseSkin[];
+        const skins = await prisma.skin.findMany({ orderBy: { createdAt: "desc" } });
+        return skins.map(({ id, name, imageFilename, createdAt, updatedAt }) => ({
+            id, name, image_filename: imageFilename, created_at: createdAt, updated_at: updatedAt,
+        }));
     } catch (error) {
         console.error("Error listing skins:", error);
         return [];
@@ -188,8 +183,8 @@ export async function removeSkin(rawId: number): Promise<{ success: boolean; err
     try {
         await requireAdmin();
         const id = z.coerce.number().min(1).parse(rawId);
-        const rows = (await query("SELECT image_filename FROM skins WHERE id = ?", [id])) as Array<{ image_filename?: string }>;
-        const imageFilename = rows[0]?.image_filename;
+        const skin = await prisma.skin.findUnique({ where: { id }, select: { imageFilename: true } });
+        const imageFilename = skin?.imageFilename;
         const imagePath = imageFilename ? resolveSkinPath(imageFilename) : null;
 
         await removeSkinFromDatabase(id);

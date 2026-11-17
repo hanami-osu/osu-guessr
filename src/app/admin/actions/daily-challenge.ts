@@ -6,7 +6,7 @@ import { requireAdmin } from "@/actions/require-admin";
 import { createManualDailyChallenge } from "@/lib/game/mapsets";
 import { parseFutureDailyDate } from "@/lib/game/daily";
 import { createManualScorePpDailyChallenge } from "@/lib/score-pp/server";
-import { query } from "@/lib/database";
+import type { ScorePpScoreSnapshot } from "@/lib/score-pp/types";
 import { prisma } from "@/lib/database/prisma";
 
 const inputSchema = z.object({
@@ -17,57 +17,80 @@ const inputSchema = z.object({
     overwrite: z.boolean().default(false),
 });
 
+function matchesScoreSearch(text: string, search: string): boolean {
+    // Preserve the case-insensitive LIKE wildcards from the database search.
+    const candidate = text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase();
+    const pattern = search.normalize("NFD").replace(/\p{M}/gu, "");
+    if (!/[%_\\]/.test(pattern)) return candidate.includes(pattern);
+
+    const characters = [...candidate];
+    let matches = Array<boolean>(characters.length + 1).fill(true);
+    for (const token of pattern.match(/\\[\s\S]|[\s\S]/gu) ?? []) {
+        const literal = token.startsWith("\\") && token.length > 1 ? token.slice(1) : token;
+        const next = [token === "%" && matches[0]];
+        for (const [index, character] of characters.entries()) {
+            next.push(token === "%" ? next[index] || matches[index + 1] : matches[index] && (token === "_" || literal === character));
+        }
+        matches = next;
+    }
+    return matches.some(Boolean);
+}
+
 export async function searchManualDailyContent(rawGameMode: string, searchText: string): Promise<Array<{ id: number; label: string }>> {
     await requireAdmin();
     const gameMode = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp]).parse(rawGameMode);
     const search = z.string().trim().min(2).max(100).parse(searchText).toLocaleLowerCase();
-    const like = `%${search}%`;
+    const id = /^[1-9]\d*$/.test(search) && Number(search) <= 2_147_483_647 ? Number(search) : undefined;
 
     if (gameMode === GameMode.Background || gameMode === GameMode.Audio) {
-        const mediaColumn = gameMode === GameMode.Audio ? "mt.audio_filename" : "mt.image_filename";
-        return query<{ id: number; label: string }>(
-            `SELECT md.mapset_id AS id, CONCAT(md.artist, ' - ', md.title, ' (', md.mapper, ')') AS label
-             FROM mapset_data AS md
-             INNER JOIN mapset_tags AS mt ON mt.mapset_id = md.mapset_id
-             WHERE ${mediaColumn} IS NOT NULL AND ${mediaColumn} <> ''
-               AND (LOWER(md.artist) LIKE ? OR LOWER(md.title) LIKE ? OR CAST(md.mapset_id AS CHAR) = ?)
-             ORDER BY md.artist, md.title LIMIT 30`,
-            [like, like, search],
-        );
+        const media = gameMode === GameMode.Audio ? "audioFilename" : "imageFilename";
+        const rows = await prisma.mapsetData.findMany({
+            where: {
+                tag: { is: { [media]: { not: "" } } },
+                OR: [{ artist: { contains: search } }, { title: { contains: search } }, ...(id === undefined ? [] : [{ mapsetId: id }])],
+            },
+            select: { mapsetId: true, artist: true, title: true, mapper: true },
+            orderBy: [{ artist: "asc" }, { title: "asc" }, { mapsetId: "asc" }],
+            take: 30,
+        });
+        return rows.map(({ mapsetId, artist, title, mapper }) => ({ id: mapsetId, label: `${artist ?? ""} - ${title ?? ""} (${mapper ?? ""})` }));
     }
 
     if (gameMode === GameMode.Skin) {
-        return query<{ id: number; label: string }>(
-            `SELECT id, name AS label FROM skins
-             WHERE image_filename IS NOT NULL AND image_filename <> ''
-               AND (LOWER(name) LIKE ? OR CAST(id AS CHAR) = ?)
-             ORDER BY name LIMIT 30`,
-            [like, search],
-        );
+        const rows = await prisma.skin.findMany({
+            where: { imageFilename: { not: "" }, OR: [{ name: { contains: search } }, ...(id === undefined ? [] : [{ id }])] },
+            select: { id: true, name: true },
+            orderBy: [{ name: "asc" }, { id: "asc" }],
+            take: 30,
+        });
+        return rows.map(({ id, name }) => ({ id, label: name }));
     }
 
     const batch = await prisma.scorePpBatch.findFirst({ where: { status: "active" }, orderBy: { activatedAt: "desc" }, select: { id: true } });
     if (!batch) return [];
-    return query<{ id: number; label: string }>(
-        `SELECT id, CONCAT(
-             JSON_UNQUOTE(JSON_EXTRACT(left_snapshot, '$.player.username')), ' vs ',
-             JSON_UNQUOTE(JSON_EXTRACT(right_snapshot, '$.player.username')), ' | ',
-             JSON_UNQUOTE(JSON_EXTRACT(left_snapshot, '$.beatmap.artist')), ' - ',
-             JSON_UNQUOTE(JSON_EXTRACT(left_snapshot, '$.beatmap.title')), ' vs ',
-             JSON_UNQUOTE(JSON_EXTRACT(right_snapshot, '$.beatmap.artist')), ' - ',
-             JSON_UNQUOTE(JSON_EXTRACT(right_snapshot, '$.beatmap.title'))
-           ) AS label
-         FROM score_pp_pairs
-         WHERE batch_id = ? AND active = TRUE
-           AND LOWER(CONCAT(
-             JSON_UNQUOTE(JSON_EXTRACT(left_snapshot, '$.player.username')), ' ',
-             JSON_UNQUOTE(JSON_EXTRACT(right_snapshot, '$.player.username')), ' ',
-             JSON_UNQUOTE(JSON_EXTRACT(left_snapshot, '$.beatmap.title')), ' ',
-             JSON_UNQUOTE(JSON_EXTRACT(right_snapshot, '$.beatmap.title'))
-           )) LIKE ?
-         ORDER BY id DESC LIMIT 30`,
-        [batch.id, like],
-    );
+    const matches: Array<{ id: number; label: string }> = [];
+    const batchSize = 500;
+    let before: number | undefined;
+    while (matches.length < 30) {
+        const rows = await prisma.scorePpPair.findMany({
+            where: { batchId: batch.id, active: true, ...(before === undefined ? {} : { id: { lt: before } }) },
+            select: { id: true, leftSnapshot: true, rightSnapshot: true },
+            orderBy: { id: "desc" },
+            take: batchSize,
+        });
+        for (const row of rows) {
+            const left = row.leftSnapshot as ScorePpScoreSnapshot | null;
+            const right = row.rightSnapshot as ScorePpScoreSnapshot | null;
+            if (!left?.player || !left.beatmap || !right?.player || !right.beatmap) continue;
+            const searchable = `${left.player.username} ${right.player.username} ${left.beatmap.title} ${right.beatmap.title}`;
+            if (!matchesScoreSearch(searchable, search)) continue;
+            matches.push({ id: row.id, label: `${left.player.username} vs ${right.player.username} | ${left.beatmap.artist} - ${left.beatmap.title} vs ${right.beatmap.artist} - ${right.beatmap.title}` });
+            if (matches.length === 30) break;
+        }
+        if (rows.length < batchSize) break;
+        before = rows[rows.length - 1].id;
+    }
+    return matches;
 }
 
 export async function setManualDailyChallenge(dateText: string, rawGameMode: string, rawIgnoreRepetitionChecks: boolean, selectedItemIds: number[], overwrite = false): Promise<string> {

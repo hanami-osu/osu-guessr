@@ -1,6 +1,6 @@
 "use server";
 
-import { query } from "@/lib/database";
+import { prisma } from "@/lib/database/prisma";
 import { Report } from "@/actions/types";
 import { requireAdmin } from "@/actions/require-admin";
 import { reportStatusUpdateSchema } from "@/lib/reports/report-validation";
@@ -8,21 +8,19 @@ import { reportStatusUpdateSchema } from "@/lib/reports/report-validation";
 export async function listReports(): Promise<Report[]> {
     try {
         await requireAdmin();
-        const results = await query(`
-            SELECT
-                id,
-                user_id,
-                mapset_id,
-                report_type,
-                description,
-                status,
-                created_at,
-                updated_at
-            FROM reports
-            ORDER BY created_at DESC
-        `);
+        const rows = await prisma.report.findMany({ orderBy: { createdAt: "desc" } });
+        const results = rows.map((report) => ({
+            id: report.id,
+            user_id: report.userId,
+            mapset_id: report.mapsetId,
+            report_type: report.reportType,
+            description: report.description,
+            status: report.status,
+            created_at: report.createdAt,
+            updated_at: report.updatedAt,
+        }));
         console.table(results);
-        return results as Report[];
+        return results;
     } catch (error) {
         console.error("Error listing reports:", error);
         return [];
@@ -33,7 +31,7 @@ export async function updateReportStatus(reportId: number, status: string): Prom
     try {
         await requireAdmin();
         const validated = reportStatusUpdateSchema.parse({ reportId, status });
-        await query(`UPDATE reports SET status = ? WHERE id = ?`, [validated.status, validated.reportId]);
+        await prisma.report.updateMany({ where: { id: validated.reportId }, data: { status: validated.status } });
         console.log(`Report ${validated.reportId} status updated to ${validated.status}`);
     } catch (error) {
         console.error(`Error updating report ${reportId}:`, error);

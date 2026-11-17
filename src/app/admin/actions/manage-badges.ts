@@ -1,6 +1,6 @@
 "use server";
 
-import { query } from "@/lib/database";
+import { prisma } from "@/lib/database/prisma";
 import { requireAdmin } from "@/actions/require-admin";
 import { z } from "zod";
 
@@ -9,7 +9,7 @@ export interface UserBadge {
     username: string;
     badge_name: string;
     color: string;
-    assigned_at: string;
+    assigned_at: Date;
 }
 
 const badgeSchema = z.object({
@@ -26,7 +26,8 @@ function capitalizeWords(str: string): string {
 
 export async function getBadges() {
     await requireAdmin();
-    return query("SELECT * FROM badges ORDER BY name");
+    const badges = await prisma.badge.findMany({ orderBy: { name: "asc" } });
+    return badges.map(({ createdAt, ...badge }) => ({ ...badge, created_at: createdAt }));
 }
 
 export async function addBadge(name: string, color: string) {
@@ -35,7 +36,7 @@ export async function addBadge(name: string, color: string) {
         const validated = badgeSchema.parse({ name, color });
         const formattedName = capitalizeWords(validated.name);
 
-        await query("INSERT INTO badges (name, color) VALUES (?, ?)", [formattedName, validated.color]);
+        await prisma.badge.create({ data: { name: formattedName, color: validated.color } });
 
         return `Added badge "${formattedName}" with color ${validated.color}`;
     } catch (error) {
@@ -50,7 +51,7 @@ export async function removeBadge(name: string) {
     try {
         await requireAdmin();
         const formattedName = capitalizeWords(name);
-        await query("DELETE FROM badges WHERE name = ?", [formattedName]);
+        await prisma.badge.deleteMany({ where: { name: formattedName } });
         return `Removed badge "${formattedName}"`;
     } catch (error) {
         throw new Error(`Failed to remove badge: ${error}`);
@@ -61,7 +62,7 @@ export async function assignBadgeToUser(userId: number, badgeName: string) {
     try {
         await requireAdmin();
         const formattedName = capitalizeWords(badgeName);
-        await query("INSERT INTO user_badges (user_id, badge_name) VALUES (?, ?)", [userId, formattedName]);
+        await prisma.userBadge.create({ data: { userId, badgeName: formattedName } });
         return `Assigned badge "${formattedName}" to user ${userId}`;
     } catch (error) {
         throw new Error(`Failed to assign badge: ${error}`);
@@ -72,7 +73,7 @@ export async function removeBadgeFromUser(userId: number, badgeName: string) {
     try {
         await requireAdmin();
         const formattedName = capitalizeWords(badgeName);
-        await query("DELETE FROM user_badges WHERE user_id = ? AND badge_name = ?", [userId, formattedName]);
+        await prisma.userBadge.deleteMany({ where: { userId, badgeName: formattedName } });
         return `Removed badge "${formattedName}" from user ${userId}`;
     } catch (error) {
         throw new Error(`Failed to remove badge: ${error}`);
@@ -82,14 +83,19 @@ export async function removeBadgeFromUser(userId: number, badgeName: string) {
 export async function listBadges(): Promise<UserBadge[]> {
     try {
         await requireAdmin();
-        const results = await query(`
-            SELECT ub.user_id, u.username, b.name as badge_name, b.color, ub.assigned_at
-            FROM user_badges ub
-            JOIN users u ON ub.user_id = u.bancho_id
-            JOIN badges b ON ub.badge_name = b.name
-            ORDER BY ub.assigned_at DESC
-        `);
-        return results as UserBadge[];
+        const badges = await prisma.badge.findMany({ select: { name: true, color: true } });
+        const assignments = await Promise.all(badges.map(async (badge) => ({
+            badge,
+            users: await prisma.userBadge.findMany({ where: { badgeName: badge.name }, select: { userId: true, assignedAt: true } }),
+        })));
+        const userIds = [...new Set(assignments.flatMap(({ users }) => users.map(({ userId }) => userId)))];
+        const users = await prisma.user.findMany({ where: { banchoId: { in: userIds } }, select: { banchoId: true, username: true } });
+        const usernames = new Map(users.map(({ banchoId, username }) => [banchoId, username]));
+        const results = assignments.flatMap(({ badge, users }) => users.flatMap(({ userId, assignedAt }) => {
+            const username = usernames.get(userId);
+            return username === undefined ? [] : [{ user_id: userId, username, badge_name: badge.name, color: badge.color, assigned_at: assignedAt }];
+        }));
+        return results.sort((a, b) => b.assigned_at.getTime() - a.assigned_at.getTime());
     } catch (error) {
         throw new Error(`Failed to list badges: ${error}`);
     }

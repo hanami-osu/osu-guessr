@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
-type DeletionTransaction = Pick<PrismaClient, "$executeRaw" | "game" | "userAchievement" | "userBadge" | "apiKey" | "report" | "contentStatContribution" | "gameChallenge" | "user">;
+type DeletionTransaction = Pick<PrismaClient, "gameRound" | "game" | "userAchievement" | "userBadge" | "apiKey" | "report" | "contentStatContribution" | "gameChallenge" | "user">;
 
 export interface AccountDeletionDependencies {
     prisma: Pick<PrismaClient, "user"> & { $transaction<T>(operation: (tx: DeletionTransaction) => Promise<T>): Promise<T> };
@@ -38,7 +38,7 @@ export function createAccountDeletionService(dependencies: AccountDeletionDepend
 
     async function purgeUser(userId: number): Promise<void> {
         await dependencies.prisma.$transaction(async (tx) => {
-            await tx.$executeRaw`DELETE gr FROM game_rounds gr JOIN games g ON g.id = gr.game_id WHERE g.user_id = ${userId}`;
+            await tx.gameRound.deleteMany({ where: { game: { userId } } });
             await tx.game.deleteMany({ where: { userId } });
             await tx.userAchievement.deleteMany({ where: { userId } });
             await tx.userBadge.deleteMany({ where: { userId } });

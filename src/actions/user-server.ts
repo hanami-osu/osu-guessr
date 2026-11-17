@@ -1,7 +1,6 @@
 "use server";
 
 import { GAME_VARIANTS, GameVariant } from "@/app/games/config";
-import { query } from "@/lib/database/database";
 import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 import { calculateProfilePp } from "@/lib/game/performance-points";
@@ -346,7 +345,6 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
     const windowStart = new Date(todayStart - (validated.days - 1) * 86_400_000);
     if (!(await isUserVisible(banchoId))) return [];
     const hiddenUserIds = await getHiddenUserIds();
-    const hiddenUsers = new Set(hiddenUserIds);
 
     const targetHasPlayedBeforeWindow =
         (await prisma.game.count({
@@ -361,34 +359,40 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
             },
         })) > 0;
 
-    type BaselineRun = { user_id: number; pp: number };
-    const baselineRuns = await query<BaselineRun>(
-        `WITH ranked_runs AS (
-            SELECT
-                user_id,
-                pp,
-                ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY pp DESC, ended_at ASC, id ASC) AS run_position
-            FROM games
-            WHERE game_mode = ?
-              AND variant = ?
-              AND ruleset_version = ?
-              AND pp_version = ?
-              AND ranked = TRUE
-              AND pp > 0
-              AND ended_at < ?
-        )
-        SELECT user_id, pp
-        FROM ranked_runs
-        WHERE run_position <= 100`,
-        [validatedMode, validated.variant, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION, windowStart],
-    );
-
     const topRunsByUser = new Map<number, number[]>();
-    for (const run of baselineRuns) {
-        if (hiddenUsers.has(run.user_id)) continue;
-        const runs = topRunsByUser.get(run.user_id) ?? [];
-        runs.push(Number(run.pp));
-        topRunsByUser.set(run.user_id, runs);
+    function addRankedRun(userId: number, pp: number): number[] {
+        const runs = topRunsByUser.get(userId) ?? [];
+        if (runs.length < 100 || pp > runs[runs.length - 1]) {
+            runs.push(pp);
+            runs.sort((a, b) => b - a);
+            if (runs.length > 100) runs.length = 100;
+            topRunsByUser.set(userId, runs);
+        }
+        return runs;
+    }
+
+    let after: bigint | undefined;
+    const batchSize = 1000;
+    while (true) {
+        const baselineRuns = await prisma.game.findMany({
+            where: {
+                userId: { notIn: hiddenUserIds },
+                gameMode: validatedMode,
+                variant: validated.variant,
+                rulesetVersion: CURRENT_RULESET_VERSION,
+                ppVersion: CURRENT_PP_VERSION,
+                ranked: true,
+                pp: { gt: 0 },
+                endedAt: { lt: windowStart },
+                ...(after === undefined ? {} : { id: { gt: after } }),
+            },
+            select: { id: true, userId: true, pp: true },
+            orderBy: { id: "asc" },
+            take: batchSize,
+        });
+        for (const run of baselineRuns) addRankedRun(run.userId, Number(run.pp));
+        if (baselineRuns.length < batchSize) break;
+        after = baselineRuns[baselineRuns.length - 1].id;
     }
 
     const profilePpByUser = new Map<number, number>();
@@ -426,11 +430,7 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
             if (event.userId === banchoId) targetHasPlayed = true;
 
             if (runPp > 0) {
-                const runs = topRunsByUser.get(event.userId) ?? [];
-                runs.push(runPp);
-                runs.sort((a, b) => b - a);
-                if (runs.length > 100) runs.length = 100;
-                topRunsByUser.set(event.userId, runs);
+                const runs = addRankedRun(event.userId, runPp);
                 profilePpByUser.set(event.userId, calculateProfilePp(runs, validated.variant));
             }
 

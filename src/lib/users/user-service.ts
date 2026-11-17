@@ -1,14 +1,14 @@
 import "server-only";
 
-import { query } from "@/lib/database/index";
+import { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/database/prisma";
 
 export async function upsertUser(banchoId: number, username: string, avatarUrl: string): Promise<void> {
-    await query(
-        `INSERT INTO users (bancho_id, username, avatar_url)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-            username = VALUES(username),
-            avatar_url = VALUES(avatar_url)`,
-        [banchoId, username, avatarUrl],
-    );
+    const profile = { username, avatarUrl };
+    try {
+        await prisma.user.upsert({ where: { banchoId }, update: profile, create: { banchoId, ...profile } });
+    } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
+        await prisma.user.update({ where: { banchoId }, data: profile });
+    }
 }

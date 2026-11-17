@@ -56,12 +56,12 @@ function createDatabase() {
 
     const tx = {
         ...tables,
-        async $executeRaw(strings: TemplateStringsArray, ...values: unknown[]) {
-            expect(strings.join("?")).toContain("DELETE gr FROM game_rounds gr JOIN games g");
-            const gameIds = new Set(tables.game.rows.filter((game) => game.userId === values[0]).map((game) => game.id));
-            const rounds = tables.gameRound.rows;
-            rounds.splice(0, rounds.length, ...rounds.filter((round) => !gameIds.has(round.gameId)));
-            return 0;
+        gameRound: {
+            async deleteMany({ where }: { where: { game: { userId: number } } }) {
+                const games = tables.game.rows.filter((game) => matches(game, where.game));
+                const counts = await Promise.all(games.map((game) => tables.gameRound.deleteMany({ where: { gameId: game.id } })));
+                return { count: counts.reduce((total, row) => total + row.count, 0) };
+            },
         },
     };
 

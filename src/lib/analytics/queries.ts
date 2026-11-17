@@ -1,25 +1,16 @@
 import "server-only";
 
-import { query } from "../database";
-
+import { prisma } from "@/lib/database/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import { classifyWrongGuess, type WrongGuessKind } from "./guesses";
-import { listBuckets, resolveRange, type AnalyticsRange, type BucketSize, type ResolvedRange } from "./range";
+import { bucketKey, listBuckets, resolveRange, type AnalyticsRange, type ResolvedRange } from "./range";
 
 export const GAME_MODES = ["background", "audio", "skin", "score_pp"] as const;
 export type AnalyticsGameMode = (typeof GAME_MODES)[number];
 
 const MIN_ITEM_APPEARANCES = 3;
 const DAY_MS = 86_400_000;
-
-function bucketSql(column: string, bucket: BucketSize): string {
-    return bucket === "week" ? `DATE_FORMAT(DATE_SUB(DATE(${column}), INTERVAL WEEKDAY(${column}) DAY), '%Y-%m-%d')` : `DATE_FORMAT(${column}, '%Y-%m-%d')`;
-}
-
-function ratio(part: number, whole: number): number | null {
-    return whole > 0 ? part / whole : null;
-}
-
-// Overview
+const PAGE_SIZE = 2000;
 
 export interface Kpis {
     games: number;
@@ -31,59 +22,11 @@ export interface Kpis {
     quitRate: number | null;
 }
 
-async function getKpis(from: Date, to: Date): Promise<Kpis> {
-    const [[games], [users]] = await Promise.all([
-        query<{ games: number; players: number; rounds: number; correct: number; avg_duration_s: number | null; quits: number }>(
-            `SELECT COUNT(*) AS games, COUNT(DISTINCT user_id) AS players,
-                COALESCE(SUM(rounds_played), 0) AS rounds,
-                COALESCE(SUM(IF(rounds_played > 0, correct_count, 0)), 0) AS correct,
-                AVG(IF(ended_at > started_at, TIMESTAMPDIFF(SECOND, started_at, ended_at), NULL)) AS avg_duration_s,
-                COALESCE(SUM(end_reason = 'quit'), 0) AS quits
-             FROM games WHERE ended_at >= ? AND ended_at < ?`,
-            [from, to],
-        ),
-        query<{ new_users: number }>("SELECT COUNT(*) AS new_users FROM users WHERE created_at >= ? AND created_at < ?", [from, to]),
-    ]);
-
-    return {
-        games: games.games,
-        players: games.players,
-        newUsers: users.new_users,
-        rounds: games.rounds,
-        accuracy: ratio(games.correct, games.rounds),
-        avgDurationSeconds: games.avg_duration_s,
-        quitRate: ratio(games.quits, games.games),
-    };
-}
-
 export interface TimelinePoint {
     bucket: string;
     games: Record<AnalyticsGameMode, number>;
     players: number;
     signups: number;
-}
-
-async function getTimeline({ since, bucket }: ResolvedRange, now: Date): Promise<TimelinePoint[]> {
-    const [games, players, signups] = await Promise.all([
-        query<{ b: string; game_mode: AnalyticsGameMode; n: number }>(`SELECT ${bucketSql("ended_at", bucket)} AS b, game_mode, COUNT(*) AS n FROM games WHERE ended_at >= ? GROUP BY b, game_mode`, [since]),
-        query<{ b: string; n: number }>(`SELECT ${bucketSql("ended_at", bucket)} AS b, COUNT(DISTINCT user_id) AS n FROM games WHERE ended_at >= ? GROUP BY b`, [since]),
-        query<{ b: string; n: number }>(`SELECT ${bucketSql("created_at", bucket)} AS b, COUNT(*) AS n FROM users WHERE created_at >= ? GROUP BY b`, [since]),
-    ]);
-
-    const points = new Map(listBuckets(since, now, bucket).map((key) => [key, { bucket: key, games: { background: 0, audio: 0, skin: 0, score_pp: 0 }, players: 0, signups: 0 } as TimelinePoint]));
-    for (const row of games) {
-        const point = points.get(row.b);
-        if (point) point.games[row.game_mode] = row.n;
-    }
-    for (const row of players) {
-        const point = points.get(row.b);
-        if (point) point.players = row.n;
-    }
-    for (const row of signups) {
-        const point = points.get(row.b);
-        if (point) point.signups = row.n;
-    }
-    return [...points.values()];
 }
 
 export interface ModeVariantRow {
@@ -104,63 +47,10 @@ export interface ModeVariantRow {
     exhaustedRate: number;
 }
 
-async function getModeVariants(since: Date): Promise<ModeVariantRow[]> {
-    const rows = await query<{
-        game_mode: AnalyticsGameMode;
-        variant: string;
-        games: number;
-        players: number;
-        avg_points: number;
-        avg_streak: number;
-        max_streak: number;
-        avg_pp: number;
-        avg_rounds: number | null;
-        rounds: number;
-        correct: number;
-        skips: number;
-        timeouts: number;
-        quits: number;
-        fails: number;
-        exhausted: number;
-    }>(
-        `SELECT game_mode, variant, COUNT(*) AS games, COUNT(DISTINCT user_id) AS players,
-            AVG(points) AS avg_points, AVG(streak) AS avg_streak, MAX(streak) AS max_streak, AVG(pp) AS avg_pp,
-            AVG(NULLIF(rounds_played, 0)) AS avg_rounds,
-            SUM(rounds_played) AS rounds, SUM(IF(rounds_played > 0, correct_count, 0)) AS correct,
-            SUM(skip_count) AS skips, SUM(timeout_count) AS timeouts,
-            SUM(end_reason = 'quit') AS quits, SUM(end_reason = 'failed') AS fails, SUM(end_reason = 'content_exhausted') AS exhausted
-         FROM games WHERE ended_at >= ?
-         GROUP BY game_mode, variant ORDER BY games DESC`,
-        [since],
-    );
-
-    return rows.map((row) => ({
-        gameMode: row.game_mode,
-        variant: row.variant,
-        games: row.games,
-        players: row.players,
-        avgPoints: row.avg_points,
-        avgStreak: row.avg_streak,
-        maxStreak: row.max_streak,
-        avgPp: row.avg_pp,
-        avgRounds: row.avg_rounds,
-        accuracy: ratio(row.correct, row.rounds),
-        skipRate: ratio(row.skips, row.rounds),
-        timeoutRate: ratio(row.timeouts, row.rounds),
-        quitRate: row.quits / row.games,
-        failRate: row.fails / row.games,
-        exhaustedRate: row.exhausted / row.games,
-    }));
-}
-
 export interface HeatmapCell {
     weekday: number;
     hour: number;
     games: number;
-}
-
-function getActivityHeatmap(since: Date): Promise<HeatmapCell[]> {
-    return query<HeatmapCell>("SELECT WEEKDAY(ended_at) AS weekday, HOUR(ended_at) AS hour, COUNT(*) AS games FROM games WHERE ended_at >= ? GROUP BY weekday, hour", [since]);
 }
 
 export interface RunTypeRow {
@@ -168,14 +58,6 @@ export interface RunTypeRow {
     ranked: boolean;
     games: number;
     players: number;
-}
-
-async function getRunTypes(since: Date): Promise<RunTypeRow[]> {
-    const rows = await query<{ run_type: string; ranked: number; games: number; players: number }>(
-        "SELECT run_type, ranked, COUNT(*) AS games, COUNT(DISTINCT user_id) AS players FROM games WHERE ended_at >= ? GROUP BY run_type, ranked ORDER BY games DESC",
-        [since],
-    );
-    return rows.map((row) => ({ runType: row.run_type, ranked: Boolean(row.ranked), games: row.games, players: row.players }));
 }
 
 export interface VersionRow {
@@ -191,44 +73,6 @@ export interface VersionRow {
     quitRate: number;
 }
 
-async function getVersions(since: Date): Promise<VersionRow[]> {
-    const rows = await query<{
-        game_mode: AnalyticsGameMode;
-        variant: string;
-        ruleset_version: number;
-        pp_version: number;
-        games: number;
-        first_played: Date;
-        avg_pp: number;
-        avg_streak: number;
-        rounds: number;
-        correct: number;
-        quits: number;
-    }>(
-        `SELECT game_mode, variant, ruleset_version, pp_version, COUNT(*) AS games, MIN(ended_at) AS first_played,
-            AVG(pp) AS avg_pp, AVG(streak) AS avg_streak,
-            SUM(rounds_played) AS rounds, SUM(IF(rounds_played > 0, correct_count, 0)) AS correct, SUM(end_reason = 'quit') AS quits
-         FROM games WHERE ended_at >= ?
-         GROUP BY game_mode, variant, ruleset_version, pp_version
-         ORDER BY game_mode, variant, ruleset_version, pp_version`,
-        [since],
-    );
-    return rows.map((row) => ({
-        gameMode: row.game_mode,
-        variant: row.variant,
-        rulesetVersion: row.ruleset_version,
-        ppVersion: row.pp_version,
-        games: row.games,
-        firstPlayed: row.first_played,
-        avgPp: row.avg_pp,
-        avgStreak: row.avg_streak,
-        accuracy: ratio(row.correct, row.rounds),
-        quitRate: row.quits / row.games,
-    }));
-}
-
-// Runs
-
 export interface Bin {
     label: string;
     count: number;
@@ -239,59 +83,6 @@ export interface GroupedBins {
     bins: Bin[];
 }
 
-function groupBins<T extends { grp: string; bin: number; n: number }>(rows: T[], labels: string[]): GroupedBins[] {
-    const groups = new Map<string, number[]>();
-    for (const row of rows) {
-        const counts = groups.get(row.grp) ?? labels.map(() => 0);
-        counts[row.bin] = row.n;
-        groups.set(row.grp, counts);
-    }
-    return [...groups.entries()].map(([group, counts]) => ({ group, bins: labels.map((label, index) => ({ label, count: counts[index] })) }));
-}
-
-const STREAK_BIN_LABELS = ["0", "1–4", "5–9", "10–19", "20–49", "50–99", "100+"];
-const STREAK_BIN_SQL = (column: string) =>
-    `CASE WHEN ${column} = 0 THEN 0 WHEN ${column} < 5 THEN 1 WHEN ${column} < 10 THEN 2 WHEN ${column} < 20 THEN 3 WHEN ${column} < 50 THEN 4 WHEN ${column} < 100 THEN 5 ELSE 6 END`;
-
-async function getStreakDistribution(since: Date): Promise<GroupedBins[]> {
-    const rows = await query<{ grp: string; bin: number; n: number }>(
-        `SELECT variant AS grp, ${STREAK_BIN_SQL("streak")} AS bin, COUNT(*) AS n FROM games
-         WHERE ended_at >= ? AND variant IN ('survival', 'death') GROUP BY grp, bin`,
-        [since],
-    );
-    return groupBins(rows, STREAK_BIN_LABELS);
-}
-
-const ROUNDS_BIN_LABELS = ["1", "2–4", "5–9", "10–19", "20–29", "30–49", "50+"];
-
-async function getRunLengthByEndReason(since: Date): Promise<GroupedBins[]> {
-    const rows = await query<{ grp: string; bin: number; n: number }>(
-        `SELECT end_reason AS grp,
-            CASE WHEN rounds_played = 1 THEN 0 WHEN rounds_played < 5 THEN 1 WHEN rounds_played < 10 THEN 2 WHEN rounds_played < 20 THEN 3
-                 WHEN rounds_played < 30 THEN 4 WHEN rounds_played < 50 THEN 5 ELSE 6 END AS bin,
-            COUNT(*) AS n
-         FROM games WHERE ended_at >= ? AND rounds_played > 0 GROUP BY grp, bin`,
-        [since],
-    );
-    return groupBins(rows, ROUNDS_BIN_LABELS);
-}
-
-const DURATION_BIN_LABELS = ["< 1 min", "1–2 min", "2–5 min", "5–10 min", "10–20 min", "20–40 min", "40+ min"];
-
-async function getSessionLengths(since: Date): Promise<Bin[]> {
-    const rows = await query<{ grp: string; bin: number; n: number }>(
-        `SELECT 'all' AS grp,
-            CASE WHEN s < 60 THEN 0 WHEN s < 120 THEN 1 WHEN s < 300 THEN 2 WHEN s < 600 THEN 3 WHEN s < 1200 THEN 4 WHEN s < 2400 THEN 5 ELSE 6 END AS bin,
-            COUNT(*) AS n
-         FROM (SELECT TIMESTAMPDIFF(SECOND, started_at, ended_at) AS s FROM games WHERE ended_at >= ? AND ended_at > started_at) t
-         GROUP BY bin`,
-        [since],
-    );
-    return groupBins(rows, DURATION_BIN_LABELS)[0]?.bins ?? DURATION_BIN_LABELS.map((label) => ({ label, count: 0 }));
-}
-
-// Rounds
-
 export interface RoundCurvePoint {
     label: string;
     rounds: number;
@@ -299,47 +90,6 @@ export interface RoundCurvePoint {
     avgResponseMs: number | null;
     skipRate: number | null;
     timeoutRate: number | null;
-}
-
-type RoundAggregate = { bin: number; n: number; correct: number; avg_ms: number | null; skips: number; timeouts: number };
-
-const ROUND_AGGREGATES = `COUNT(*) AS n, SUM(r.correct) AS correct, AVG(r.response_time_ms) AS avg_ms,
-    SUM(r.result_type = 'skip') AS skips, SUM(r.result_type = 'timeout') AS timeouts`;
-
-function toCurve(rows: RoundAggregate[], labels: string[]): RoundCurvePoint[] {
-    const byBin = new Map(rows.map((row) => [row.bin, row]));
-    return labels.map((label, index) => {
-        const row = byBin.get(index);
-        return {
-            label,
-            rounds: row?.n ?? 0,
-            accuracy: row ? ratio(row.correct, row.n) : null,
-            avgResponseMs: row?.avg_ms ?? null,
-            skipRate: row ? ratio(row.skips, row.n) : null,
-            timeoutRate: row ? ratio(row.timeouts, row.n) : null,
-        };
-    });
-}
-
-const MAX_ROUND_NUMBER = 30;
-
-async function getFatigueCurve(since: Date): Promise<RoundCurvePoint[]> {
-    const rows = await query<RoundAggregate>(
-        `SELECT LEAST(r.round_number, ${MAX_ROUND_NUMBER + 1}) - 1 AS bin, ${ROUND_AGGREGATES}
-         FROM game_rounds r JOIN games g ON g.id = r.game_id WHERE g.ended_at >= ? GROUP BY bin`,
-        [since],
-    );
-    const labels = Array.from({ length: MAX_ROUND_NUMBER + 1 }, (_, index) => (index === MAX_ROUND_NUMBER ? `${MAX_ROUND_NUMBER + 1}+` : String(index + 1)));
-    return toCurve(rows, labels);
-}
-
-async function getPressureCurve(since: Date): Promise<RoundCurvePoint[]> {
-    const rows = await query<RoundAggregate>(
-        `SELECT ${STREAK_BIN_SQL("r.streak_before")} AS bin, ${ROUND_AGGREGATES}
-         FROM game_rounds r JOIN games g ON g.id = r.game_id WHERE g.ended_at >= ? GROUP BY bin`,
-        [since],
-    );
-    return toCurve(rows, STREAK_BIN_LABELS);
 }
 
 export interface ResultMixRow {
@@ -350,37 +100,11 @@ export interface ResultMixRow {
     timedOut: number;
 }
 
-async function getResultMix(since: Date): Promise<ResultMixRow[]> {
-    const rows = await query<{ game_mode: AnalyticsGameMode; correct: number; wrong: number; skipped: number; timed_out: number }>(
-        `SELECT g.game_mode, SUM(r.correct) AS correct, SUM(r.result_type = 'guess' AND NOT r.correct) AS wrong,
-            SUM(r.result_type = 'skip') AS skipped, SUM(r.result_type = 'timeout') AS timed_out
-         FROM game_rounds r JOIN games g ON g.id = r.game_id WHERE g.ended_at >= ? GROUP BY g.game_mode`,
-        [since],
-    );
-    return rows.map((row) => ({ gameMode: row.game_mode, correct: row.correct, wrong: row.wrong, skipped: row.skipped, timedOut: row.timed_out }));
-}
-
 export interface TimerUsageBin {
     label: string;
     correct: number;
     wrong: number;
     skipped: number;
-}
-
-async function getTimerUsage(since: Date): Promise<TimerUsageBin[]> {
-    const rows = await query<{ bin: number; correct: number; wrong: number; skipped: number }>(
-        `SELECT FLOOR(LEAST(r.response_time_ms / r.time_limit_ms, 0.999) * 10) AS bin,
-            SUM(r.correct) AS correct, SUM(r.result_type = 'guess' AND NOT r.correct) AS wrong, SUM(r.result_type = 'skip') AS skipped
-         FROM game_rounds r JOIN games g ON g.id = r.game_id
-         WHERE g.ended_at >= ? AND r.time_limit_ms > 0 AND r.result_type <> 'timeout'
-         GROUP BY bin`,
-        [since],
-    );
-    const byBin = new Map(rows.map((row) => [row.bin, row]));
-    return Array.from({ length: 10 }, (_, index) => {
-        const row = byBin.get(index);
-        return { label: `${index * 10}–${index * 10 + 10}%`, correct: row?.correct ?? 0, wrong: row?.wrong ?? 0, skipped: row?.skipped ?? 0 };
-    });
 }
 
 export interface CalibrationBin {
@@ -390,20 +114,6 @@ export interface CalibrationBin {
     accuracy: number | null;
     avgResponseMs: number | null;
 }
-
-async function getDifficultyCalibration(since: Date): Promise<CalibrationBin[]> {
-    const rows = await query<{ min_d: number; max_d: number; n: number; correct: number; avg_ms: number }>(
-        `SELECT MIN(d) AS min_d, MAX(d) AS max_d, COUNT(*) AS n, SUM(correct) AS correct, AVG(response_time_ms) AS avg_ms
-         FROM (SELECT r.difficulty_snapshot AS d, r.correct, r.response_time_ms, NTILE(10) OVER (ORDER BY r.difficulty_snapshot) AS tile
-               FROM game_rounds r JOIN games g ON g.id = r.game_id
-               WHERE g.ended_at >= ? AND r.difficulty_snapshot IS NOT NULL AND r.item_type <> 'score_pair') t
-         GROUP BY tile ORDER BY tile`,
-        [since],
-    );
-    return rows.map((row) => ({ minDifficulty: row.min_d, maxDifficulty: row.max_d, rounds: row.n, accuracy: ratio(row.correct, row.n), avgResponseMs: row.avg_ms }));
-}
-
-// Content
 
 export interface ItemStat {
     gameMode: AnalyticsGameMode;
@@ -417,43 +127,6 @@ export interface ItemStat {
     avgResponseMs: number;
     avgSkipMs: number | null;
     difficulty: number | null;
-}
-
-async function getItemStats(since: Date): Promise<ItemStat[]> {
-    const rows = await query<{
-        game_mode: AnalyticsGameMode;
-        item_type: string;
-        item_id: number;
-        answer: string;
-        n: number;
-        correct: number;
-        skips: number;
-        timeouts: number;
-        avg_ms: number;
-        avg_skip_ms: number | null;
-        difficulty: number | null;
-    }>(
-        `SELECT g.game_mode, r.item_type, r.item_id, MAX(r.answer_snapshot) AS answer, COUNT(*) AS n, SUM(r.correct) AS correct,
-            SUM(r.result_type = 'skip') AS skips, SUM(r.result_type = 'timeout') AS timeouts, AVG(r.response_time_ms) AS avg_ms,
-            AVG(IF(r.result_type = 'skip', r.response_time_ms, NULL)) AS avg_skip_ms, AVG(r.difficulty_snapshot) AS difficulty
-         FROM game_rounds r JOIN games g ON g.id = r.game_id
-         WHERE g.ended_at >= ? AND r.item_type <> 'score_pair'
-         GROUP BY g.game_mode, r.item_type, r.item_id HAVING n >= ?`,
-        [since, MIN_ITEM_APPEARANCES],
-    );
-    return rows.map((row) => ({
-        gameMode: row.game_mode,
-        itemType: row.item_type,
-        itemId: row.item_id,
-        answer: row.answer,
-        appearances: row.n,
-        accuracy: row.correct / row.n,
-        skipRate: row.skips / row.n,
-        timeoutRate: row.timeouts / row.n,
-        avgResponseMs: row.avg_ms,
-        avgSkipMs: row.avg_skip_ms,
-        difficulty: row.difficulty,
-    }));
 }
 
 export interface WrongGuess {
@@ -474,58 +147,10 @@ export interface WrongGuessSummary {
     common: WrongGuess[];
 }
 
-async function getWrongGuesses(since: Date): Promise<WrongGuessSummary> {
-    const rows = await query<{ game_mode: AnalyticsGameMode; item_type: string; item_id: number; answer: string; guess: string; artist: string | null; n: number }>(
-        `SELECT g.game_mode, r.item_type, r.item_id, r.answer_snapshot AS answer, LOWER(TRIM(r.submitted_guess)) AS guess,
-            JSON_VALUE(r.content_snapshot, '$.artist') AS artist, COUNT(*) AS n
-         FROM game_rounds r JOIN games g ON g.id = r.game_id
-         WHERE g.ended_at >= ? AND r.result_type = 'guess' AND NOT r.correct AND r.item_type <> 'score_pair' AND TRIM(r.submitted_guess) <> ''
-         GROUP BY g.game_mode, r.item_type, r.item_id, answer, guess, artist
-         ORDER BY n DESC LIMIT 5000`,
-        [since],
-    );
-
-    const guesses: WrongGuess[] = rows.map((row) => ({
-        gameMode: row.game_mode,
-        itemType: row.item_type,
-        itemId: row.item_id,
-        answer: row.answer,
-        guess: row.guess,
-        count: row.n,
-        kind: classifyWrongGuess(row.guess, row.answer, row.artist),
-    }));
-
-    const byKind: Record<WrongGuessKind, number> = { near_miss: 0, artist: 0, other: 0 };
-    for (const guess of guesses) byKind[guess.kind] += guess.count;
-
-    return {
-        total: byKind.near_miss + byKind.artist + byKind.other,
-        byKind,
-        nearMisses: guesses.filter((guess) => guess.kind === "near_miss").slice(0, 25),
-        artistConfusions: guesses.filter((guess) => guess.kind === "artist").slice(0, 15),
-        common: guesses.filter((guess) => guess.kind === "other").slice(0, 25),
-    };
-}
-
 export interface CoverageRow {
     gameMode: AnalyticsGameMode;
     shown: number;
     pool: number;
-}
-
-async function getCoverage(since: Date): Promise<CoverageRow[]> {
-    const [shown, [pools]] = await Promise.all([
-        query<{ game_mode: AnalyticsGameMode; shown: number }>(
-            "SELECT g.game_mode, COUNT(DISTINCT r.item_id) AS shown FROM game_rounds r JOIN games g ON g.id = r.game_id WHERE g.ended_at >= ? GROUP BY g.game_mode",
-            [since],
-        ),
-        query<{ mapsets: number; skins: number; pairs: number }>(
-            "SELECT (SELECT COUNT(*) FROM mapset_data) AS mapsets, (SELECT COUNT(*) FROM skins) AS skins, (SELECT COUNT(*) FROM score_pp_pairs WHERE active) AS pairs",
-        ),
-    ]);
-    const shownByMode = new Map(shown.map((row) => [row.game_mode, row.shown]));
-    const poolByMode: Record<AnalyticsGameMode, number> = { background: pools.mapsets, audio: pools.mapsets, skin: pools.skins, score_pp: pools.pairs };
-    return GAME_MODES.map((gameMode) => ({ gameMode, shown: shownByMode.get(gameMode) ?? 0, pool: poolByMode[gameMode] }));
 }
 
 export interface EraRow {
@@ -535,17 +160,6 @@ export interface EraRow {
     skipRate: number;
 }
 
-async function getAccuracyByRankedYear(since: Date): Promise<EraRow[]> {
-    const rows = await query<{ year: number; n: number; correct: number; skips: number }>(
-        `SELECT YEAR(JSON_VALUE(r.content_snapshot, '$.rankedAt')) AS year, COUNT(*) AS n, SUM(r.correct) AS correct, SUM(r.result_type = 'skip') AS skips
-         FROM game_rounds r JOIN games g ON g.id = r.game_id
-         WHERE g.ended_at >= ? AND r.item_type = 'mapset' AND JSON_VALUE(r.content_snapshot, '$.rankedAt') IS NOT NULL
-         GROUP BY year HAVING year IS NOT NULL ORDER BY year`,
-        [since],
-    );
-    return rows.map((row) => ({ year: row.year, rounds: row.n, accuracy: row.correct / row.n, skipRate: row.skips / row.n }));
-}
-
 export interface ScorePpSourceRow {
     source: string;
     rounds: number;
@@ -553,72 +167,16 @@ export interface ScorePpSourceRow {
     avgResponseMs: number;
 }
 
-async function getScorePpSources(since: Date): Promise<ScorePpSourceRow[]> {
-    const rows = await query<{ source: string; n: number; correct: number; avg_ms: number }>(
-        `SELECT p.source, COUNT(*) AS n, SUM(r.correct) AS correct, AVG(r.response_time_ms) AS avg_ms
-         FROM game_rounds r JOIN games g ON g.id = r.game_id JOIN score_pp_pairs p ON p.id = r.item_id
-         WHERE g.ended_at >= ? AND r.item_type = 'score_pair' GROUP BY p.source ORDER BY n DESC`,
-        [since],
-    );
-    return rows.map((row) => ({ source: row.source, rounds: row.n, accuracy: row.correct / row.n, avgResponseMs: row.avg_ms }));
-}
-
 export interface ReportSummary {
     byType: Array<{ reportType: string; open: number; closed: number }>;
     topMapsets: Array<{ mapsetId: number; title: string | null; reports: number; open: number }>;
 }
-
-async function getReports(since: Date): Promise<ReportSummary> {
-    const [byType, topMapsets] = await Promise.all([
-        query<{ report_type: string; open: number; closed: number }>(
-            `SELECT report_type, SUM(status IN ('pending', 'investigating')) AS open, SUM(status IN ('resolved', 'rejected')) AS closed
-             FROM reports WHERE created_at >= ? GROUP BY report_type ORDER BY open DESC`,
-            [since],
-        ),
-        query<{ mapset_id: number; title: string | null; reports: number; open: number }>(
-            `SELECT r.mapset_id, MAX(m.title) AS title, COUNT(*) AS reports, SUM(r.status IN ('pending', 'investigating')) AS open
-             FROM reports r LEFT JOIN mapset_data m ON m.mapset_id = r.mapset_id
-             WHERE r.created_at >= ? GROUP BY r.mapset_id ORDER BY reports DESC LIMIT 10`,
-            [since],
-        ),
-    ]);
-    return {
-        byType: byType.map((row) => ({ reportType: row.report_type, open: row.open, closed: row.closed })),
-        topMapsets: topMapsets.map((row) => ({ mapsetId: row.mapset_id, title: row.title, reports: row.reports, open: row.open })),
-    };
-}
-
-// Players
 
 export interface CohortRow {
     cohort: string;
     users: number;
     played: number;
     retention: Array<{ days: number; returned: number; eligible: number }>;
-}
-
-export const RETENTION_DAYS = [1, 7, 30] as const;
-
-async function getCohorts(since: Date): Promise<CohortRow[]> {
-    const retentionSql = RETENTION_DAYS.map(
-        (days) => `SUM(u.created_at <= NOW() - INTERVAL ${days} DAY) AS eligible_${days},
-            SUM(u.created_at <= NOW() - INTERVAL ${days} DAY AND EXISTS (SELECT 1 FROM games g WHERE g.user_id = u.bancho_id AND g.ended_at >= u.created_at + INTERVAL ${days} DAY)) AS returned_${days}`,
-    ).join(",\n");
-
-    const rows = await query<Record<string, number> & { cohort: string; users: number; played: number }>(
-        `SELECT ${bucketSql("u.created_at", "week")} AS cohort, COUNT(*) AS users,
-            SUM(EXISTS (SELECT 1 FROM games g WHERE g.user_id = u.bancho_id)) AS played,
-            ${retentionSql}
-         FROM users u WHERE u.created_at >= ?
-         GROUP BY cohort ORDER BY cohort DESC LIMIT 16`,
-        [since],
-    );
-    return rows.map((row) => ({
-        cohort: row.cohort,
-        users: row.users,
-        played: row.played,
-        retention: RETENTION_DAYS.map((days) => ({ days, returned: row[`returned_${days}`], eligible: row[`eligible_${days}`] })),
-    }));
 }
 
 export interface FirstModeRow {
@@ -629,69 +187,10 @@ export interface FirstModeRow {
     avgGames: number;
 }
 
-async function getFirstModeRetention(since: Date): Promise<FirstModeRow[]> {
-    const rows = await query<{ game_mode: AnalyticsGameMode; players: number; eligible: number; returned: number; avg_games: number }>(
-        `SELECT f.game_mode, COUNT(*) AS players,
-            SUM(f.ended_at <= NOW() - INTERVAL 7 DAY) AS eligible,
-            SUM(f.ended_at <= NOW() - INTERVAL 7 DAY AND EXISTS (SELECT 1 FROM games g WHERE g.user_id = f.user_id AND g.ended_at >= f.ended_at + INTERVAL 7 DAY)) AS returned,
-            AVG((SELECT COUNT(*) FROM games g WHERE g.user_id = f.user_id)) AS avg_games
-         FROM games f JOIN (SELECT user_id, MIN(id) AS id FROM games GROUP BY user_id) firsts ON firsts.id = f.id
-         WHERE f.ended_at >= ?
-         GROUP BY f.game_mode ORDER BY players DESC`,
-        [since],
-    );
-    return rows.map((row) => ({ gameMode: row.game_mode, players: row.players, eligible: row.eligible, returned: row.returned, avgGames: row.avg_games }));
-}
-
 export interface PlayerActivity {
     gamesPerPlayer: Bin[];
     topShare: Array<{ label: string; share: number }>;
     topPlayers: Array<{ userId: number; username: string | null; games: number; modes: number; accuracy: number | null; bestStreak: number }>;
-}
-
-const GAMES_PER_PLAYER_BINS: Array<{ label: string; max: number }> = [
-    { label: "1", max: 1 },
-    { label: "2–5", max: 5 },
-    { label: "6–20", max: 20 },
-    { label: "21–100", max: 100 },
-    { label: "101–500", max: 500 },
-    { label: "500+", max: Infinity },
-];
-
-async function getPlayerActivity(since: Date): Promise<PlayerActivity> {
-    const [counts, topPlayers] = await Promise.all([
-        query<{ n: number }>("SELECT COUNT(*) AS n FROM games WHERE ended_at >= ? GROUP BY user_id ORDER BY n DESC", [since]),
-        query<{ user_id: number; username: string | null; games: number; modes: number; rounds: number; correct: number; best_streak: number }>(
-            `SELECT g.user_id, MAX(u.username) AS username, COUNT(*) AS games, COUNT(DISTINCT g.game_mode) AS modes,
-                SUM(g.rounds_played) AS rounds, SUM(IF(g.rounds_played > 0, g.correct_count, 0)) AS correct, MAX(g.streak) AS best_streak
-             FROM games g LEFT JOIN users u ON u.bancho_id = g.user_id
-             WHERE g.ended_at >= ? GROUP BY g.user_id ORDER BY games DESC LIMIT 15`,
-            [since],
-        ),
-    ]);
-
-    const gamesPerPlayer = GAMES_PER_PLAYER_BINS.map(({ label }) => ({ label, count: 0 }));
-    for (const { n } of counts) gamesPerPlayer[GAMES_PER_PLAYER_BINS.findIndex((bin) => n <= bin.max)].count++;
-
-    const totalGames = counts.reduce((sum, { n }) => sum + n, 0);
-    const topShare = [0.01, 0.1, 0.5].map((fraction) => {
-        const players = Math.max(1, Math.ceil(counts.length * fraction));
-        const games = counts.slice(0, players).reduce((sum, { n }) => sum + n, 0);
-        return { label: `Top ${fraction * 100}%`, share: totalGames > 0 ? games / totalGames : 0 };
-    });
-
-    return {
-        gamesPerPlayer,
-        topShare,
-        topPlayers: topPlayers.map((row) => ({
-            userId: row.user_id,
-            username: row.username,
-            games: row.games,
-            modes: row.modes,
-            accuracy: ratio(row.correct, row.rounds),
-            bestStreak: row.best_streak,
-        })),
-    };
 }
 
 export interface ModeTransition {
@@ -700,38 +199,12 @@ export interface ModeTransition {
     count: number;
 }
 
-async function getModeTransitions(since: Date): Promise<ModeTransition[]> {
-    const rows = await query<{ from_mode: AnalyticsGameMode; to_mode: AnalyticsGameMode; n: number }>(
-        `SELECT prev_mode AS from_mode, game_mode AS to_mode, COUNT(*) AS n
-         FROM (SELECT game_mode, LAG(game_mode) OVER (PARTITION BY user_id ORDER BY ended_at, id) AS prev_mode FROM games WHERE ended_at >= ?) t
-         WHERE prev_mode IS NOT NULL GROUP BY from_mode, to_mode`,
-        [since],
-    );
-    return rows.map((row) => ({ from: row.from_mode, to: row.to_mode, count: row.n }));
-}
-
 export interface ProgressionRow {
     gameMode: AnalyticsGameMode;
     label: string;
     games: number;
     accuracy: number | null;
 }
-
-export const PROGRESSION_LABELS = ["1st", "2–5", "6–10", "11–25", "26–50", "51–100", "101+"];
-
-/** Accuracy by how many games of that mode the player had played, across all of history. */
-async function getSkillProgression(): Promise<ProgressionRow[]> {
-    const rows = await query<{ game_mode: AnalyticsGameMode; bin: number; n: number; rounds: number; correct: number }>(
-        `SELECT game_mode,
-            CASE WHEN k = 1 THEN 0 WHEN k <= 5 THEN 1 WHEN k <= 10 THEN 2 WHEN k <= 25 THEN 3 WHEN k <= 50 THEN 4 WHEN k <= 100 THEN 5 ELSE 6 END AS bin,
-            COUNT(*) AS n, SUM(rounds_played) AS rounds, SUM(correct_count) AS correct
-         FROM (SELECT game_mode, rounds_played, correct_count, ROW_NUMBER() OVER (PARTITION BY user_id, game_mode ORDER BY ended_at, id) AS k FROM games) t
-         WHERE rounds_played > 0 GROUP BY game_mode, bin`,
-    );
-    return rows.map((row) => ({ gameMode: row.game_mode, label: PROGRESSION_LABELS[row.bin], games: row.n, accuracy: ratio(row.correct, row.rounds) }));
-}
-
-// Challenges & multiplayer
 
 export interface ChallengeRow {
     id: string;
@@ -747,43 +220,6 @@ export interface ChallengeRow {
     avgPoints: number | null;
 }
 
-async function getChallenges(since: Date): Promise<ChallengeRow[]> {
-    const rows = await query<{
-        id: string;
-        challenge_type: string;
-        daily_date: Date | null;
-        game_mode: AnalyticsGameMode;
-        variant: string;
-        created_at: Date;
-        plays: number;
-        players: number;
-        other_players: number;
-        completed: number;
-        avg_points: number | null;
-    }>(
-        `SELECT c.id, c.challenge_type, c.daily_date, c.game_mode, c.variant, c.created_at,
-            COUNT(g.id) AS plays, COUNT(DISTINCT g.user_id) AS players,
-            COUNT(DISTINCT IF(g.user_id <> c.creator_user_id, g.user_id, NULL)) AS other_players,
-            COALESCE(SUM(g.end_reason = 'completed'), 0) AS completed, AVG(g.points) AS avg_points
-         FROM game_challenges c LEFT JOIN games g ON g.challenge_id = c.id
-         WHERE c.created_at >= ? GROUP BY c.id ORDER BY c.created_at DESC LIMIT 40`,
-        [since],
-    );
-    return rows.map((row) => ({
-        id: row.id,
-        challengeType: row.challenge_type,
-        dailyDate: row.daily_date,
-        gameMode: row.game_mode,
-        variant: row.variant,
-        createdAt: row.created_at,
-        plays: row.plays,
-        players: row.players,
-        otherPlayers: row.other_players,
-        completed: row.completed,
-        avgPoints: row.avg_points,
-    }));
-}
-
 export interface MultiplayerSummary {
     matches: number;
     games: number;
@@ -795,101 +231,589 @@ export interface MultiplayerSummary {
     trackedSince: Date | null;
 }
 
-async function getMultiplayer(since: Date, totalGames: number): Promise<MultiplayerSummary> {
-    const [matches, [first]] = await Promise.all([
-        query<{ match_id: string; game_mode: AnalyticsGameMode; players: number; quits: number }>(
-            `SELECT match_id, MAX(game_mode) AS game_mode, COUNT(DISTINCT user_id) AS players, SUM(end_reason = 'quit') AS quits
-             FROM (SELECT JSON_VALUE(config_snapshot, '$.multiplayer.matchId') AS match_id, game_mode, user_id, end_reason
-                   FROM games WHERE ended_at >= ? AND config_snapshot IS NOT NULL) t
-             WHERE match_id IS NOT NULL GROUP BY match_id`,
-            [since],
-        ),
-        query<{ first: Date | null }>("SELECT MIN(ended_at) AS first FROM games WHERE JSON_VALUE(config_snapshot, '$.multiplayer.matchId') IS NOT NULL"),
-    ]);
+export const RETENTION_DAYS = [1, 7, 30] as const;
+export const PROGRESSION_LABELS = ["1st", "2–5", "6–10", "11–25", "26–50", "51–100", "101+"];
 
-    const games = matches.reduce((sum, match) => sum + match.players, 0);
-    const quits = matches.reduce((sum, match) => sum + match.quits, 0);
-    const playersPerMatch = ["1", "2", "3", "4", "5–8", "9+"].map((label) => ({ label, count: 0 }));
-    const byMode = new Map<AnalyticsGameMode, { matches: number; players: number }>();
-    for (const match of matches) {
-        playersPerMatch[match.players <= 4 ? match.players - 1 : match.players <= 8 ? 4 : 5].count++;
-        const mode = byMode.get(match.game_mode) ?? { matches: 0, players: 0 };
-        mode.matches++;
-        mode.players += match.players;
-        byMode.set(match.game_mode, mode);
-    }
+function ratio(part: number, whole: number): number | null {
+    return whole > 0 ? part / whole : null;
+}
 
+function getGroup<K, V>(groups: Map<K, V>, key: K, create: () => V): V {
+    const existing = groups.get(key);
+    if (existing !== undefined) return existing;
+    const group = create();
+    groups.set(key, group);
+    return group;
+}
+
+function bins(labels: string[]): Bin[] {
+    return labels.map((label) => ({ label, count: 0 }));
+}
+
+function binIndex(value: number, thresholds: number[]): number {
+    const index = thresholds.findIndex((threshold) => value < threshold);
+    return index < 0 ? thresholds.length : index;
+}
+
+const STREAK_BIN_LABELS = ["0", "1–4", "5–9", "10–19", "20–49", "50–99", "100+"];
+const STREAK_THRESHOLDS = [1, 5, 10, 20, 50, 100];
+const ROUNDS_BIN_LABELS = ["1", "2–4", "5–9", "10–19", "20–29", "30–49", "50+"];
+const DURATION_BIN_LABELS = ["< 1 min", "1–2 min", "2–5 min", "5–10 min", "10–20 min", "20–40 min", "40+ min"];
+
+const gameSelect = {
+    id: true, userId: true, gameMode: true, variant: true, runType: true, ranked: true,
+    rulesetVersion: true, ppVersion: true, points: true, streak: true, pp: true, roundsPlayed: true,
+    correctCount: true, skipCount: true, timeoutCount: true, startedAt: true, endedAt: true,
+    endReason: true, configSnapshot: true,
+} satisfies Prisma.GameSelect;
+type AnalyticsGame = Prisma.GameGetPayload<{ select: typeof gameSelect }>;
+
+function jsonProperty(value: Prisma.JsonValue, key: string): Prisma.JsonValue {
+    return value !== null && typeof value === "object" && !Array.isArray(value) ? (value[key] ?? null) : null;
+}
+
+function gameTotals() {
     return {
-        matches: matches.length,
-        games,
-        shareOfGames: ratio(games, totalGames),
-        avgPlayers: ratio(games, matches.length),
-        quitRate: ratio(quits, games),
-        playersPerMatch,
-        byMode: [...byMode.entries()].map(([gameMode, mode]) => ({ gameMode, matches: mode.matches, avgPlayers: mode.players / mode.matches })),
-        trackedSince: first?.first ?? null,
+        games: 0, players: new Set<number>(), points: 0, streak: 0, maxStreak: 0, pp: 0, played: 0,
+        rounds: 0, correct: 0, skips: 0, timeouts: 0, quits: 0, fails: 0, exhausted: 0, duration: 0, timed: 0,
     };
 }
 
-// Entry point
+function addGame(totals: ReturnType<typeof gameTotals>, game: AnalyticsGame, duration: number) {
+    totals.games++;
+    totals.players.add(game.userId);
+    totals.points += game.points;
+    totals.streak += game.streak;
+    totals.maxStreak = Math.max(totals.maxStreak, game.streak);
+    totals.pp += Number(game.pp);
+    totals.quits += Number(game.endReason === "quit");
+    totals.fails += Number(game.endReason === "failed");
+    totals.exhausted += Number(game.endReason === "content_exhausted");
+    totals.skips += game.skipCount;
+    totals.timeouts += game.timeoutCount;
+    if (game.roundsPlayed > 0) {
+        totals.played++;
+        totals.rounds += game.roundsPlayed;
+        totals.correct += game.correctCount;
+    }
+    if (duration > 0) {
+        totals.duration += Math.floor(duration / 1000);
+        totals.timed++;
+    }
+}
+
+function toKpis(totals: ReturnType<typeof gameTotals>, newUsers: number): Kpis {
+    return {
+        games: totals.games, players: totals.players.size, newUsers, rounds: totals.rounds,
+        accuracy: ratio(totals.correct, totals.rounds), avgDurationSeconds: ratio(totals.duration, totals.timed),
+        quitRate: ratio(totals.quits, totals.games),
+    };
+}
+
+async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, now: Date) {
+    const until = new Date(now.getTime() + DAY_MS);
+    const current = gameTotals();
+    const previous = gameTotals();
+    const days = new Map(listBuckets(since, now, bucket).map((day) => [day, {
+        bucket: day, games: { background: 0, audio: 0, skin: 0, score_pp: 0 }, players: new Set<number>(), signups: 0,
+    }]));
+    const modes = new Map<string, { gameMode: AnalyticsGameMode; variant: string; totals: ReturnType<typeof gameTotals> }>();
+    const runGroups = new Map<string, { runType: string; ranked: boolean; games: number; players: Set<number> }>();
+    const versionGroups = new Map<string, Pick<VersionRow, "gameMode" | "variant" | "rulesetVersion" | "ppVersion" | "firstPlayed"> & { totals: ReturnType<typeof gameTotals> }>();
+    const heatmap = new Map<number, HeatmapCell>();
+    const streakGroups = new Map<string, Bin[]>();
+    const lengthGroups = new Map<string, Bin[]>();
+    const sessionLengths = bins(DURATION_BIN_LABELS);
+    const history = new Map<number, { first: { id: bigint; gameMode: AnalyticsGameMode; endedAt: Date }; last: Date; games: number; modeCounts: Record<AnalyticsGameMode, number> }>();
+    const activityGroups = new Map<number, { games: number; modes: Set<AnalyticsGameMode>; rounds: number; correct: number; bestStreak: number; lastMode: AnalyticsGameMode | null }>();
+    const transitions = new Map<string, ModeTransition>();
+    const progressionGroups = new Map<string, { gameMode: AnalyticsGameMode; index: number; games: number; rounds: number; correct: number }>();
+    const matches = new Map<string, { gameMode: AnalyticsGameMode; players: Set<number>; quits: number }>();
+    let trackedSince: Date | null = null;
+
+    let cursor: bigint | undefined;
+    while (true) {
+        const page = await prisma.game.findMany({
+            select: gameSelect,
+            orderBy: [{ endedAt: "asc" }, { id: "asc" }],
+            take: PAGE_SIZE,
+            ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
+        });
+        for (const game of page) {
+            const { id, userId, gameMode, variant, runType, ranked, rulesetVersion, ppVersion, endedAt, endReason, roundsPlayed, correctCount } = game;
+            const player = getGroup(history, userId, () => ({
+                first: { id, gameMode, endedAt }, last: endedAt, games: 0, modeCounts: { background: 0, audio: 0, skin: 0, score_pp: 0 },
+            }));
+            if (id < player.first.id) player.first = { id, gameMode, endedAt };
+            player.last = endedAt;
+            player.games++;
+            const gameNumber = ++player.modeCounts[gameMode];
+            if (roundsPlayed > 0) {
+                const index = binIndex(gameNumber, [2, 6, 11, 26, 51, 101]);
+                const group = getGroup(progressionGroups, `${gameMode}:${index}`, () => ({ gameMode, index, games: 0, rounds: 0, correct: 0 }));
+                group.games++;
+                group.rounds += roundsPlayed;
+                group.correct += correctCount;
+            }
+
+            const matchId = jsonProperty(jsonProperty(game.configSnapshot, "multiplayer"), "matchId");
+            if (typeof matchId === "string") trackedSince ??= endedAt;
+            const duration = endedAt.getTime() - game.startedAt.getTime();
+            if (endedAt < since) {
+                if (previousSince && endedAt >= previousSince) addGame(previous, game, duration);
+                continue;
+            }
+
+            if (endedAt < until) addGame(current, game, duration);
+            const day = days.get(bucketKey(endedAt, bucket));
+            if (day) {
+                day.games[gameMode]++;
+                day.players.add(userId);
+            }
+            const mode = getGroup(modes, `${gameMode}:${variant}`, () => ({ gameMode, variant, totals: gameTotals() }));
+            addGame(mode.totals, game, duration);
+            const version = getGroup(versionGroups, `${gameMode}:${variant}:${rulesetVersion}:${ppVersion}`, () => ({
+                gameMode, variant, rulesetVersion, ppVersion, firstPlayed: endedAt, totals: gameTotals(),
+            }));
+            addGame(version.totals, game, duration);
+            const run = getGroup(runGroups, `${runType}:${ranked}`, () => ({ runType, ranked, games: 0, players: new Set<number>() }));
+            run.games++;
+            run.players.add(userId);
+            const weekday = (endedAt.getUTCDay() + 6) % 7;
+            const hour = endedAt.getUTCHours();
+            getGroup(heatmap, weekday * 24 + hour, () => ({ weekday, hour, games: 0 })).games++;
+            if (variant !== "classic") {
+                getGroup(streakGroups, variant, () => bins(STREAK_BIN_LABELS))[binIndex(game.streak, STREAK_THRESHOLDS)].count++;
+            }
+            if (roundsPlayed > 0) {
+                getGroup(lengthGroups, endReason, () => bins(ROUNDS_BIN_LABELS))[binIndex(roundsPlayed, [2, 5, 10, 20, 30, 50])].count++;
+            }
+            if (duration > 0) sessionLengths[binIndex(duration / 1000, [60, 120, 300, 600, 1200, 2400])].count++;
+
+            const activity = getGroup(activityGroups, userId, () => ({
+                games: 0, modes: new Set<AnalyticsGameMode>(), rounds: 0, correct: 0, bestStreak: 0, lastMode: null as AnalyticsGameMode | null,
+            }));
+            if (activity.lastMode !== null) {
+                const from = activity.lastMode;
+                getGroup(transitions, `${from}:${gameMode}`, () => ({ from, to: gameMode, count: 0 })).count++;
+            }
+            activity.games++;
+            activity.modes.add(gameMode);
+            activity.rounds += roundsPlayed;
+            if (roundsPlayed > 0) activity.correct += correctCount;
+            activity.bestStreak = Math.max(activity.bestStreak, game.streak);
+            activity.lastMode = gameMode;
+
+            if (typeof matchId === "string") {
+                const match = getGroup(matches, matchId, () => ({ gameMode, players: new Set<number>(), quits: 0 }));
+                if (gameMode > match.gameMode) match.gameMode = gameMode;
+                match.players.add(userId);
+                match.quits += Number(endReason === "quit");
+            }
+        }
+        if (page.length < PAGE_SIZE) break;
+        cursor = page[page.length - 1].id;
+    }
+
+    const cohorts = new Map<string, CohortRow>();
+    let newUsers = 0;
+    let previousNewUsers = 0;
+    let userCursor: number | undefined;
+    while (true) {
+        const page = await prisma.user.findMany({
+            where: { createdAt: { gte: previousSince ?? since }, ...(userCursor === undefined ? {} : { banchoId: { gt: userCursor } }) },
+            select: { banchoId: true, createdAt: true },
+            orderBy: { banchoId: "asc" },
+            take: PAGE_SIZE,
+        });
+        for (const { banchoId, createdAt } of page) {
+            if (createdAt < since) {
+                previousNewUsers++;
+                continue;
+            }
+            if (createdAt < until) newUsers++;
+            const day = days.get(bucketKey(createdAt, bucket));
+            if (day) day.signups++;
+            const cohort = bucketKey(createdAt, "week");
+            const group = getGroup(cohorts, cohort, () => ({
+                cohort, users: 0, played: 0, retention: RETENTION_DAYS.map((days) => ({ days, returned: 0, eligible: 0 })),
+            }));
+            const player = history.get(banchoId);
+            group.users++;
+            if (player) group.played++;
+            for (const retention of group.retention) {
+                const returnAt = createdAt.getTime() + retention.days * DAY_MS;
+                if (returnAt > now.getTime()) continue;
+                retention.eligible++;
+                if (player && player.last.getTime() >= returnAt) retention.returned++;
+            }
+        }
+        if (page.length < PAGE_SIZE) break;
+        userCursor = page[page.length - 1].banchoId;
+    }
+
+    const firstModes = new Map<AnalyticsGameMode, FirstModeRow>();
+    for (const { first, last, games } of history.values()) {
+        if (first.endedAt < since) continue;
+        const group = getGroup(firstModes, first.gameMode, () => ({ gameMode: first.gameMode, players: 0, returned: 0, eligible: 0, avgGames: 0 }));
+        group.players++;
+        group.avgGames += games;
+        const returnAt = first.endedAt.getTime() + 7 * DAY_MS;
+        if (returnAt <= now.getTime()) {
+            group.eligible++;
+            if (last.getTime() >= returnAt) group.returned++;
+        }
+    }
+
+    return {
+        overview: {
+            kpis: toKpis(current, newUsers),
+            previousKpis: previousSince ? toKpis(previous, previousNewUsers) : null,
+            timeline: [...days.values()].map(({ players, ...day }): TimelinePoint => ({ ...day, players: players.size })),
+            modeVariants: [...modes.values()].map(({ gameMode, variant, totals: t }): ModeVariantRow => ({
+                gameMode, variant, games: t.games, players: t.players.size, avgPoints: t.points / t.games, avgStreak: t.streak / t.games,
+                maxStreak: t.maxStreak, avgPp: t.pp / t.games, avgRounds: ratio(t.rounds, t.played), accuracy: ratio(t.correct, t.rounds),
+                skipRate: ratio(t.skips, t.rounds), timeoutRate: ratio(t.timeouts, t.rounds), quitRate: t.quits / t.games,
+                failRate: t.fails / t.games, exhaustedRate: t.exhausted / t.games,
+            })).sort((a, b) => b.games - a.games),
+            heatmap: [...heatmap.values()],
+            runTypes: [...runGroups.values()].map(({ players, ...run }): RunTypeRow => ({ ...run, players: players.size })).sort((a, b) => b.games - a.games),
+            versions: [...versionGroups.values()].map(({ totals: t, ...version }): VersionRow => ({
+                ...version, games: t.games, avgPp: t.pp / t.games, avgStreak: t.streak / t.games,
+                accuracy: ratio(t.correct, t.rounds), quitRate: t.quits / t.games,
+            })).sort((a, b) => GAME_MODES.indexOf(a.gameMode) - GAME_MODES.indexOf(b.gameMode)
+                || a.variant.localeCompare(b.variant) || a.rulesetVersion - b.rulesetVersion || a.ppVersion - b.ppVersion),
+        },
+        runs: {
+            streaks: [...streakGroups].map(([group, bins]): GroupedBins => ({ group, bins })),
+            runLengths: [...lengthGroups].map(([group, bins]): GroupedBins => ({ group, bins })),
+            sessionLengths,
+        },
+        players: {
+            cohorts: [...cohorts.values()].sort((a, b) => b.cohort.localeCompare(a.cohort)).slice(0, 16),
+            firstModes: [...firstModes.values()].map((group) => ({ ...group, avgGames: group.avgGames / group.players })).sort((a, b) => b.players - a.players),
+            activity: await summarizeActivity(activityGroups),
+            transitions: [...transitions.values()],
+            progression: [...progressionGroups.values()].map(({ gameMode, index, games, rounds, correct }): ProgressionRow => ({
+                gameMode, label: PROGRESSION_LABELS[index], games, accuracy: ratio(correct, rounds),
+            })),
+        },
+        multiplayer: summarizeMultiplayer(matches, current.games, trackedSince),
+    };
+}
+
+async function summarizeActivity(groups: Map<number, {
+    games: number; modes: Set<AnalyticsGameMode>; rounds: number; correct: number; bestStreak: number;
+}>): Promise<PlayerActivity> {
+    const ranking = [...groups].sort((a, b) => b[1].games - a[1].games);
+    const gamesPerPlayer = bins(["1", "2–5", "6–20", "21–100", "101–500", "500+"]);
+    let totalGames = 0;
+    for (const [, activity] of ranking) {
+        totalGames += activity.games;
+        gamesPerPlayer[binIndex(activity.games, [2, 6, 21, 101, 501])].count++;
+    }
+    const topShare = [0.01, 0.1, 0.5].map((fraction) => {
+        const players = Math.max(1, Math.ceil(ranking.length * fraction));
+        const games = ranking.slice(0, players).reduce((sum, [, activity]) => sum + activity.games, 0);
+        return { label: `Top ${fraction * 100}%`, share: ratio(games, totalGames) ?? 0 };
+    });
+    const leaders = ranking.slice(0, 15);
+    const users = await prisma.user.findMany({ where: { banchoId: { in: leaders.map(([id]) => id) } }, select: { banchoId: true, username: true } });
+    const names = new Map(users.map(({ banchoId, username }) => [banchoId, username]));
+    return {
+        gamesPerPlayer, topShare,
+        topPlayers: leaders.map(([userId, player]) => ({
+            userId, username: names.get(userId) ?? null, games: player.games, modes: player.modes.size,
+            accuracy: ratio(player.correct, player.rounds), bestStreak: player.bestStreak,
+        })),
+    };
+}
+
+function summarizeMultiplayer(
+    matches: Map<string, { gameMode: AnalyticsGameMode; players: Set<number>; quits: number }>,
+    totalGames: number,
+    trackedSince: Date | null,
+): MultiplayerSummary {
+    let games = 0;
+    let quits = 0;
+    const playersPerMatch = bins(["1", "2", "3", "4", "5–8", "9+"]);
+    const byMode = new Map<AnalyticsGameMode, { matches: number; players: number }>();
+    for (const { gameMode, players, quits: matchQuits } of matches.values()) {
+        games += players.size;
+        quits += matchQuits;
+        playersPerMatch[binIndex(players.size, [2, 3, 4, 5, 9])].count++;
+        const mode = getGroup(byMode, gameMode, () => ({ matches: 0, players: 0 }));
+        mode.matches++;
+        mode.players += players.size;
+    }
+    return {
+        matches: matches.size, games, shareOfGames: ratio(games, totalGames), avgPlayers: ratio(games, matches.size),
+        quitRate: ratio(quits, games), playersPerMatch, trackedSince,
+        byMode: [...byMode].map(([gameMode, { matches, players }]) => ({ gameMode, matches, avgPlayers: players / matches })),
+    };
+}
+
+function roundTotals() {
+    return { rounds: 0, correct: 0, wrong: 0, skipped: 0, timedOut: 0, response: 0, skipResponse: 0 };
+}
+
+function addRound(totals: ReturnType<typeof roundTotals>, round: { correct: boolean; resultType: string; responseTimeMs: number }) {
+    totals.rounds++;
+    totals.correct += Number(round.correct);
+    totals.wrong += Number(round.resultType === "guess" && !round.correct);
+    totals.timedOut += Number(round.resultType === "timeout");
+    totals.response += round.responseTimeMs;
+    if (round.resultType === "skip") {
+        totals.skipped++;
+        totals.skipResponse += round.responseTimeMs;
+    }
+}
+
+function toCurve(totals: ReturnType<typeof roundTotals>[], labels: string[]): RoundCurvePoint[] {
+    return totals.map((row, index) => ({
+        label: labels[index], rounds: row.rounds, accuracy: ratio(row.correct, row.rounds),
+        avgResponseMs: ratio(row.response, row.rounds), skipRate: ratio(row.skipped, row.rounds),
+        timeoutRate: ratio(row.timedOut, row.rounds),
+    }));
+}
+
+function difficultyCalibration(samples: Array<{ difficulty: number; correct: boolean; response: number }>): CalibrationBin[] {
+    samples.sort((a, b) => a.difficulty - b.difficulty);
+    const baseSize = Math.floor(samples.length / 10);
+    const extra = samples.length % 10;
+    const result: CalibrationBin[] = [];
+    let start = 0;
+    for (let index = 0; index < Math.min(10, samples.length); index++) {
+        const size = baseSize + Number(index < extra);
+        const end = start + size;
+        let correct = 0;
+        let response = 0;
+        for (let position = start; position < end; position++) {
+            correct += Number(samples[position].correct);
+            response += samples[position].response;
+        }
+        result.push({
+            minDifficulty: samples[start].difficulty, maxDifficulty: samples[end - 1].difficulty, rounds: size,
+            accuracy: correct / size, avgResponseMs: response / size,
+        });
+        start = end;
+    }
+    return result;
+}
+
+const textOrder = new Intl.Collator("und", { sensitivity: "base" });
+
+async function summarizeRounds(since: Date) {
+    const fatigueLabels = Array.from({ length: 31 }, (_, index) => index === 30 ? "31+" : String(index + 1));
+    const fatigue = fatigueLabels.map(roundTotals);
+    const pressure = STREAK_BIN_LABELS.map(roundTotals);
+    const results = new Map<AnalyticsGameMode, ReturnType<typeof roundTotals>>();
+    const timer = Array.from({ length: 10 }, roundTotals);
+    const samples: Array<{ difficulty: number; correct: boolean; response: number }> = [];
+    const items = new Map<string, {
+        gameMode: AnalyticsGameMode; itemType: string; itemId: number; answer: string;
+        totals: ReturnType<typeof roundTotals>; difficulty: number; measured: number;
+    }>();
+    const misses = new Map<string, Omit<WrongGuess, "kind"> & { artist: string | null }>();
+    const shown = new Map<AnalyticsGameMode, Set<number>>();
+    const byYear = new Map<number, ReturnType<typeof roundTotals>>();
+    const byPair = new Map<number, { rounds: number; correct: number; response: number }>();
+
+    let after: bigint | undefined;
+    while (true) {
+        const page = await prisma.gameRound.findMany({
+            where: { game: { endedAt: { gte: since } }, ...(after === undefined ? {} : { id: { gt: after } }) },
+            select: {
+                id: true, roundNumber: true, streakBefore: true, resultType: true, itemType: true, itemId: true,
+                correct: true, responseTimeMs: true, timeLimitMs: true, difficultySnapshot: true,
+                answerSnapshot: true, submittedGuess: true, contentSnapshot: true, game: { select: { gameMode: true } },
+            },
+            orderBy: { id: "asc" },
+            take: PAGE_SIZE,
+        });
+        for (const round of page) {
+            const { game: { gameMode }, itemType, itemId, answerSnapshot: answer, resultType, correct, responseTimeMs, timeLimitMs } = round;
+            if (round.roundNumber > 0) addRound(fatigue[Math.min(round.roundNumber, 31) - 1], round);
+            addRound(pressure[binIndex(round.streakBefore, STREAK_THRESHOLDS)], round);
+            addRound(getGroup(results, gameMode, roundTotals), round);
+            if (timeLimitMs && resultType !== "timeout") addRound(timer[Math.min(Math.floor(10 * responseTimeMs / timeLimitMs), 9)], round);
+            getGroup(shown, gameMode, () => new Set<number>()).add(itemId);
+
+            if (itemType === "score_pair") {
+                const pair = getGroup(byPair, itemId, () => ({ rounds: 0, correct: 0, response: 0 }));
+                pair.rounds++;
+                pair.correct += Number(correct);
+                pair.response += responseTimeMs;
+                continue;
+            }
+            const item = getGroup(items, `${gameMode}:${itemType}:${itemId}`, () => ({
+                gameMode, itemType, itemId, answer, totals: roundTotals(), difficulty: 0, measured: 0,
+            }));
+            addRound(item.totals, round);
+            if (textOrder.compare(answer, item.answer) > 0) item.answer = answer;
+            if (round.difficultySnapshot !== null) {
+                const difficulty = Number(round.difficultySnapshot);
+                item.difficulty += difficulty;
+                item.measured++;
+                samples.push({ difficulty, correct, response: responseTimeMs });
+            }
+            const guess = round.submittedGuess?.replace(/^ +| +$/g, "").toLowerCase();
+            if (resultType === "guess" && !correct && guess) {
+                const artist = jsonProperty(round.contentSnapshot, "artist");
+                const key = JSON.stringify([gameMode, itemType, itemId, answer, guess, artist]);
+                getGroup(misses, key, () => ({ gameMode, itemType, itemId, answer, guess, artist: typeof artist === "string" ? artist : null, count: 0 })).count++;
+            }
+            if (itemType === "mapset") {
+                const rankedAt = jsonProperty(round.contentSnapshot, "rankedAt");
+                if (typeof rankedAt === "string") {
+                    const year = new Date(rankedAt).getUTCFullYear();
+                    if (Number.isFinite(year)) addRound(getGroup(byYear, year, roundTotals), round);
+                }
+            }
+        }
+        if (page.length < PAGE_SIZE) break;
+        after = page[page.length - 1].id;
+    }
+
+    const [mapsets, skins, pairs, scorePpSources] = await Promise.all([
+        prisma.mapsetData.count(),
+        prisma.skin.count(),
+        prisma.scorePpPair.count({ where: { active: true } }),
+        summarizeScorePpSources(byPair),
+    ]);
+    const pools = { background: mapsets, audio: mapsets, skin: skins, score_pp: pairs };
+    const coverage: CoverageRow[] = GAME_MODES.map((gameMode) => ({ gameMode, shown: shown.get(gameMode)?.size ?? 0, pool: pools[gameMode] }));
+    const guesses: WrongGuess[] = [...misses.values()].sort((a, b) => b.count - a.count).slice(0, 5000).map(({ artist, ...row }) => ({
+        ...row, kind: classifyWrongGuess(row.guess, row.answer, artist),
+    }));
+    const byKind: Record<WrongGuessKind, number> = { near_miss: 0, artist: 0, other: 0 };
+    for (const guess of guesses) byKind[guess.kind] += guess.count;
+    const wrongGuesses: WrongGuessSummary = {
+        total: byKind.near_miss + byKind.artist + byKind.other, byKind,
+        nearMisses: guesses.filter(({ kind }) => kind === "near_miss").slice(0, 25),
+        artistConfusions: guesses.filter(({ kind }) => kind === "artist").slice(0, 15),
+        common: guesses.filter(({ kind }) => kind === "other").slice(0, 25),
+    };
+
+    return {
+        rounds: {
+            fatigue: toCurve(fatigue, fatigueLabels),
+            pressure: toCurve(pressure, STREAK_BIN_LABELS),
+            resultMix: [...results].map(([gameMode, { correct, wrong, skipped, timedOut }]): ResultMixRow => ({ gameMode, correct, wrong, skipped, timedOut })),
+            timerUsage: timer.map(({ correct, wrong, skipped }, index): TimerUsageBin => ({ label: `${index * 10}–${index * 10 + 10}%`, correct, wrong, skipped })),
+            calibration: difficultyCalibration(samples),
+        },
+        content: {
+            items: [...items.values()].filter(({ totals }) => totals.rounds >= MIN_ITEM_APPEARANCES).map(({ gameMode, itemType, itemId, answer, totals: t, difficulty, measured }): ItemStat => ({
+                gameMode, itemType, itemId, answer, appearances: t.rounds, accuracy: t.correct / t.rounds,
+                skipRate: t.skipped / t.rounds, timeoutRate: t.timedOut / t.rounds, avgResponseMs: t.response / t.rounds,
+                avgSkipMs: ratio(t.skipResponse, t.skipped), difficulty: ratio(difficulty, measured),
+            })),
+            wrongGuesses, coverage, scorePpSources,
+            eras: [...byYear].sort(([a], [b]) => a - b).map(([year, t]): EraRow => ({
+                year, rounds: t.rounds, accuracy: t.correct / t.rounds, skipRate: t.skipped / t.rounds,
+            })),
+        },
+    };
+}
+
+async function summarizeScorePpSources(byPair: Map<number, { rounds: number; correct: number; response: number }>): Promise<ScorePpSourceRow[]> {
+    const ids = [...byPair.keys()];
+    const sources = new Map<string, { rounds: number; correct: number; response: number }>();
+    for (let start = 0; start < ids.length; start += PAGE_SIZE) {
+        const pairs = await prisma.scorePpPair.findMany({ where: { id: { in: ids.slice(start, start + PAGE_SIZE) } }, select: { id: true, source: true } });
+        for (const { id, source } of pairs) {
+            const pair = byPair.get(id)!;
+            const total = getGroup(sources, source, () => ({ rounds: 0, correct: 0, response: 0 }));
+            total.rounds += pair.rounds;
+            total.correct += pair.correct;
+            total.response += pair.response;
+        }
+    }
+    return [...sources].map(([source, { rounds, correct, response }]) => ({
+        source, rounds, accuracy: correct / rounds, avgResponseMs: response / rounds,
+    })).sort((a, b) => b.rounds - a.rounds);
+}
+
+async function getReports(since: Date): Promise<ReportSummary> {
+    const createdAt = { gte: since };
+    const [types, leaders] = await Promise.all([
+        prisma.report.groupBy({ by: ["reportType", "status"], where: { createdAt }, _count: { _all: true } }),
+        prisma.report.groupBy({
+            by: ["mapsetId"], where: { createdAt }, _count: { _all: true },
+            orderBy: { _count: { mapsetId: "desc" } }, take: 10,
+        }),
+    ]);
+    const byType = new Map<string, ReportSummary["byType"][number]>();
+    for (const { reportType, status, _count } of types) {
+        const group = getGroup(byType, reportType, () => ({ reportType, open: 0, closed: 0 }));
+        if (status === "pending" || status === "investigating") group.open += _count._all;
+        else group.closed += _count._all;
+    }
+
+    const mapsetId = { in: leaders.map((row) => row.mapsetId) };
+    const [mapsets, open] = await Promise.all([
+        prisma.mapsetData.findMany({ where: { mapsetId }, select: { mapsetId: true, title: true } }),
+        prisma.report.groupBy({
+            by: ["mapsetId"], where: { mapsetId, createdAt, status: { in: ["pending", "investigating"] } }, _count: { _all: true },
+        }),
+    ]);
+    const names = new Map(mapsets.map((mapset) => [mapset.mapsetId, mapset.title]));
+    const openCounts = new Map(open.map((row) => [row.mapsetId, row._count._all]));
+    return {
+        byType: [...byType.values()].sort((a, b) => b.open - a.open),
+        topMapsets: leaders.map((row) => ({
+            mapsetId: row.mapsetId, title: names.get(row.mapsetId) ?? null, reports: row._count._all, open: openCounts.get(row.mapsetId) ?? 0,
+        })),
+    };
+}
+
+async function getChallenges(since: Date): Promise<ChallengeRow[]> {
+    const challenges = await prisma.gameChallenge.findMany({
+        where: { createdAt: { gte: since } }, orderBy: { createdAt: "desc" }, take: 40,
+        select: { id: true, challengeType: true, dailyDate: true, gameMode: true, variant: true, createdAt: true, creatorUserId: true },
+    });
+    const games = await prisma.game.groupBy({
+        by: ["challengeId", "userId", "endReason"], where: { challengeId: { in: challenges.map(({ id }) => id) } },
+        _count: { _all: true }, _sum: { points: true },
+    });
+    const groups = new Map<string, { players: Set<number>; plays: number; points: number; completed: number }>();
+    for (const { challengeId, userId, endReason, _count, _sum } of games) {
+        if (challengeId === null) continue;
+        const row = getGroup(groups, challengeId, () => ({ players: new Set<number>(), plays: 0, points: 0, completed: 0 }));
+        row.players.add(userId);
+        row.plays += _count._all;
+        row.points += _sum.points ?? 0;
+        if (endReason === "completed") row.completed += _count._all;
+    }
+    return challenges.map(({ creatorUserId, ...challenge }) => {
+        const group = groups.get(challenge.id);
+        const players = group?.players.size ?? 0;
+        return {
+            ...challenge, plays: group?.plays ?? 0, players,
+            otherPlayers: creatorUserId === null ? 0 : players - Number(group?.players.has(creatorUserId) ?? false),
+            completed: group?.completed ?? 0, avgPoints: group ? ratio(group.points, group.plays) : null,
+        };
+    });
+}
 
 export async function getAnalytics(range: AnalyticsRange) {
     const now = new Date();
-    const [earliest] = await query<{ first: Date | null }>("SELECT MIN(ended_at) AS first FROM games");
-    const resolved = resolveRange(range, now, earliest?.first ?? null);
-    const { since, previousSince } = resolved;
-    const until = new Date(now.getTime() + DAY_MS);
-
-    const [kpis, previousKpis, timeline, modeVariants, heatmap, runTypes, versions] = await Promise.all([
-        getKpis(since, until),
-        previousSince ? getKpis(previousSince, since) : null,
-        getTimeline(resolved, now),
-        getModeVariants(since),
-        getActivityHeatmap(since),
-        getRunTypes(since),
-        getVersions(since),
+    const earliest = await prisma.game.findFirst({ orderBy: { endedAt: "asc" }, select: { endedAt: true } });
+    const resolved = resolveRange(range, now, earliest?.endedAt ?? null);
+    const [gameData, roundData, reports, challenges] = await Promise.all([
+        summarizeGames(resolved, now),
+        summarizeRounds(resolved.since),
+        getReports(resolved.since),
+        getChallenges(resolved.since),
     ]);
-
-    const [streaks, runLengths, sessionLengths, fatigue, pressure, resultMix, timerUsage, calibration] = await Promise.all([
-        getStreakDistribution(since),
-        getRunLengthByEndReason(since),
-        getSessionLengths(since),
-        getFatigueCurve(since),
-        getPressureCurve(since),
-        getResultMix(since),
-        getTimerUsage(since),
-        getDifficultyCalibration(since),
-    ]);
-
-    const [items, wrongGuesses, coverage, eras, scorePpSources, reports] = await Promise.all([
-        getItemStats(since),
-        getWrongGuesses(since),
-        getCoverage(since),
-        getAccuracyByRankedYear(since),
-        getScorePpSources(since),
-        getReports(since),
-    ]);
-
-    const [cohorts, firstModes, activity, transitions, progression, challenges, multiplayer] = await Promise.all([
-        getCohorts(since),
-        getFirstModeRetention(since),
-        getPlayerActivity(since),
-        getModeTransitions(since),
-        getSkillProgression(),
-        getChallenges(since),
-        getMultiplayer(since, kpis.games),
-    ]);
-
     return {
         range: resolved,
         generatedAt: now,
-        overview: { kpis, previousKpis, timeline, modeVariants, heatmap, runTypes, versions },
-        runs: { streaks, runLengths, sessionLengths },
-        rounds: { fatigue, pressure, resultMix, timerUsage, calibration },
-        content: { items, wrongGuesses, coverage, eras, scorePpSources, reports },
-        players: { cohorts, firstModes, activity, transitions, progression },
+        ...gameData,
+        rounds: roundData.rounds,
+        content: { ...roundData.content, reports },
         challenges,
-        multiplayer,
     };
 }
 

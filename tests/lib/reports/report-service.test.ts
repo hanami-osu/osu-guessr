@@ -10,20 +10,20 @@ const validReport = {
     description: "The audio belongs to another mapset.",
 } as const;
 
+const findMapset = async () => ({ title: "Title", artist: "Artist" });
+
 describe("createReportRecord", () => {
     test("stores a report without attempting delivery when no webhook is configured", async () => {
-        const queries: string[] = [];
+        const saveReport = mock(async () => {});
         const fetchImpl = mock(async () => new Response(null, { status: 204 }));
 
         await createReportRecord(validReport, {
-            query: async (sql) => {
-                queries.push(sql);
-                return sql.startsWith("SELECT") ? [{ title: "Title", artist: "Artist" }] : [];
-            },
+            findMapset,
+            saveReport,
             fetchImpl,
         });
 
-        expect(queries.some((sql) => sql.includes("INSERT INTO reports"))).toBe(true);
+        expect(saveReport).toHaveBeenCalledWith(validReport);
         expect(fetchImpl).not.toHaveBeenCalled();
     });
 
@@ -33,11 +33,8 @@ describe("createReportRecord", () => {
         const webhookUrl = "https://discord.example/private-webhook";
 
         await createReportRecord(validReport, {
-            query: async (sql) => {
-                if (sql.startsWith("SELECT")) return [{ title: "Title", artist: "Artist" }];
-                stored = true;
-                return [];
-            },
+            findMapset,
+            saveReport: async () => { stored = true; },
             webhookUrl,
             fetchImpl: async () => {
                 expect(stored).toBe(true);
@@ -57,11 +54,8 @@ describe("createReportRecord", () => {
         const loggedErrors: string[] = [];
 
         await createReportRecord(validReport, {
-            query: async (sql) => {
-                if (sql.startsWith("SELECT")) return [{ title: "Title", artist: "Artist" }];
-                stored = true;
-                return [];
-            },
+            findMapset,
+            saveReport: async () => { stored = true; },
             webhookUrl: "https://discord.example/private-webhook",
             webhookTimeoutMs: 5,
             fetchImpl: async (_input, init) => {
@@ -78,26 +72,24 @@ describe("createReportRecord", () => {
     });
 
     test("returns a controlled error when the mapset does not exist", async () => {
-        let inserted = false;
+        const saveReport = mock(async () => {});
 
         await expect(
             createReportRecord(validReport, {
-                query: async (sql) => {
-                    if (sql.includes("INSERT INTO reports")) inserted = true;
-                    return [];
-                },
+                findMapset: async () => null,
+                saveReport,
             }),
         ).rejects.toBeInstanceOf(ReportMapsetNotFoundError);
 
-        expect(inserted).toBe(false);
+        expect(saveReport).not.toHaveBeenCalled();
     });
 
-    test("rejects an invalid report type before querying", async () => {
-        const query = mock(async () => []);
+    test("rejects an invalid report type before looking up a mapset", async () => {
+        const findMapset = mock(async () => null);
 
-        await expect(createReportRecord({ ...validReport, reportType: "not-a-report-type" }, { query })).rejects.toBeInstanceOf(ZodError);
+        await expect(createReportRecord({ ...validReport, reportType: "not-a-report-type" }, { findMapset, saveReport: async () => {} })).rejects.toBeInstanceOf(ZodError);
 
-        expect(query).not.toHaveBeenCalled();
+        expect(findMapset).not.toHaveBeenCalled();
     });
 });
 

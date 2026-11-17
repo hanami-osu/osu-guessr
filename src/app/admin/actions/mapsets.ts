@@ -1,6 +1,7 @@
 "use server";
 
-import { query, transaction } from "@/lib/database";
+import { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/database/prisma";
 import fs from "fs/promises";
 import fsSync from "fs";
 import path from "path";
@@ -296,48 +297,39 @@ async function extractAudio(mapsetId: number, mapsetDir: string): Promise<string
 }
 
 async function saveMapsetToDatabase(mapsetId: number, beatmapData: BeatmapData, imageFilename: string, audioFilename: string): Promise<void> {
-    await transaction(async (query) => {
-        await query(
-            `INSERT INTO mapset_data (mapset_id, title, artist, mapper, ranked_at, star_rating_min, star_rating_max)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE
-               title = VALUES(title),
-               artist = VALUES(artist),
-               mapper = VALUES(mapper),
-               ranked_at = VALUES(ranked_at),
-               star_rating_min = VALUES(star_rating_min),
-               star_rating_max = VALUES(star_rating_max)`,
-            [mapsetId, beatmapData.title, beatmapData.artist, beatmapData.creator, beatmapData.rankedAt, beatmapData.starRatingMin, beatmapData.starRatingMax],
-        );
-
-        await query(
-            `INSERT INTO mapset_tags (mapset_id, image_filename, audio_filename)
-             VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE
-               image_filename = VALUES(image_filename),
-               audio_filename = VALUES(audio_filename)`,
-            [mapsetId, imageFilename, audioFilename],
-        );
-    });
+    const metadata = {
+        title: beatmapData.title,
+        artist: beatmapData.artist,
+        mapper: beatmapData.creator,
+        rankedAt: beatmapData.rankedAt,
+        starRatingMin: beatmapData.starRatingMin,
+        starRatingMax: beatmapData.starRatingMax,
+    };
+    const media = { imageFilename, audioFilename };
+    const where = { mapsetId };
+    const save = () => prisma.$transaction([
+        prisma.mapsetData.upsert({ where, create: { mapsetId, ...metadata }, update: metadata }),
+        prisma.mapsetTag.upsert({ where, create: { mapsetId, ...media }, update: media }),
+    ]);
+    try {
+        await save();
+    } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || !["P2002", "P2034"].includes(error.code)) throw error;
+        await save();
+    }
 }
 
 async function mapsetExists(mapsetId: number): Promise<boolean> {
-    const [row] = await query<{ image_filename: string; audio_filename: string }>(
-        `SELECT mt.image_filename, mt.audio_filename
-         FROM mapset_data md
-         JOIN mapset_tags mt ON md.mapset_id = mt.mapset_id
-         WHERE md.mapset_id = ?
-           AND mt.image_filename <> ''
-           AND mt.audio_filename <> ''
-         LIMIT 1`,
-        [mapsetId],
-    );
-    if (!row) return false;
+    const row = await prisma.mapsetTag.findFirst({
+        where: { mapsetId, data: { mapsetId } },
+        select: { imageFilename: true, audioFilename: true },
+    });
+    if (!row?.imageFilename || !row.audioFilename) return false;
 
     try {
         const [image, audio] = await Promise.all([
-            fs.stat(resolveMediaPath(DIRECTORIES.backgrounds, row.image_filename)).catch(() => null),
-            fs.stat(resolveMediaPath(DIRECTORIES.audio, row.audio_filename)).catch(() => null),
+            fs.stat(resolveMediaPath(DIRECTORIES.backgrounds, row.imageFilename)).catch(() => null),
+            fs.stat(resolveMediaPath(DIRECTORIES.audio, row.audioFilename)).catch(() => null),
         ]);
         return Boolean(image?.isFile() && audio?.isFile());
     } catch {
@@ -346,10 +338,10 @@ async function mapsetExists(mapsetId: number): Promise<boolean> {
 }
 
 async function removeMapsetFromDatabase(mapsetId: number): Promise<void> {
-    await transaction(async (execute) => {
-        await execute("DELETE FROM mapset_tags WHERE mapset_id = ?", [mapsetId]);
-        await execute("DELETE FROM mapset_data WHERE mapset_id = ?", [mapsetId]);
-    });
+    await prisma.$transaction([
+        prisma.mapsetTag.deleteMany({ where: { mapsetId } }),
+        prisma.mapsetData.deleteMany({ where: { mapsetId } }),
+    ]);
 }
 
 export async function addMapset(rawMapsetId: number): Promise<AddMapsetResult> {
@@ -462,8 +454,8 @@ export async function removeMapset(rawMapsetId: number): Promise<void> {
     await requireAdmin();
     const mapsetId = z.coerce.number().min(1).parse(rawMapsetId);
     try {
-        const files = (await query("SELECT image_filename, audio_filename FROM mapset_tags WHERE mapset_id = ?", [mapsetId])) as Array<{ image_filename?: string; audio_filename?: string }>;
-        const { image_filename, audio_filename } = files[0] ?? {};
+        const files = await prisma.mapsetTag.findUnique({ where: { mapsetId } });
+        const { imageFilename: image_filename, audioFilename: audio_filename } = files ?? {};
         const imagePath = image_filename ? resolveMediaPath(DIRECTORIES.backgrounds, image_filename) : null;
         const audioPath = audio_filename ? resolveMediaPath(DIRECTORIES.audio, audio_filename) : null;
 
@@ -494,32 +486,21 @@ export async function listMapsets(page = 1, limit = 50, q?: string): Promise<Map
 
         const offset = (args.page - 1) * args.limit;
 
-        let sql = `
-            SELECT
-                md.mapset_id,
-                md.title,
-                md.artist,
-                md.mapper,
-                mt.image_filename,
-                mt.audio_filename
-            FROM mapset_data md
-            JOIN mapset_tags mt ON md.mapset_id = mt.mapset_id
-        `;
-
-        const params: (string | number)[] = [];
-
-        if (args.q && args.q.trim().length > 0) {
-            sql += ` WHERE LOWER(md.artist) LIKE ? OR LOWER(md.title) LIKE ? `;
-            const like = `%${args.q.toLowerCase().trim()}%`;
-            params.push(like, like);
-        }
-
-        sql += ` ORDER BY md.artist DESC LIMIT ? OFFSET ? `;
-        params.push(args.limit, offset);
-
-        const mapsets = await query(sql, params);
-
-        return (mapsets as Mapset[]) || [];
+        const search = args.q?.trim().toLowerCase();
+        const mapsets = await prisma.mapsetData.findMany({
+            where: {
+                tag: { isNot: null },
+                ...(search ? { OR: [{ artist: { contains: search } }, { title: { contains: search } }] } : {}),
+            },
+            select: { mapsetId: true, title: true, artist: true, mapper: true, tag: { select: { imageFilename: true, audioFilename: true } } },
+            orderBy: [{ artist: "desc" }, { mapsetId: "asc" }],
+            take: args.limit,
+            skip: offset,
+        });
+        return mapsets.flatMap(({ mapsetId, title, artist, mapper, tag }) => tag ? [{
+            mapset_id: mapsetId, title: title ?? "", artist: artist ?? "", mapper: mapper ?? "",
+            image_filename: tag.imageFilename ?? "", audio_filename: tag.audioFilename ?? "",
+        }] : []);
     } catch (error) {
         console.error("Error listing mapsets:", error);
         return [];

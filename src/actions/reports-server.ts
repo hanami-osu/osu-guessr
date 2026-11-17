@@ -1,6 +1,6 @@
 "use server";
 
-import { query } from "@/lib/database";
+import { prisma } from "@/lib/database/prisma";
 import { authenticatedAction } from "./server";
 import { ReportType } from "./types";
 import redisClient from "@/lib/infra/redis";
@@ -38,7 +38,8 @@ export async function createReportAction(mapsetId: number, reportType: ReportTyp
         await createReportRecord(
             { ...validated, userId: session.user.banchoId },
             {
-                query: (sql, values) => query(sql, values),
+                findMapset: (mapsetId) => prisma.mapsetData.findUnique({ where: { mapsetId }, select: { title: true, artist: true } }),
+                saveReport: (data) => prisma.report.create({ data }),
                 webhookUrl: env.DISCORD_WEBHOOK,
                 logError: (message) => console.error(message),
             },

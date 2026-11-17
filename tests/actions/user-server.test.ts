@@ -59,7 +59,6 @@ const gameFindManyMock = mock(async (args: { where?: Where }) => {
     return [] as Row[];
 });
 const gameCountMock = mock(async () => 4);
-const queryMock = mock(async () => [] as Row[]);
 
 const dailyAttempts: Row[] = [];
 const dailyGames: Row[] = [];
@@ -85,7 +84,6 @@ const prismaMock = {
 
 mock.module("@/actions/server", () => ({ authenticatedAction: mock() }));
 mock.module("@/lib/database/prisma", () => ({ prisma: prismaMock }));
-mock.module("@/lib/database/database", () => ({ query: queryMock }));
 
 const actions = await import("@/actions/user-server");
 
@@ -118,10 +116,8 @@ describe("users scheduled for deletion", () => {
     });
 
     test("do not count towards a visible user's rank history", async () => {
-        queryMock.mockImplementationOnce(async () => [
-            { user_id: hiddenId, pp: 500 },
-            { user_id: visibleId, pp: 100 },
-        ]);
+        const baseline = [{ userId: hiddenId, pp: 500 }, { userId: visibleId, pp: 100 }];
+        gameFindManyMock.mockImplementationOnce(async ({ where }) => filter(baseline, where?.userId ? { userId: where.userId } : {}));
 
         const history = await actions.getUserRankHistoryAction(visibleId, GameMode.Background, "classic", 3);
 

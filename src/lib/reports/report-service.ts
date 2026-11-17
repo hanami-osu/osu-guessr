@@ -5,11 +5,11 @@ const storedReportSchema = reportSchema.extend({
     userId: z.number().int().positive(),
 });
 
-type QueryFunction = (sql: string, values?: Array<unknown>) => Promise<unknown[]>;
 type FetchFunction = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 interface ReportDependencies {
-    query: QueryFunction;
+    findMapset(mapsetId: number): Promise<{ title: string | null; artist: string | null } | null>;
+    saveReport(data: z.infer<typeof storedReportSchema>): Promise<unknown>;
     webhookUrl?: string;
     fetchImpl?: FetchFunction;
     logError?: (message: string) => void;
@@ -31,18 +31,12 @@ function escapeDiscordMentions(value: string): string {
 
 export async function createReportRecord(input: unknown, dependencies: ReportDependencies): Promise<void> {
     const report = storedReportSchema.parse(input);
-    const [mapset] = (await dependencies.query(`SELECT title, artist FROM mapset_data WHERE mapset_id = ?`, [report.mapsetId])) as [{ title: string; artist: string }?];
-
+    const mapset = await dependencies.findMapset(report.mapsetId);
     if (!mapset) {
         throw new ReportMapsetNotFoundError();
     }
 
-    await dependencies.query(
-        `INSERT INTO reports (
-            user_id, mapset_id, report_type, description
-        ) VALUES (?, ?, ?, ?)`,
-        [report.userId, report.mapsetId, report.reportType, report.description],
-    );
+    await dependencies.saveReport(report);
 
     if (!dependencies.webhookUrl) {
         return;

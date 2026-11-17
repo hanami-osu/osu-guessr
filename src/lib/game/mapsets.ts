@@ -1,4 +1,3 @@
-import { query } from "../database";
 import { env } from "@/lib/infra/env";
 import redisClient from "@/lib/infra/redis";
 import { getMediaData } from "@/actions/media";
@@ -10,11 +9,11 @@ import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "./versioning";
 import { acquireRedisLock, releaseRedisLock } from "@/lib/infra/redis-lock-core";
 import { z } from "zod";
-import { Prisma } from "@/generated/prisma/client";
+import { type MapsetTag, Prisma, type Skin } from "@/generated/prisma/client";
 import { normalizeString as normalizeSongTitle } from "./guess-checker";
 
 export async function getRandomAudio(sessionId?: string) {
-    const audio = await getRandomMapset("audio_filename", sessionId);
+    const audio = await getRandomMapset("audioFilename", sessionId);
     if (!audio) {
         throw new NoGameContentError("No audio found");
     }
@@ -28,13 +27,13 @@ export async function getRandomAudio(sessionId?: string) {
 }
 
 export async function getDailyAudio(day: number, round: number) {
-    const audio = await getDailyMapset("audio_filename", day, GameMode.Audio, round);
+    const audio = await getDailyMapset("audioFilename", day, GameMode.Audio, round);
     if (!audio) throw new NoGameContentError("No daily audio found");
     return { data: audio, challengeId: audio.challengeId, audioData: await getMediaData(GameMode.Audio, audio.audio_filename) };
 }
 
 export async function getRandomBackground(sessionId?: string) {
-    const background = await getRandomMapset("image_filename", sessionId);
+    const background = await getRandomMapset("imageFilename", sessionId);
     if (!background) {
         throw new NoGameContentError("No background found");
     }
@@ -48,7 +47,7 @@ export async function getRandomBackground(sessionId?: string) {
 }
 
 export async function getDailyBackground(day: number, round: number) {
-    const background = await getDailyMapset("image_filename", day, GameMode.Background, round);
+    const background = await getDailyMapset("imageFilename", day, GameMode.Background, round);
     if (!background) throw new NoGameContentError("No daily background found");
     return { data: background, challengeId: background.challengeId, backgroundData: await getMediaData(GameMode.Background, background.image_filename) };
 }
@@ -58,22 +57,21 @@ async function getExcludedIds(sessionId: string | undefined, itemType: "mapset" 
     return (await redisClient.sMembers(`session_items:${sessionId}:${itemType}`)).map(Number).filter(Boolean);
 }
 
-async function getRandomMapset(filenameColumn: "audio_filename" | "image_filename", sessionId?: string): Promise<MapsetDataWithTags | null> {
+async function getRandomMapset(filenameColumn: "audioFilename" | "imageFilename", sessionId?: string): Promise<MapsetDataWithTags | null> {
     const excludedIds = await getExcludedIds(sessionId, "mapset");
-    const [tags] = await query<MapsetTags>(
-        `SELECT * FROM mapset_tags
-         WHERE ${filenameColumn} IS NOT NULL
-           AND ${filenameColumn} <> ''
-           AND mapset_id NOT IN (${excludedIds.length ? excludedIds.map(() => "?").join(",") : "0"})
-         ORDER BY RAND() LIMIT 1`,
-        excludedIds,
-    );
-    if (!tags) return null;
-
-    return getMapsetWithTags(tags);
+    const tags = await prisma.$transaction(async (tx) => {
+        const filter: Prisma.MapsetTagWhereInput = {
+            [filenameColumn]: { not: "" },
+            mapsetId: { notIn: excludedIds.length ? excludedIds : [0] },
+        };
+        const count = await tx.mapsetTag.count({ where: filter });
+        if (!count) return null;
+        return tx.mapsetTag.findFirst({ where: filter, orderBy: { mapsetId: "asc" }, skip: Math.floor(Math.random() * count) });
+    }, { isolationLevel: "RepeatableRead" });
+    return tags ? getMapsetWithTags(toMapsetTags(tags)) : null;
 }
 
-async function getDailyMapset(filenameColumn: "audio_filename" | "image_filename", day: number, gameMode: GameMode, round: number): Promise<(MapsetDataWithTags & { challengeId: string }) | null> {
+async function getDailyMapset(filenameColumn: "audioFilename" | "imageFilename", day: number, gameMode: GameMode, round: number): Promise<(MapsetDataWithTags & { challengeId: string }) | null> {
     const dailyDate = new Date(DAILY_EPOCH_UTC + (day - 1) * 86_400_000);
     let challenge = await prisma.gameChallenge.findUnique({
         where: { dailyDate_gameMode_variant: { dailyDate, gameMode, variant: "classic" } },
@@ -95,17 +93,16 @@ async function getDailyMapset(filenameColumn: "audio_filename" | "image_filename
         where: { challengeId_roundNumber: { challengeId: challenge.id, roundNumber: round } },
     });
     if (!challengeRound || challengeRound.itemType !== "mapset") return null;
-    const [selectedTags] = await query<MapsetTags>(`SELECT * FROM mapset_tags WHERE mapset_id = ? AND ${filenameColumn} IS NOT NULL AND ${filenameColumn} <> ''`, [challengeRound.itemId]);
-    const mapset = selectedTags ? await getMapsetWithTags(selectedTags) : null;
+    const selectedTags = await prisma.mapsetTag.findUnique({ where: { mapsetId: challengeRound.itemId, [filenameColumn]: { not: "" } } });
+    const mapset = selectedTags ? await getMapsetWithTags(toMapsetTags(selectedTags)) : null;
     return mapset ? { ...mapset, title: challengeRound.answerSnapshot, challengeId: challenge.id } : null;
 }
 
-async function createDailyMapChallenge(filenameColumn: "audio_filename" | "image_filename", dailyDate: Date, day: number, gameMode: GameMode, checkRepetition: boolean, manuallySet = false) {
-    const availableTags = await query<MapsetTags>(
-        `SELECT * FROM mapset_tags
-         WHERE ${filenameColumn} IS NOT NULL AND ${filenameColumn} <> ''
-         ORDER BY mapset_id`,
-    );
+async function createDailyMapChallenge(filenameColumn: "audioFilename" | "imageFilename", dailyDate: Date, day: number, gameMode: GameMode, checkRepetition: boolean, manuallySet = false) {
+    const availableTags = (await prisma.mapsetTag.findMany({
+        where: { [filenameColumn]: { not: "" } },
+        orderBy: { mapsetId: "asc" },
+    })).map(toMapsetTags);
     const currentDate = dailyDate.toISOString().slice(0, 10);
     const poolTags = checkRepetition ? await excludeRecentDailyMapsets(availableTags, dailyDate, gameMode) : availableTags;
     const configSnapshot = {
@@ -190,36 +187,38 @@ async function excludeRecentDailyMapsets(availableTags: MapsetTags[], dailyDate:
     if (availableTags.length === 0) return [];
     const pastWeekStart = new Date(dailyDate.getTime() - 7 * 86_400_000);
     const otherMapMode = gameMode === GameMode.Audio ? GameMode.Background : GameMode.Audio;
-    const recentRows = await query<{ item_id: number; title?: string }>(
-        `SELECT DISTINCT used.item_id, data.title FROM (
-            SELECT rounds.item_id
-            FROM game_challenge_rounds AS rounds
-            INNER JOIN game_challenges AS challenges ON challenges.id = rounds.challenge_id
-            WHERE challenges.challenge_type = 'daily'
-              AND rounds.item_type = 'mapset'
-              AND (
-                (challenges.game_mode = ? AND challenges.daily_date >= ? AND challenges.daily_date < ?)
-                OR (challenges.game_mode = ? AND challenges.daily_date = ?)
-              )
-            UNION
-            SELECT rounds.item_id
-            FROM game_rounds AS rounds
-            INNER JOIN games ON games.id = rounds.game_id
-            WHERE games.run_type = 'daily'
-              AND rounds.item_type = 'mapset'
-              AND (
-                (games.game_mode = ? AND games.ended_at >= ? AND games.ended_at < ?)
-                OR (games.game_mode = ? AND games.ended_at >= ? AND games.ended_at < DATE_ADD(?, INTERVAL 1 DAY))
-              )
-        ) AS used LEFT JOIN mapset_data AS data ON data.mapset_id = used.item_id`,
-        [gameMode, pastWeekStart, dailyDate, otherMapMode, dailyDate, gameMode, pastWeekStart, dailyDate, otherMapMode, dailyDate, dailyDate],
-    );
-    const recentIds = new Set(recentRows.map(({ item_id }) => Number(item_id)));
-    const recentTitles = new Set(recentRows.map(row => normalizeSongTitle(row.title ?? "")).filter(Boolean));
-    const metadata = recentTitles.size === 0 ? [] : await query<{ mapset_id: number; title: string }>(
-        `SELECT mapset_id, title FROM mapset_data WHERE mapset_id IN (${availableTags.map(() => "?").join(",")})`, availableTags.map(tag => tag.mapset_id),
-    );
-    const titles = new Map(metadata.map(row => [Number(row.mapset_id), normalizeSongTitle(row.title ?? "")]));
+    const nextDate = new Date(dailyDate.getTime() + 86_400_000);
+    const [scheduled, played] = await Promise.all([
+        prisma.gameChallengeRound.groupBy({
+            by: ["itemId"],
+            where: {
+                itemType: "mapset",
+                challenge: {
+                    challengeType: "daily",
+                    OR: [{ gameMode, dailyDate: { gte: pastWeekStart, lt: dailyDate } }, { gameMode: otherMapMode, dailyDate }],
+                },
+            },
+        }),
+        prisma.gameRound.groupBy({
+            by: ["itemId"],
+            where: {
+                itemType: "mapset",
+                game: {
+                    runType: "daily",
+                    OR: [{ gameMode, endedAt: { gte: pastWeekStart, lt: dailyDate } }, { gameMode: otherMapMode, endedAt: { gte: dailyDate, lt: nextDate } }],
+                },
+            },
+        }),
+    ]);
+    const recentIds = new Set([...scheduled, ...played].map(({ itemId }) => itemId));
+    if (!recentIds.size) return availableTags;
+    const recent = await prisma.mapsetData.findMany({ where: { mapsetId: { in: [...recentIds] } }, select: { title: true } });
+    const recentTitles = new Set(recent.map(({ title }) => normalizeSongTitle(title ?? "")).filter(Boolean));
+    const metadata = recentTitles.size === 0 ? [] : await prisma.mapsetData.findMany({
+        where: { mapsetId: { in: availableTags.map(({ mapset_id }) => mapset_id) } },
+        select: { mapsetId: true, title: true },
+    });
+    const titles = new Map(metadata.map(({ mapsetId, title }) => [mapsetId, normalizeSongTitle(title ?? "")]));
     return availableTags.filter(({ mapset_id }) => !recentIds.has(mapset_id) && !recentTitles.has(titles.get(mapset_id) ?? ""));
 }
 
@@ -235,7 +234,7 @@ export async function createManualDailyChallenge(dailyDate: Date, gameMode: Game
     }
 
     if (gameMode === GameMode.Skin) {
-        const skins = await query<SkinData>(`SELECT * FROM skins WHERE id IN (${itemIds.map(() => "?").join(",")}) AND image_filename IS NOT NULL AND image_filename <> ''`, itemIds);
+        const skins = (await prisma.skin.findMany({ where: { id: { in: itemIds }, imageFilename: { not: "" } } })).map(toSkinData);
         const skinById = new Map(skins.map((skin) => [skin.id, skin]));
         const selected = itemIds.map((id) => skinById.get(id));
         if (selected.some((skin) => !skin)) throw new Error("One or more selected skins are unavailable");
@@ -254,8 +253,10 @@ export async function createManualDailyChallenge(dailyDate: Date, gameMode: Game
         return;
     }
 
-    const filenameColumn = gameMode === GameMode.Audio ? "audio_filename" : "image_filename";
-    const selectedTags = await query<MapsetTags>(`SELECT * FROM mapset_tags WHERE mapset_id IN (${itemIds.map(() => "?").join(",")}) AND ${filenameColumn} IS NOT NULL AND ${filenameColumn} <> ''`, itemIds);
+    const filenameColumn = gameMode === GameMode.Audio ? "audioFilename" : "imageFilename";
+    const selectedTags = (await prisma.mapsetTag.findMany({
+        where: { mapsetId: { in: itemIds }, [filenameColumn]: { not: "" } },
+    })).map(toMapsetTags);
     const tagsById = new Map(selectedTags.map((tags) => [tags.mapset_id, tags]));
     const orderedTags = itemIds.map((id) => tagsById.get(id));
     if (orderedTags.some((tags) => !tags)) throw new Error("One or more selected mapsets are unavailable for this mode");
@@ -318,24 +319,44 @@ async function persistDailyChallenge(
     });
 }
 
+function toMapsetTags(tag: MapsetTag): MapsetTags {
+    return { mapset_id: tag.mapsetId, image_filename: tag.imageFilename ?? "", audio_filename: tag.audioFilename ?? "" };
+}
+
+function toSkinData(skin: Skin): SkinData {
+    return { id: skin.id, name: skin.name, image_filename: skin.imageFilename, created_at: skin.createdAt, updated_at: skin.updatedAt };
+}
+
 async function getMapsetWithTags(tags: MapsetTags): Promise<MapsetDataWithTags | null> {
-    const [storedMapset] = await query<MapsetData>("SELECT * FROM mapset_data WHERE mapset_id = ?", [tags.mapset_id]);
-    const mapset = storedMapset ?? (await getMapsetById(tags.mapset_id));
-    if (!mapset) return null;
-
-    if (!storedMapset) {
-        await query("INSERT INTO mapset_data (mapset_id, title, artist, mapper, ranked_at, star_rating_min, star_rating_max) VALUES (?, ?, ?, ?, ?, ?, ?)", [
-            mapset.mapset_id,
-            mapset.title,
-            mapset.artist,
-            mapset.mapper,
-            mapset.ranked_at ?? null,
-            mapset.star_rating_min ?? null,
-            mapset.star_rating_max ?? null,
-        ]);
+    let stored = await prisma.mapsetData.findUnique({ where: { mapsetId: tags.mapset_id } });
+    if (!stored) {
+        const mapset = await getMapsetById(tags.mapset_id);
+        if (!mapset) return null;
+        await prisma.mapsetData.createMany({
+            data: [{
+                mapsetId: mapset.mapset_id,
+                title: mapset.title,
+                artist: mapset.artist,
+                mapper: mapset.mapper,
+                rankedAt: mapset.ranked_at,
+                starRatingMin: mapset.star_rating_min,
+                starRatingMax: mapset.star_rating_max,
+            }],
+            skipDuplicates: true,
+        });
+        stored = await prisma.mapsetData.findUnique({ where: { mapsetId: mapset.mapset_id } });
+        if (!stored) return { ...tags, ...mapset };
     }
-
-    return { ...tags, ...mapset };
+    return {
+        ...tags,
+        mapset_id: stored.mapsetId,
+        title: stored.title ?? "",
+        artist: stored.artist ?? "",
+        mapper: stored.mapper ?? "",
+        ranked_at: stored.rankedAt,
+        star_rating_min: stored.starRatingMin === null ? null : Number(stored.starRatingMin),
+        star_rating_max: stored.starRatingMax === null ? null : Number(stored.starRatingMax),
+    };
 }
 
 async function getMapsetById(mapsetId: number): Promise<MapsetData | null> {
@@ -380,13 +401,14 @@ export async function getDailySkin(day: number, round: number) {
         try {
             challenge = await prisma.gameChallenge.findUnique({ where: key });
             if (!challenge) {
-                const recent = env.DEBUG_DAILY_REUSE_CHECK ? await query<{ item_id: number }>(
-                    `SELECT rounds.item_id FROM game_challenge_rounds rounds INNER JOIN game_challenges challenges ON challenges.id = rounds.challenge_id
-                     WHERE challenges.challenge_type = 'daily' AND challenges.game_mode = 'skin' AND challenges.daily_date >= ? AND challenges.daily_date < ?`,
-                    [new Date(dailyDate.getTime() - 7 * 86_400_000), dailyDate],
-                ) : [];
-                const used = new Set(recent.map(row => Number(row.item_id)));
-                const skins = (await query<SkinData>(`SELECT * FROM skins WHERE image_filename IS NOT NULL AND image_filename <> '' ORDER BY id`)).filter(skin => !used.has(skin.id));
+                const recent = env.DEBUG_DAILY_REUSE_CHECK ? await prisma.gameChallengeRound.groupBy({
+                    by: ["itemId"],
+                    where: { challenge: { challengeType: "daily", gameMode: GameMode.Skin, dailyDate: { gte: new Date(dailyDate.getTime() - 7 * 86_400_000), lt: dailyDate } } },
+                }) : [];
+                const skins = (await prisma.skin.findMany({
+                    where: { imageFilename: { not: "" }, id: { notIn: recent.map(({ itemId }) => itemId) } },
+                    orderBy: { id: "asc" },
+                })).map(toSkinData);
                 const stats = await prisma.contentStat.findMany({ where: { gameMode: GameMode.Skin, itemType: "skin", rulesetVersion: CURRENT_RULESET_VERSION, ppVersion: CURRENT_PP_VERSION }, select: { itemId: true, empiricalDifficulty: true } });
                 const difficulty = new Map(stats.map(stat => [stat.itemId, Number(stat.empiricalDifficulty ?? 1)]));
                 skins.sort((a, b) => (difficulty.get(a.id) ?? 1) - (difficulty.get(b.id) ?? 1) || a.id - b.id);
@@ -401,23 +423,18 @@ export async function getDailySkin(day: number, round: number) {
     }
     const challengeRound = await prisma.gameChallengeRound.findUnique({ where: { challengeId_roundNumber: { challengeId: challenge.id, roundNumber: round } } });
     if (!challengeRound || challengeRound.itemType !== "skin") throw new NoGameContentError("Daily skin challenge is invalid");
-    const [skin] = await query<SkinData>(`SELECT * FROM skins WHERE id = ? AND image_filename IS NOT NULL AND image_filename <> ''`, [challengeRound.itemId]);
+    const skin = await prisma.skin.findUnique({ where: { id: challengeRound.itemId, imageFilename: { not: "" } } });
     if (!skin) throw new NoGameContentError("Daily skin is unavailable");
-    return { data: { ...skin, name: challengeRound.answerSnapshot }, challengeId: challenge.id, skinData: await getMediaData(GameMode.Skin, skin.image_filename) };
+    return { data: { ...toSkinData(skin), name: challengeRound.answerSnapshot }, challengeId: challenge.id, skinData: await getMediaData(GameMode.Skin, skin.imageFilename) };
 }
 
 async function selectRandomSkin(sessionId?: string): Promise<SkinData | null> {
     const excludedIds = await getExcludedIds(sessionId, "skin");
-    const excludedCondition = excludedIds.length > 0 ? `AND id NOT IN (${excludedIds.map(() => "?").join(",")})` : "";
-    const result = await query(
-        `SELECT *
-         FROM skins
-         WHERE image_filename IS NOT NULL
-           AND image_filename <> ''
-           ${excludedCondition}
-         ORDER BY RAND()
-         LIMIT 1`,
-        excludedIds,
-    );
-    return result.length > 0 ? (result[0] as SkinData) : null;
+    const where = { imageFilename: { not: "" }, id: { notIn: excludedIds } };
+    const skin = await prisma.$transaction(async (tx) => {
+        const count = await tx.skin.count({ where });
+        if (!count) return null;
+        return tx.skin.findFirst({ where, orderBy: { id: "asc" }, skip: Math.floor(Math.random() * count) });
+    }, { isolationLevel: "RepeatableRead" });
+    return skin ? toSkinData(skin) : null;
 }

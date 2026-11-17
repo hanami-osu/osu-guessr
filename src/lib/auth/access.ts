@@ -1,7 +1,7 @@
 import "server-only";
 
 import { OWNER_ID } from "@/lib/users/owner";
-import { query } from "@/lib/database/index";
+import { prisma } from "@/lib/database/prisma";
 
 // Access checks run on every authenticated request, so results are cached briefly.
 // Admin and deletion changes propagate within the TTL window.
@@ -18,8 +18,8 @@ export async function getSessionUserAccess(userId?: number): Promise<{ active: b
     const cached = accessCache.get(userId);
     if (cached && cached.expires > Date.now()) return cached.value;
 
-    const [user] = await query<{ is_admin: number | boolean; deletion_scheduled_at: Date | string | null }>("SELECT is_admin, deletion_scheduled_at FROM users WHERE bancho_id = ? LIMIT 1", [userId]);
-    const access = !user || user.deletion_scheduled_at ? { active: false, isAdmin: false } : { active: true, isAdmin: userId === OWNER_ID || Boolean(user.is_admin) };
+    const user = await prisma.user.findUnique({ where: { banchoId: userId }, select: { isAdmin: true, deletionScheduledAt: true } });
+    const access = !user || user.deletionScheduledAt ? { active: false, isAdmin: false } : { active: true, isAdmin: userId === OWNER_ID || user.isAdmin };
     accessCache.set(userId, { value: access, expires: Date.now() + ACCESS_CACHE_TTL_MS });
     return access;
 }
