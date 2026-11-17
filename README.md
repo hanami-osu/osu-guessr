@@ -75,17 +75,22 @@ Guess osu! songs from beatmap backgrounds or audio clips, and skins from screens
 
 4. Prepare a database.
 
-    > [!CAUTION]
-    > `init.sql` is only for a brand-new, disposable development database. It disables foreign-key checks and drops existing application tables before recreating them. Never run it against an existing, shared, staging, or production database. A migration-based installation path is tracked separately and is not replaced by this command.
+    The schema is managed by Prisma Migrate. `prisma/schema.prisma` is the source of truth, and the SQL in `prisma/migrations/` is generated, never hand-written.
 
-    For a fresh disposable development database only:
+    For a brand-new development database:
 
     ```bash
-    mysql -u your_database_user -p osu_guessr < init.sql
-    bun run prisma:generate
+    bun run db:migrate
     ```
 
-    Existing environments are migrated automatically when the production container starts. `bun run db:introspect` reads an existing database into `prisma/schema.prisma`; it is not a migration command.
+    For a database that predates Prisma Migrate (created by the old `init.sql` plus raw migrations), align its index and foreign key names with the ones Prisma generates, then mark the baseline migration as already applied. Review the generated script before running it: it renames foreign keys and indexes, and it drops retired tables such as `schema_migrations` and the `*_backup_20261112` recovery tables.
+
+    ```bash
+    bunx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script | mysql -u your_database_user -p osu_guessr
+    bunx prisma migrate resolve --applied 20261117000000_init
+    ```
+
+    After that, schema changes follow the normal flow: edit `prisma/schema.prisma`, run `bun run db:migrate --name <change>`, and commit the generated migration. `bun run db:introspect` reads an existing database into `prisma/schema.prisma`; it is not a migration command.
 
 5. Start the development server:
 
@@ -108,11 +113,10 @@ bun run build
 - Use production-specific secrets and HTTPS URLs.
 - Keep `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across replicas and deployments.
 - Back MariaDB, Redis, and imported media with appropriate persistent storage.
-- Do not use `init.sql` to update an existing deployment.
-- A production container acquires a database lock and applies missing files from `migrations/` before starting the server. If a migration fails, the server does not start.
+- Schema changes are Prisma Migrate migrations in `prisma/migrations/`. The production container applies pending migrations with `prisma migrate deploy` before starting the server. If a migration fails, the server does not start.
 - Run only one app container while migrations execute. Scale it after startup if a future deployment adds replicas.
-- Conflicting legacy `mapset_tags` duplicates must be resolved manually if startup reports them. Successful migration keeps the original rows in `mapset_tags_before_20260905` for recovery.
-- Treat applied migration files as immutable. Add a new migration for later schema changes.
+- Before the first deployment with Prisma Migrate, make sure every raw SQL migration from the old `migrations/` system has been applied to the database, then run `bunx prisma migrate resolve --applied 20261117000000_init` with `DATABASE_URL` pointed at production.
+- Treat applied migration files as immutable. Edit `prisma/schema.prisma` and generate a new migration with `bun run db:migrate --name <change>` instead of editing SQL.
 - The app runs through a custom server (`server.ts`) that also serves multiplayer WebSockets at `/multiplayer-ws`. Reverse proxies must forward `Upgrade` and `Connection` headers on that path.
 
 ## Built with

@@ -14,6 +14,8 @@
         "backfill:arcade-scores": "dotenv -e .env -- bun scripts/backfill-arcade-scores.ts",
         "prepare:score-pp-pairs": "dotenv -e .env -- bun scripts/prepare-score-pp-pairs.ts",
         "prisma:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:migrate:deploy": "prisma migrate deploy",
         "db:introspect": "prisma db pull"
     },
     "dependencies": {
