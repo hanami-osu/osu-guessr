@@ -13,7 +13,8 @@
             "artCredit": "Sanatçı: {artist_name}",
             "developerCredit": "Created by yorunoken",
             "discordInvite": "Join our Discord",
-            "multiplayer": "Çok Oyunculu"
+            "multiplayer": "Çok Oyunculu",
+            "playDaily": "Günlük meydan okumayı oyna"
         },
         "statistics": {
             "title": "Oyun İstatistikleri",
@@ -237,6 +238,10 @@
                 "oneLife": {
                     "continuous": "İlk hatana kadar devam et",
                     "lives": "Tek bir yanlış tahmin, atlama veya süre aşımı koşuyu bitirir"
+                },
+                "daily": {
+                    "rounds": "{count} tur",
+                    "seeded": "Herkes için aynı beş içerik kullanılır ve her gün yenilenir"
                 }
             },
             "scoring": {
@@ -269,6 +274,10 @@
                 "oneLife": {
                     "title": "Ölüm Modu",
                     "description": "1 can"
+                },
+                "daily": {
+                    "title": "Günlük Meydan Okuma",
+                    "description": "Her gün yeni bir meydan okuma"
                 }
             },
             "warning": {
@@ -279,7 +288,8 @@
                 "startGame": "Oyunu Başlat",
                 "backToHome": "Ana Sayfaya Dön"
             },
-            "variantLabel": "Oyun varyantı"
+            "variantLabel": "Oyun varyantı",
+            "modeLabel": "Günlük oyun modu"
         },
         "input": {
             "placeholder": "Şarkı adı...",
@@ -451,6 +461,22 @@
             "unknown": "Bilinmiyor",
             "backgroundAlt": "Beatmap arka planı",
             "skinAlt": "Skin ekran görüntüsü"
+        },
+        "daily": {
+            "checkingStatus": "Bugünün meydan okuması kontrol ediliyor...",
+            "retryStatus": "Durum denetimini yeniden dene",
+            "alreadyPlayed": "Bugünün meydan okuması zaten oynandı",
+            "resetIn": "{time} UTC içinde sıfırlanır",
+            "share": {
+                "title": "Günlük Meydan Okuma #{day}",
+                "results": "Günlük tur sonuçları",
+                "round": "Tur",
+                "copy": "Sonuçları kopyala",
+                "copied": "Kopyalandı"
+            },
+            "continueChallenge": "Meydan okumaya devam et",
+            "title": "Günlük Meydan Okuma",
+            "chooseMode": "Bugünün ortak meydan okuması için bir oyun modu seç."
         }
     },
     "leaderboard": {
@@ -534,6 +560,18 @@
             "recentGames": {
                 "title": "Son Oyunlar",
                 "noGames": "Henüz oyun yok"
+            },
+            "daily": {
+                "title": "Günlük",
+                "dailiesPlayed": "Oynanan günlük meydan okumalar",
+                "totalPoints": "Toplam puan",
+                "bestStreak": "En iyi günlük seri",
+                "timeAnswering": "Yanıtlama süresi",
+                "calendarTitle": "Günlük Meydan Okuma Takvimi",
+                "calendarEmpty": "İlk günlük meydan okuma 15 Kasım 2026'da başlıyor.",
+                "played": "Tamamlandı",
+                "missed": "Kaçırıldı",
+                "today": "Bugün"
             }
         },
         "notFound": {

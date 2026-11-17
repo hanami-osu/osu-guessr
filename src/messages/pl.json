@@ -13,7 +13,8 @@
             "artCredit": "Grafika autorstwa: {artist_name}",
             "developerCredit": "Stworzone przez: yorunoken",
             "discordInvite": "Dołącz do naszego Discorda",
-            "multiplayer": "Tryb wieloosobowy"
+            "multiplayer": "Tryb wieloosobowy",
+            "playDaily": "Zagraj w wyzwanie dnia"
         },
         "statistics": {
             "title": "Statystyki Gry",
@@ -303,6 +304,10 @@
                 "oneLife": {
                     "continuous": "Graj do pierwszego błędu",
                     "lives": "Jedna błędna odpowiedź, pominięcie lub przekroczenie czasu kończy grę"
+                },
+                "daily": {
+                    "rounds": "{count} rund",
+                    "seeded": "Wszyscy otrzymują te same pięć elementów, które zmieniają się codziennie"
                 }
             },
             "scoring": {
@@ -335,6 +340,10 @@
                 "oneLife": {
                     "title": "Tryb Śmierci",
                     "description": "1 życie"
+                },
+                "daily": {
+                    "title": "Wyzwanie dnia",
+                    "description": "Nowe wyzwanie każdego dnia"
                 }
             },
             "warning": {
@@ -345,7 +354,8 @@
                 "startGame": "Rozpocznij Grę",
                 "backToHome": "Wróć na Stronę Główną"
             },
-            "variantLabel": "Wariant gry"
+            "variantLabel": "Wariant gry",
+            "modeLabel": "Tryb gry wyzwania dnia"
         },
         "modes": {
             "classic": {
@@ -517,6 +527,22 @@
             "unknown": "Nieznane",
             "backgroundAlt": "Tło beatmapy",
             "skinAlt": "Zrzut ekranu skina"
+        },
+        "daily": {
+            "checkingStatus": "Sprawdzanie dzisiejszego wyzwania...",
+            "retryStatus": "Ponów sprawdzanie statusu",
+            "alreadyPlayed": "Dzisiejsze wyzwanie zostało już rozegrane",
+            "resetIn": "Reset za {time} UTC",
+            "share": {
+                "title": "Wyzwanie dnia nr {day}",
+                "results": "Wyniki dzisiejszej rundy",
+                "round": "Runda",
+                "copy": "Kopiuj wyniki",
+                "copied": "Skopiowano"
+            },
+            "continueChallenge": "Kontynuuj wyzwanie",
+            "title": "Wyzwanie dnia",
+            "chooseMode": "Wybierz tryb gry dla dzisiejszego wspólnego wyzwania."
         }
     },
     "leaderboard": {
@@ -600,6 +626,18 @@
             "recentGames": {
                 "title": "Ostatnie gry",
                 "noGames": "Brak gier"
+            },
+            "daily": {
+                "title": "Wyzwanie dnia",
+                "dailiesPlayed": "Rozegrane wyzwania dnia",
+                "totalPoints": "Łączna liczba punktów",
+                "bestStreak": "Najlepsza seria w wyzwaniach dnia",
+                "timeAnswering": "Czas odpowiedzi",
+                "calendarTitle": "Kalendarz wyzwań dnia",
+                "calendarEmpty": "Pierwsze wyzwanie dnia rozpocznie się 15 listopada 2026 r.",
+                "played": "Ukończono",
+                "missed": "Nie rozegrano",
+                "today": "Dzisiaj"
             }
         },
         "notFound": {

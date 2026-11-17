@@ -1,16 +1,24 @@
 import { z } from "zod";
 import { finishGameSession, getRoundDifficultySnapshot } from "@/lib/game/server";
-import { GameMode, type DatabaseGameSession, type GameRoundResult, type GameVariant, type PersistedGameRound } from "@/actions/types";
+import { GameMode, type DatabaseGameSession, type GameRoundResult, type GameRunType, type GameVariant, type PersistedGameRound } from "@/actions/types";
 import type { ScorePpPairSnapshot, ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunEndResult, ScorePpRunState, ScorePpScoreSnapshot } from "@/lib/score-pp/types";
 import { getBeatmapMaxCombo } from "@/lib/score-pp/beatmap-max-combo";
-import { selectStoredScorePpPair } from "@/lib/score-pp/store";
+import { getStoredScorePpPairsByIds, selectStoredScorePpPair } from "@/lib/score-pp/store";
 import { calculateArcadeScore } from "@/lib/game/arcade-score";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
-import { GAME_VARIANTS, MAX_ROUNDS, ROUND_TIME, getVariantLives, isContinuousVariant } from "@/app/games/config";
-import { acquireGameSessionLock, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
+import { DAILY_ROUNDS, GAME_VARIANTS, MAX_ROUNDS, ROUND_TIME, getVariantLives, isContinuousVariant } from "@/app/games/config";
+import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer";
+import { prisma } from "@/lib/database/prisma";
+import { env } from "@/lib/env";
+import { DAILY_CHALLENGE_ALREADY_PLAYED, DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, createDailyRandom, getDailyChallengeDay, getDailyDate } from "@/lib/game/daily";
 
 const ROUND_TIME_MS = ROUND_TIME * 1000;
+const DAILY_SESSION_TTL_SECONDS = 24 * 60 * 60;
+
+function writeScorePpSession(run: DatabaseGameSession): Promise<void> {
+    return writeGameSession(run, run.run_type === "daily" ? DAILY_SESSION_TTL_SECONDS : undefined);
+}
 
 const exclusionsSchema = z.object({
     scoreIds: z.array(z.string().min(1).max(64)).max(20_000).default([]),
@@ -74,7 +82,12 @@ function scoreLabel(score: ScorePpScoreSnapshot): string {
 }
 
 async function readOwnedRun(sessionId: string, userId: number): Promise<DatabaseGameSession> {
-    const run = await readOwnedGameSession<DatabaseGameSession>(sessionId, userId, "Score PP session not found or expired", (run) => run.game_mode === GameMode.ScorePp);
+    const run = await readOwnedGameSession<DatabaseGameSession>(
+        sessionId,
+        userId,
+        "Score PP session not found or expired",
+        (run) => run.game_mode === GameMode.ScorePp && (userId !== 0 || run.run_type === "daily"),
+    );
     await getCurrentMultiplayerLobby(run);
     return run;
 }
@@ -138,7 +151,8 @@ async function getResolution(run: DatabaseGameSession): Promise<ScorePpResolutio
 }
 
 function isTerminalRound(run: DatabaseGameSession): boolean {
-    return (run.variant === "classic" && run.current_round >= MAX_ROUNDS) || (isContinuousVariant(run.variant) && getMistakes(run) >= getVariantLives(run.variant));
+    const roundLimit = run.run_type === "daily" ? DAILY_ROUNDS : MAX_ROUNDS;
+    return (run.variant === "classic" && run.current_round >= roundLimit) || (isContinuousVariant(run.variant) && getMistakes(run) >= getVariantLives(run.variant));
 }
 
 async function toRunState(run: DatabaseGameSession, allSubmitted = true): Promise<ScorePpRunState> {
@@ -156,6 +170,7 @@ async function toRunState(run: DatabaseGameSession, allSubmitted = true): Promis
         saved,
         submitted: run.has_guessed_current_round,
         round: run.current_round,
+        runType: run.run_type ?? "standard",
         pair,
         deadlineAt: run.is_active && !run.has_guessed_current_round && pair ? getRoundDeadline(run) : null,
         resolution,
@@ -214,8 +229,10 @@ async function acquireRunLock(sessionId: string): Promise<{ key: string; token: 
     return lock;
 }
 
-export async function startScorePpRunForUser(userId: number, variant: GameVariant, multiplayerLobbyCode?: string): Promise<string> {
+export async function startScorePpRunForUser(userId: number, variant: GameVariant, multiplayerLobbyCode?: string, requestedRunType: GameRunType = "standard"): Promise<string> {
     const parsedVariant = variantSchema.parse(variant);
+    const runType = z.enum(["standard", "daily"]).parse(requestedRunType);
+    if (runType === "daily" && (parsedVariant !== "classic" || multiplayerLobbyCode)) throw new Error("Daily challenges are available in single-player Classic mode only");
 
     const lobbyCode = multiplayerLobbyCode ? normalizeLobbyCode(multiplayerLobbyCode) : undefined;
     const lobby = lobbyCode ? await requireActiveMultiplayerLobby(lobbyCode, userId, GameMode.ScorePp, parsedVariant) : null;
@@ -227,6 +244,25 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
         } catch {}
     }
     if (lobbyPlayer?.finished) throw new Error("You have already finished this match");
+    const now = new Date();
+    const dailyDate = runType === "daily" ? getDailyDate(now, env.DEBUG_DAILY_DAY_OFFSET) : undefined;
+    const dailyDay = dailyDate ? getDailyChallengeDay(dailyDate) : undefined;
+    if (dailyDate && userId !== 0) {
+        const existingAttempt = await prisma.dailyGameAttempt.findUnique({
+            where: { userId_dailyDate_gameMode: { userId, dailyDate, gameMode: GameMode.ScorePp } },
+        });
+        if (existingAttempt && !env.DEBUG_DAILY_UNLIMITED_ATTEMPTS) {
+            const existingState = await getScorePpRunStateForUser(userId, existingAttempt.sessionId).catch(() => null);
+            if (existingState?.active && existingState.runType === "daily") return existingAttempt.sessionId;
+            throw new Error(DAILY_CHALLENGE_ALREADY_PLAYED);
+        }
+    }
+    const scheduledDailyChallenge = dailyDate
+        ? await prisma.gameChallenge.findUnique({
+              where: { dailyDate_gameMode_variant: { dailyDate, gameMode: GameMode.ScorePp, variant: "classic" } },
+              select: { id: true },
+          })
+        : null;
     const sessionId = crypto.randomUUID();
     const startedAt = new Date(lobby?.startAt ?? Date.now()).toISOString();
     const run: DatabaseGameSession = {
@@ -248,11 +284,15 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
         total_response_time_ms: 0,
         is_active: true,
         variant: parsedVariant,
-        run_type: "standard",
-        challenge_id: null,
-        seed: null,
-        config_snapshot: lobby ? { multiplayer: { matchId: lobby.matchId } } : null,
-        ranked: true,
+        run_type: runType,
+        challenge_id: scheduledDailyChallenge?.id ?? null,
+        seed: dailyDate ? `daily:${dailyDate.toISOString().slice(0, 10)}:${GameMode.ScorePp}` : null,
+        config_snapshot: dailyDate
+            ? { dailyDay, dailyDate: dailyDate.toISOString().slice(0, 10), debugUnlimitedAttempts: env.DEBUG_DAILY_UNLIMITED_ATTEMPTS }
+            : lobby
+              ? { multiplayer: { matchId: lobby.matchId } }
+              : null,
+        ranked: runType !== "daily",
         ruleset_version: CURRENT_RULESET_VERSION,
         pp_version: CURRENT_PP_VERSION,
         started_at: startedAt,
@@ -268,13 +308,123 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
         score_pp_batch_id: null,
         current_score_pp_pair: null,
     };
-    await writeGameSession(run);
+    await writeScorePpSession(run);
+    if (dailyDate && userId !== 0) {
+        try {
+            const attemptKey = { userId, dailyDate, gameMode: GameMode.ScorePp };
+            if (env.DEBUG_DAILY_UNLIMITED_ATTEMPTS) {
+                await prisma.dailyGameAttempt.upsert({
+                    where: { userId_dailyDate_gameMode: attemptKey },
+                    create: { ...attemptKey, sessionId },
+                    update: { sessionId, startedAt: new Date() },
+                });
+            } else {
+                await prisma.dailyGameAttempt.create({ data: { ...attemptKey, sessionId } });
+            }
+        } catch (error) {
+            await deleteGameSession(sessionId);
+            if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") throw new Error(DAILY_CHALLENGE_ALREADY_PLAYED);
+            throw error;
+        }
+    }
     if (lobbyCode) {
         await updateMultiplayerProgress(lobbyCode, userId, { points: 0, round: 1, scoreSessionId: sessionId, finished: false }, lobby!.matchId).catch((error) =>
             console.error("Failed to update multiplayer progress:", error),
         );
     }
     return sessionId;
+}
+
+export async function createManualScorePpDailyChallenge(dailyDate: Date, selectedPairIds: number[], overwrite = false): Promise<void> {
+    const pairIds = z.array(z.number().int().positive()).length(DAILY_ROUNDS).parse(selectedPairIds);
+    if (new Set(pairIds).size !== DAILY_ROUNDS) throw new Error("Choose a different score pair for each round");
+    if (!overwrite) {
+        const existing = await prisma.gameChallenge.findUnique({
+            where: { dailyDate_gameMode_variant: { dailyDate, gameMode: GameMode.ScorePp, variant: "classic" } },
+            select: { id: true },
+        });
+        if (existing) throw new Error(DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED);
+    }
+
+    const batch = await prisma.scorePpBatch.findFirst({
+        where: { status: "active" },
+        orderBy: { activatedAt: "desc" },
+        select: { id: true },
+    });
+    if (!batch) throw new Error("No active Score pp pair pool is available");
+
+    const pairs = await getStoredScorePpPairsByIds(batch.id, pairIds);
+    if (pairs.length !== DAILY_ROUNDS) throw new Error("One or more selected score pairs are unavailable in the active pool");
+
+    const dateKey = dailyDate.toISOString().slice(0, 10);
+    const rounds = await Promise.all(
+        pairs.map(async (pair, index) => {
+            const roundNumber = index + 1;
+            const scheduledPair = {
+                ...pair,
+                difficultySnapshot: await getRoundDifficultySnapshot(GameMode.ScorePp, "score_pair", pair.id, CURRENT_RULESET_VERSION, CURRENT_PP_VERSION),
+            };
+            return {
+                roundNumber,
+                itemType: "score_pair" as const,
+                itemId: pair.id,
+                answerSnapshot: `Score pp pair ${roundNumber}`,
+                difficultySnapshot: scheduledPair.difficultySnapshot,
+                contentSnapshot: { pair: scheduledPair },
+            };
+        }),
+    );
+
+    const challengeId = crypto.randomUUID();
+    await prisma.$transaction(async (transaction) => {
+        const uniqueKey = { dailyDate_gameMode_variant: { dailyDate, gameMode: GameMode.ScorePp, variant: "classic" } };
+        const existing = overwrite ? await transaction.gameChallenge.findUnique({ where: uniqueKey, select: { id: true } }) : null;
+        if (existing) {
+            await transaction.gameChallengeRound.deleteMany({ where: { challengeId: existing.id } });
+            await transaction.gameChallenge.delete({ where: { id: existing.id } });
+        }
+        await transaction.gameChallenge.create({
+            data: {
+                id: challengeId,
+                challengeType: "daily",
+                gameMode: GameMode.ScorePp,
+                variant: "classic",
+                rulesetVersion: CURRENT_RULESET_VERSION,
+                ppVersion: CURRENT_PP_VERSION,
+                seed: `daily:${dateKey}:${GameMode.ScorePp}`,
+                configSnapshot: { manuallySet: true, batchId: batch.id },
+                roundCount: DAILY_ROUNDS,
+                timerMs: 30_000,
+                ranked: false,
+                dailyDate,
+            },
+        });
+        await transaction.gameChallengeRound.createMany({
+            data: rounds.map((round) => ({ ...round, challengeId })),
+        });
+    });
+}
+
+async function getScheduledDailyScorePpPair(challengeId: string, roundNumber: number): Promise<ScorePpPairSnapshot> {
+    const challengeRound = await prisma.gameChallengeRound.findUnique({
+        where: { challengeId_roundNumber: { challengeId, roundNumber } },
+    });
+    const content = challengeRound?.contentSnapshot;
+    const pair = content && typeof content === "object" && !Array.isArray(content) ? (content as { pair?: unknown }).pair : null;
+    if (
+        !challengeRound ||
+        challengeRound.itemType !== "score_pair" ||
+        !pair ||
+        typeof pair !== "object" ||
+        !("id" in pair) ||
+        pair.id !== challengeRound.itemId ||
+        !("left" in pair) ||
+        !("right" in pair) ||
+        !("batchId" in pair)
+    ) {
+        throw new Error("Scheduled Score pp daily round is unavailable");
+    }
+    return pair as ScorePpPairSnapshot;
 }
 
 export async function getScorePpRoundForUser(userId: number, sessionId: string, round: number, exclusions: { scoreIds: string[]; userIds: number[]; beatmapIds: number[] }): Promise<ScorePpRoundLoad> {
@@ -299,7 +449,7 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
             if (existing && (run.current_difficulty_snapshot === undefined || existing.difficultySnapshot === undefined)) {
                 const difficultySnapshot = existing.difficultySnapshot ?? run.current_difficulty_snapshot ?? 1;
                 existing = { ...existing, difficultySnapshot };
-                await writeGameSession({ ...run, current_difficulty_snapshot: difficultySnapshot, current_score_pp_pair: existing });
+                await writeScorePpSession({ ...run, current_difficulty_snapshot: difficultySnapshot, current_score_pp_pair: existing });
             }
             return {
                 pair: existing ? await toPublicPair(existing) : null,
@@ -310,21 +460,25 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
         }
 
         const exclusions = getRoundExclusions(run, parsedExclusions);
+        const scheduledPair = run.run_type === "daily" && run.challenge_id ? await getScheduledDailyScorePpPair(run.challenge_id, parsedRound) : null;
         const selectPair = async () => {
-            const pair = await selectStoredScorePpPair(
-                parsedRound,
-                {
-                    pairIds: new Set(run.round_history.map((item) => item.item_id)),
-                    scoreIds: new Set(exclusions.scoreIds),
-                    userIds: new Set(exclusions.userIds),
-                    beatmapIds: new Set(exclusions.beatmapIds),
-                },
-                run.score_pp_batch_id,
-            );
+            const pair =
+                scheduledPair ??
+                (await selectStoredScorePpPair(
+                    parsedRound,
+                    {
+                        pairIds: new Set(run.round_history.map((item) => item.item_id)),
+                        scoreIds: new Set(exclusions.scoreIds),
+                        userIds: new Set(exclusions.userIds),
+                        beatmapIds: new Set(exclusions.beatmapIds),
+                    },
+                    run.score_pp_batch_id,
+                    run.run_type === "daily" ? createDailyRandom(`${run.seed}:${parsedRound}`) : Math.random,
+                ));
             if (!pair) return null;
             return {
                 ...pair,
-                difficultySnapshot: await getRoundDifficultySnapshot(GameMode.ScorePp, "score_pair", pair.id, run.ruleset_version, run.pp_version),
+                difficultySnapshot: pair.difficultySnapshot ?? (await getRoundDifficultySnapshot(GameMode.ScorePp, "score_pair", pair.id, run.ruleset_version, run.pp_version)),
             };
         };
         const selectedPair = run.multiplayer_lobby_id
@@ -360,7 +514,7 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
             current_difficulty_snapshot: pair.difficultySnapshot,
             current_score_pp_pair: pair,
         };
-        await writeGameSession(nextRun);
+        await writeScorePpSession(nextRun);
         if (run.multiplayer_lobby_id) {
             await updateMultiplayerProgress(
                 run.multiplayer_lobby_id,
@@ -409,17 +563,34 @@ export async function endScorePpRunForUser(userId: number, sessionId: string): P
 
     const lock = await acquireRunLock(parsedSessionId);
     let endingRun: DatabaseGameSession | null = null;
+    let pauseDailyRun = false;
     try {
         const run = await readOwnedRun(parsedSessionId, userId);
         endingRun = run;
         if (!(await isCurrentRoundRevealed(run, userId))) return { pending: true };
         if (!run.is_active && !run.end_pending) return run.pp ?? null;
-        const endReason = isTerminalRound(run) && isContinuousVariant(run.variant) ? "failed" : (run.end_reason ?? "quit");
-        return await finishGameSession(parsedSessionId, userId, endReason);
+        if (run.run_type === "daily") {
+            pauseDailyRun = true;
+        } else {
+            const endReason = isTerminalRound(run) && isContinuousVariant(run.variant) ? "failed" : (run.end_reason ?? "quit");
+            return await finishGameSession(parsedSessionId, userId, endReason);
+        }
     } finally {
         await releaseGameSessionLock(lock);
         await finishTerminalMultiplayerRuns(endingRun);
     }
+
+    if (!pauseDailyRun) return null;
+    let run = await readOwnedRun(parsedSessionId, userId);
+    if (!run.has_guessed_current_round) {
+        if (!run.current_score_pp_pair || run.current_item_id <= 0) throw new Error("Daily Score PP round is not ready to pause");
+        await submitScorePpGuessForUser(userId, parsedSessionId, run.current_item_id, null, "skip");
+        run = await readOwnedRun(parsedSessionId, userId);
+    }
+    if (!run.is_active || isTerminalRound(run)) return run.pp ?? null;
+
+    await getScorePpRoundForUser(userId, parsedSessionId, run.current_round + 1, { scoreIds: [], userIds: [], beatmapIds: [] });
+    return { paused: true };
 }
 
 export async function submitScorePpGuessForUser(
@@ -506,7 +677,7 @@ export async function submitScorePpGuessForUser(
             has_guessed_current_round: true,
         };
         const terminal = isTerminalRound(nextRun);
-        await writeGameSession(nextRun);
+        await writeScorePpSession(nextRun);
         submittedRun = nextRun;
         if (run.multiplayer_lobby_id) {
             await updateMultiplayerProgress(

@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import LeaderboardClient from "./client";
-import { getTopPlayersAction } from "@/actions/user-server";
+import { getDailyTopPlayersAction, getTopPlayersAction } from "@/actions/user-server";
 import { GAME_VARIANTS, GameMode } from "@/actions/types";
 import { createPageMetadata } from "@/lib/social-metadata";
 
@@ -15,10 +15,10 @@ export const metadata: Metadata = createPageMetadata({
 export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ mode?: string | string[]; variant?: string | string[] }> }) {
     const { mode, variant } = await searchParams;
     const initialMode = typeof mode === "string" && Object.values(GameMode).includes(mode as GameMode) ? (mode as GameMode) : GameMode.Background;
-    const initialVariant = GAME_VARIANTS.find((value) => value === variant) ?? "classic";
+    const initialVariant = variant === "daily" ? "daily" : GAME_VARIANTS.find((value) => value === variant) ?? "daily";
 
     try {
-        const initialData = await getTopPlayersAction(initialMode, initialVariant, 10, 0);
+        const initialData = initialVariant === "daily" ? await getDailyTopPlayersAction(initialMode, 10, 0) : await getTopPlayersAction(initialMode, initialVariant, 10, 0);
         return <LeaderboardClient initialData={initialData} initialMode={initialMode} initialVariant={initialVariant} />;
     } catch (error) {
         console.error("Failed to fetch initial leaderboard:", error);

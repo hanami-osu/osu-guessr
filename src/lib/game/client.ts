@@ -1,5 +1,5 @@
 import { endGameAction, getGameStateAction, getSuggestionsAction, startGameAction, submitGuessAction } from "@/actions/game-server";
-import { GameMode, type GameState, type GameVariant } from "@/actions/types";
+import { GameMode, type GameRunType, type GameState, type GameVariant } from "@/actions/types";
 import type { MultiplayerRpcAction } from "@/lib/multiplayer-protocol";
 import { GameError, handleGameError } from "./errors";
 import type { GameClientConfig, GameClientEvents, GameSession } from "./types";
@@ -31,6 +31,7 @@ export class GameClient {
         config: Partial<GameClientConfig> = {},
         private multiplayerLobbyCode?: string,
         private multiplayerRequest?: MultiplayerRequest,
+        private gameRunType: GameRunType = "standard",
     ) {
         this.config = { ...DEFAULT_CONFIG, ...config };
         if (typeof window !== "undefined") {
@@ -40,12 +41,17 @@ export class GameClient {
     }
 
     private get storageKey(): string {
-        const baseKey = `osu-guessr:game-session:${this.gameMode}:${this.gameVariant}`;
+        const baseKey = `osu-guessr:game-session:${this.gameMode}:${this.gameVariant}:${this.gameRunType}`;
         return this.multiplayerLobbyCode ? `${baseKey}:multiplayer:${this.multiplayerLobbyCode}` : baseKey;
     }
 
+    get currentSessionId(): string | null {
+        return this.session?.id ?? null;
+    }
+
     private getStorage(): Storage | null {
-        return typeof window === "undefined" ? null : window.sessionStorage;
+        if (typeof window === "undefined") return null;
+        return this.gameRunType === "daily" ? window.localStorage : window.sessionStorage;
     }
 
     private persistSessionId(sessionId: string): void {
@@ -107,7 +113,7 @@ export class GameClient {
     async startGame(): Promise<void> {
         if (this.disposed) return;
         const initialState = await this.execute(
-            () => this.request("game.start", { gameMode: this.gameMode, variant: this.gameVariant }, () => startGameAction(this.gameMode, this.gameVariant)),
+            () => this.request("game.start", { gameMode: this.gameMode, variant: this.gameVariant, runType: this.gameRunType }, () => startGameAction(this.gameMode, this.gameVariant, undefined, this.gameRunType)),
             "startGame",
             false,
         );
@@ -118,9 +124,9 @@ export class GameClient {
         this.startTimer();
     }
 
-    async resumeStoredGame(): Promise<boolean> {
+    async resumeStoredGame(sessionIdOverride?: string): Promise<boolean> {
         if (this.disposed) return false;
-        const sessionId = this.getStorage()?.getItem(this.storageKey);
+        const sessionId = sessionIdOverride ?? this.getStorage()?.getItem(this.storageKey);
         if (!sessionId) return false;
 
         try {

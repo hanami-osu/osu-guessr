@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     robots: { index: false, follow: false },
 };
 
-export default async function BackgroundGuessr({ searchParams }: { searchParams: Promise<{ variant?: string | string[]; lobby?: string | string[] }> }) {
-    const { variant, lobby } = await searchParams;
-    return <GamePage gameMode={GameMode.Background} gameVariant={variant} multiplayerLobbyCode={lobby} />;
+export default async function BackgroundGuessr({ searchParams }: { searchParams: Promise<{ variant?: string | string[]; run?: string | string[]; lobby?: string | string[] }> }) {
+    const { variant, run, lobby } = await searchParams;
+    return <GamePage gameMode={GameMode.Background} gameVariant={variant} gameRunType={run} multiplayerLobbyCode={lobby} />;
 }

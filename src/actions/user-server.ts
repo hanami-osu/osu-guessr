@@ -9,7 +9,9 @@ import { hasPlayedGame } from "@/lib/user-stats";
 import { getHiddenUserIds, isUserVisible, visibleUserWhere } from "@/lib/user-visibility";
 import { authenticatedAction } from "./server";
 import { z } from "zod";
-import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
+import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserDailyStats, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
+import { DAILY_EPOCH_UTC, DAILY_ROUNDS, getDailyDate } from "@/lib/game/daily";
+import { env } from "@/lib/env";
 
 const gameModeSchema = z.nativeEnum(GameMode);
 const gameVariantSchema = z.enum(GAME_VARIANTS);
@@ -297,6 +299,45 @@ export async function getUserLifetimeModeStatsAction(banchoId: number, gameMode:
     };
 }
 
+export async function getUserDailyStatsAction(banchoId: number, gameMode: GameMode): Promise<UserDailyStats> {
+    const validatedMode = gameModeSchema.parse(gameMode);
+    const [user, attempts] = await Promise.all([
+        prisma.user.findUnique({ where: { banchoId }, select: { createdAt: true } }),
+        prisma.dailyGameAttempt.findMany({
+            where: { userId: banchoId, gameMode: validatedMode },
+            select: { dailyDate: true, sessionId: true },
+            orderBy: { dailyDate: "asc" },
+        }),
+    ]);
+    const sessionIds = attempts.map(({ sessionId }) => sessionId);
+    const games = sessionIds.length === 0
+        ? []
+        : await prisma.game.findMany({
+              where: { userId: banchoId, runType: "daily", sessionId: { in: sessionIds } },
+              select: { sessionId: true, points: true, streak: true, totalResponseTimeMs: true },
+          });
+    const completedSessions = new Set(games.map(({ sessionId }) => sessionId));
+    const playedDates = new Set(
+        attempts.filter(({ sessionId }) => completedSessions.has(sessionId)).map(({ dailyDate }) => dailyDate.toISOString().slice(0, 10)),
+    );
+    const now = new Date();
+    const today = getDailyDate(now, env.DEBUG_DAILY_DAY_OFFSET).getTime();
+    const userStart = user ? Date.UTC(user.createdAt.getUTCFullYear(), user.createdAt.getUTCMonth(), user.createdAt.getUTCDate()) : today;
+    const calendar: UserDailyStats["calendar"] = [];
+    for (let date = Math.max(DAILY_EPOCH_UTC, userStart); date <= today; date += 86_400_000) {
+        const dateKey = new Date(date).toISOString().slice(0, 10);
+        calendar.push({ date: dateKey, status: playedDates.has(dateKey) ? "played" : date === today ? "today" : "missed" });
+    }
+
+    return {
+        dailies_played: games.length,
+        total_points: BigInt(games.reduce((total, game) => total + game.points, 0)),
+        best_streak: Math.max(0, ...games.map(({ streak }) => streak)),
+        total_response_time_ms: games.reduce((total, game) => total + game.totalResponseTimeMs, 0n),
+        calendar,
+    };
+}
+
 export async function getUserRankHistoryAction(banchoId: number, gameMode: GameMode, variant: GameVariant = "classic", days: number = 60): Promise<UserRankHistoryPoint[]> {
     const validatedMode = gameModeSchema.parse(gameMode);
     const validated = z.object({ variant: gameVariantSchema, days: z.number().int().min(1).max(60) }).parse({ variant, days });
@@ -471,6 +512,70 @@ export async function getTopPlayersAction(
             },
         ];
     });
+}
+
+export async function getDailyTopPlayersAction(gamemode: GameMode, limit: number = 10, offset: number = 0): Promise<Array<TopPlayer>> {
+    const validated = z.object({ gamemode: gameModeSchema, limit: z.number().int().min(1).max(100), offset: z.number().int().min(0) }).parse({ gamemode, limit, offset });
+    const [attempts, users] = await Promise.all([
+        prisma.dailyGameAttempt.findMany({
+            where: { gameMode: validated.gamemode },
+            select: { userId: true, dailyDate: true, sessionId: true },
+            orderBy: [{ userId: "asc" }, { dailyDate: "asc" }],
+        }),
+        prisma.user.findMany({ select: { banchoId: true, username: true, avatarUrl: true, bannerUrl: true, createdAt: true } }),
+    ]);
+    const sessionIds = attempts.map(({ sessionId }) => sessionId);
+    const games = sessionIds.length === 0
+        ? []
+        : await prisma.game.findMany({
+              where: { sessionId: { in: sessionIds }, userId: { in: [...new Set(attempts.map(({ userId }) => userId))] }, gameMode: validated.gamemode, runType: "daily", endReason: "completed", roundsPlayed: DAILY_ROUNDS },
+              select: { userId: true, sessionId: true, points: true, streak: true, endedAt: true },
+          });
+    const completedSessions = new Set(games.map(({ sessionId }) => sessionId));
+    const datesByUser = new Map<number, string[]>();
+    for (const attempt of attempts) {
+        if (!completedSessions.has(attempt.sessionId)) continue;
+        const dates = datesByUser.get(attempt.userId) ?? [];
+        dates.push(attempt.dailyDate.toISOString().slice(0, 10));
+        datesByUser.set(attempt.userId, dates);
+    }
+    const gamesByUser = new Map<number, typeof games>();
+    for (const game of games) {
+        const userGames = gamesByUser.get(game.userId) ?? [];
+        userGames.push(game);
+        gamesByUser.set(game.userId, userGames);
+    }
+    const usersById = new Map(users.map((user) => [user.banchoId, user]));
+    const badgesByUser = await getBadgesForUsers([...gamesByUser.keys()]);
+    const rows = [...gamesByUser.entries()].flatMap(([userId, userGames]) => {
+        const user = usersById.get(userId);
+        if (!user) return [];
+        const dates = [...new Set(datesByUser.get(userId) ?? [])].sort();
+        let currentStreak = 0;
+        let bestStreak = 0;
+        let previousDate = -86_400_000;
+        for (const date of dates) {
+            const timestamp = Date.parse(`${date}T00:00:00Z`);
+            currentStreak = timestamp - previousDate === 86_400_000 ? currentStreak + 1 : 1;
+            bestStreak = Math.max(bestStreak, currentStreak);
+            previousDate = timestamp;
+        }
+        const totalPoints = userGames.reduce((sum, game) => sum + game.points, 0);
+        return [{
+            ...mapUser(user),
+            badges: (badgesByUser.get(userId) ?? []).map(({ name, color }) => ({ name, color })),
+            total_score: BigInt(totalPoints),
+            games_played: dates.length,
+            highest_streak: bestStreak,
+            highest_score: Math.max(...userGames.map(({ points }) => points)),
+            best_run_pp: 0,
+            profile_pp: bestStreak,
+            last_played: userGames.reduce((latest, game) => game.endedAt > latest ? game.endedAt : latest, userGames[0].endedAt),
+            best_daily_streak: bestStreak,
+        }];
+    });
+    rows.sort((left, right) => (right.best_daily_streak ?? 0) - (left.best_daily_streak ?? 0) || right.games_played - left.games_played || Number(right.total_score - left.total_score));
+    return rows.slice(validated.offset, validated.offset + validated.limit);
 }
 
 export async function searchUsersAction(searchTerm: string, limit: number = 10): Promise<Array<User>> {

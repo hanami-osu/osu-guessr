@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import UserProfileClient from "./client";
 import { parseProfileFilters } from "@/lib/profile-params";
-import { getUserByIdAction, getUserLatestGamesAction, getUserLifetimeModeStatsAction, getUserRankHistoryAction, getUserTopGamesAction } from "@/actions/user-server";
+import { getUserByIdAction, getUserDailyStatsAction, getUserLatestGamesAction, getUserLifetimeModeStatsAction, getUserRankHistoryAction, getUserTopGamesAction } from "@/actions/user-server";
 import { createPageMetadata } from "@/lib/social-metadata";
 import { cache } from "react";
 
@@ -44,7 +44,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         }
 
         const modeStats = user.achievements?.find((achievement) => achievement.game_mode === currentMode && achievement.variant === currentVariant);
-        const rank = user.ranks?.modeRanks[currentMode]?.[currentVariant];
+        const rank = currentVariant === "daily" ? undefined : user.ranks?.modeRanks[currentMode]?.[currentVariant];
         const pp = Number(modeStats?.profile_pp ?? 0);
         const context = `${formatLabel(currentMode)} · ${formatLabel(currentVariant)}`;
         const performance = [rank ? `#${rank.toLocaleString("en-US")}` : null, modeStats ? `${pp.toLocaleString("en-US", { maximumFractionDigits: 1 })} pp` : null].filter(Boolean).join(" · ");
@@ -80,11 +80,16 @@ export default async function UserProfile({ params, searchParams }: Props) {
             return <UserProfileClient currentMode={currentMode} currentVariant={currentVariant} banchoId={banchoId} user={null} />;
         }
 
-        const [lifetimeModeStats, bestScores, recentScores, rankHistory] = await Promise.all([
-            getUserLifetimeModeStatsAction(numericBanchoId, currentMode, currentVariant),
-            getUserTopGamesAction(numericBanchoId, currentMode, currentVariant, 100),
-            getUserLatestGamesAction(numericBanchoId, currentMode, currentVariant, 10),
-            getUserRankHistoryAction(numericBanchoId, currentMode, currentVariant),
+        const [dailyStats, standardStats] = await Promise.all([
+            currentVariant === "daily" ? getUserDailyStatsAction(numericBanchoId, currentMode) : Promise.resolve(null),
+            currentVariant === "daily"
+                ? Promise.resolve(null)
+                : Promise.all([
+                      getUserLifetimeModeStatsAction(numericBanchoId, currentMode, currentVariant),
+                      getUserTopGamesAction(numericBanchoId, currentMode, currentVariant, 100),
+                      getUserLatestGamesAction(numericBanchoId, currentMode, currentVariant, 10),
+                      getUserRankHistoryAction(numericBanchoId, currentMode, currentVariant),
+                  ]),
         ]);
 
         return (
@@ -93,10 +98,11 @@ export default async function UserProfile({ params, searchParams }: Props) {
                 currentVariant={currentVariant}
                 banchoId={banchoId}
                 user={user}
-                lifetimeModeStats={lifetimeModeStats}
-                bestScores={bestScores}
-                recentScores={recentScores}
-                rankHistory={rankHistory}
+                lifetimeModeStats={standardStats?.[0]}
+                bestScores={standardStats?.[1]}
+                recentScores={standardStats?.[2]}
+                rankHistory={standardStats?.[3]}
+                dailyStats={dailyStats}
                 generatedAt={generatedAt.toISOString()}
             />
         );

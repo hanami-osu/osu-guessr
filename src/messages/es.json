@@ -13,7 +13,8 @@
             "artCredit": "Arte de {artist_name}",
             "developerCredit": "Creado por yorunoken",
             "discordInvite": "Únete a Discord",
-            "multiplayer": "Multijugador"
+            "multiplayer": "Multijugador",
+            "playDaily": "Jugar al desafío diario"
         },
         "statistics": {
             "title": "Estadísticas del juego",
@@ -237,6 +238,10 @@
                 "oneLife": {
                     "continuous": "Continúa hasta tu primer error",
                     "lives": "Una respuesta incorrecta, omisión o tiempo agotado termina la partida"
+                },
+                "daily": {
+                    "rounds": "{count} rondas",
+                    "seeded": "Todos comparten los mismos cinco elementos y se renuevan cada día"
                 }
             },
             "scoring": {
@@ -269,6 +274,10 @@
                 "oneLife": {
                     "title": "Modo muerte",
                     "description": "1 vida"
+                },
+                "daily": {
+                    "title": "Desafío diario",
+                    "description": "Un nuevo desafío cada día"
                 }
             },
             "warning": {
@@ -279,7 +288,8 @@
                 "startGame": "Comenzar el juego",
                 "backToHome": "Volver al inicio"
             },
-            "variantLabel": "Variante de juego"
+            "variantLabel": "Variante de juego",
+            "modeLabel": "Modo de juego del desafío diario"
         },
         "modes": {
             "classic": {
@@ -451,6 +461,22 @@
             "unknown": "Desconocido",
             "backgroundAlt": "Fondo del beatmap",
             "skinAlt": "Captura del skin"
+        },
+        "daily": {
+            "checkingStatus": "Comprobando el desafío de hoy...",
+            "retryStatus": "Reintentar comprobación del estado",
+            "alreadyPlayed": "Ya jugaste el desafío de hoy",
+            "resetIn": "Se reinicia en {time} UTC",
+            "share": {
+                "title": "Desafío diario n.º {day}",
+                "results": "Resultados de la ronda diaria",
+                "round": "Ronda",
+                "copy": "Copiar resultados",
+                "copied": "Copiado"
+            },
+            "continueChallenge": "Continuar el desafío",
+            "title": "Desafío diario",
+            "chooseMode": "Elige un modo de juego para el desafío compartido de hoy."
         }
     },
     "leaderboard": {
@@ -534,6 +560,18 @@
             "recentGames": {
                 "title": "Partidas recientes",
                 "noGames": "Aún no hay partidas"
+            },
+            "daily": {
+                "title": "Diario",
+                "dailiesPlayed": "Desafíos diarios jugados",
+                "totalPoints": "Puntos totales",
+                "bestStreak": "Mejor racha diaria",
+                "timeAnswering": "Tiempo respondiendo",
+                "calendarTitle": "Calendario del desafío diario",
+                "calendarEmpty": "El primer desafío diario comienza el 15 de noviembre de 2026.",
+                "played": "Completado",
+                "missed": "No jugado",
+                "today": "Hoy"
             }
         },
         "notFound": {

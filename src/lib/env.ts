@@ -24,6 +24,9 @@ const envSchema = z.object({
 
     NEXT_PUBLIC_API_URL: z.string().optional(),
     NEXT_PUBLIC_APP_URL: optionalUrl("NEXT_PUBLIC_APP_URL must be a valid URL").default("http://localhost:3000"),
+    DEBUG_DAILY_DAY_OFFSET: z.coerce.number().int().default(0),
+    DEBUG_DAILY_UNLIMITED_ATTEMPTS: z.string().optional().transform((value) => value === "true"),
+    DEBUG_DAILY_REUSE_CHECK: z.string().optional().transform((value) => value === undefined ? true : value === "true"),
 });
 
 const processEnv = {
@@ -44,6 +47,9 @@ const processEnv = {
     DISCORD_WEBHOOK: process.env.DISCORD_WEBHOOK,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    DEBUG_DAILY_DAY_OFFSET: process.env.DEBUG_DAILY_DAY_OFFSET,
+    DEBUG_DAILY_UNLIMITED_ATTEMPTS: process.env.DEBUG_DAILY_UNLIMITED_ATTEMPTS,
+    DEBUG_DAILY_REUSE_CHECK: process.env.DEBUG_DAILY_REUSE_CHECK,
 };
 
 const parsed = envSchema.safeParse(processEnv);

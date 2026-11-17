@@ -1,5 +1,5 @@
 import { ROUND_TIME, getVariantLives } from "../../config";
-import { GameMode, type GameVariant } from "@/actions/types";
+import { GameMode, type GameRunType, type GameVariant } from "@/actions/types";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Heart, HeartCrack } from "lucide-react";
 
@@ -11,6 +11,7 @@ interface GameHeaderProps {
     totalRounds: number;
     mode: GameMode;
     gameVariant: GameVariant;
+    gameRunType?: GameRunType;
     maxStreak?: number;
     mistakes?: number;
     lifeCount?: number;
@@ -26,6 +27,7 @@ export default function GameHeader({
     totalRounds,
     mode,
     gameVariant,
+    gameRunType = "standard",
     maxStreak = 0,
     mistakes = 0,
     lifeCount = getVariantLives(gameVariant),
@@ -41,7 +43,7 @@ export default function GameHeader({
             <div className="flex items-center justify-between gap-4">
                 <div>
                     <div className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {gameVariant === "classic" ? t.game.preGame.modes.classic.title : gameVariant === "survival" ? t.game.preGame.modes.death.title : t.game.preGame.modes.oneLife.title}
+                        {gameRunType === "daily" ? t.game.preGame.modes.daily.title : gameVariant === "classic" ? t.game.preGame.modes.classic.title : gameVariant === "survival" ? t.game.preGame.modes.death.title : t.game.preGame.modes.oneLife.title}
                     </div>
                     <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">{t.game.preGame.title[mode as keyof typeof t.game.preGame.title]}</h1>
                 </div>

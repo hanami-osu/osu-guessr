@@ -13,7 +13,8 @@
             "artCredit": "Dílo od {artist_name}",
             "developerCredit": "Vytvořil/a yorunoken",
             "discordInvite": "Přidejte se na náš Discord",
-            "multiplayer": "Hra pro více hráčů"
+            "multiplayer": "Hra pro více hráčů",
+            "playDaily": "Hrát denní výzvu"
         },
         "statistics": {
             "title": "Statistiky hry",
@@ -237,6 +238,10 @@
                 "oneLife": {
                     "continuous": "Pokračujte až do první chyby",
                     "lives": "Jediný chybný tip, přeskočení nebo vypršení času běh ukončí"
+                },
+                "daily": {
+                    "rounds": "{count} kol",
+                    "seeded": "Stejných pět položek mají všichni hráči a každý den se obnovují"
                 }
             },
             "scoring": {
@@ -269,6 +274,10 @@
                 "oneLife": {
                     "title": "Režim smrti",
                     "description": "1 život"
+                },
+                "daily": {
+                    "title": "Denní výzva",
+                    "description": "Každý den nová výzva"
                 }
             },
             "warning": {
@@ -279,7 +288,8 @@
                 "startGame": "Začít hru",
                 "backToHome": "Domů"
             },
-            "variantLabel": "Varianta hry"
+            "variantLabel": "Varianta hry",
+            "modeLabel": "Herní režim denní výzvy"
         },
         "modes": {
             "classic": {
@@ -451,6 +461,22 @@
             "unknown": "Neznámé",
             "backgroundAlt": "Pozadí beatmapy",
             "skinAlt": "Snímek skinu"
+        },
+        "daily": {
+            "checkingStatus": "Kontroluje se dnešní výzva...",
+            "retryStatus": "Zkusit znovu načíst stav",
+            "alreadyPlayed": "Dnešní výzva už byla odehrána",
+            "resetIn": "Obnovení za {time} UTC",
+            "share": {
+                "title": "Denní výzva č. {day}",
+                "results": "Výsledky denní výzvy",
+                "round": "Kolo",
+                "copy": "Kopírovat výsledky",
+                "copied": "Zkopírováno"
+            },
+            "continueChallenge": "Pokračovat ve výzvě",
+            "title": "Denní výzva",
+            "chooseMode": "Vyberte herní režim dnešní společné výzvy."
         }
     },
     "leaderboard": {
@@ -534,6 +560,18 @@
             "recentGames": {
                 "title": "Nedávné hry",
                 "noGames": "Zatím žádné hry"
+            },
+            "daily": {
+                "title": "Denní",
+                "dailiesPlayed": "Odehrané denní výzvy",
+                "totalPoints": "Celkem bodů",
+                "bestStreak": "Nejdelší denní série",
+                "timeAnswering": "Čas odpovídání",
+                "calendarTitle": "Kalendář denních výzev",
+                "calendarEmpty": "První denní výzva začíná 15. listopadu 2026.",
+                "played": "Dokončeno",
+                "missed": "Zmeškáno",
+                "today": "Dnes"
             }
         },
         "notFound": {
