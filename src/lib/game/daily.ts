@@ -57,14 +57,6 @@ function seededHash(value: string): number {
     return hash >>> 0;
 }
 
-export function createDailyRandom(seed: string): () => number {
-    let state = seededHash(seed);
-    return () => {
-        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-        return state / 0x1_0000_0000;
-    };
-}
-
 export function getDailyItemId(ids: number[], day: number, gameMode: string, round: number): number | undefined {
     if (!Number.isInteger(round) || round < 1 || round > DAILY_ROUNDS || ids.length < DAILY_ROUNDS) return undefined;
 

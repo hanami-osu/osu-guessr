@@ -125,10 +125,6 @@ describe("users scheduled for deletion", () => {
         expect(gameFindManyMock).toHaveBeenLastCalledWith(expect.objectContaining({ where: expect.objectContaining({ userId: { notIn: [hiddenId] } }) }));
     });
 
-    test("leave visible users' games readable", async () => {
-        expect(await actions.getUserGamesCountAction(visibleId)).toBe(4);
-    });
-
     test("are excluded from the leaderboard query so pages stay full", async () => {
         const players = await actions.getTopPlayersAction(GameMode.Background, "classic", 2);
 

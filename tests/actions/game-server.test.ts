@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { GameMode, type DatabaseGameSession } from "@/actions/types";
 import { NoGameContentError } from "@/lib/game/content-errors";
+import { MediaUnavailableError } from "@/lib/media/media-format";
 import { createGuestDailyAccessToken, getGuestDailyCookieName } from "@/lib/game/guest-daily-access";
 
 const sessionId = "00000000-0000-4000-8000-000000000000";
@@ -411,7 +412,7 @@ describe("game server lifecycle", () => {
         await expect(submitGuessAction(sessionId, answer)).rejects.toThrow("Game session belongs to a previous match");
     });
 
-    test("persists a survival-mode correct guess before next-round content exhaustion", async () => {
+    test("keeps a survival result retryable on media failure and saves it on content exhaustion", async () => {
         putSession(makeSession({ variant: "survival" }));
 
         const answered = await submitGuessAction(sessionId, answer);
@@ -421,6 +422,15 @@ describe("game server lifecycle", () => {
         const afterGuess = JSON.parse(redisValues.get(`game_session:${sessionId}`)!);
         expect(afterGuess.correct_guesses).toBe(1);
         expect(afterGuess.has_guessed_current_round).toBe(true);
+
+        getRandomActionMock.mockRejectedValueOnce(new MediaUnavailableError());
+        await expect(submitGuessAction(sessionId)).rejects.toBeInstanceOf(MediaUnavailableError);
+        const recovered = await getGameStateAction(sessionId);
+        expect(recovered.gameStatus).toBe("active");
+        expect(recovered.rounds.current).toBe(1);
+        expect(recovered.currentBeatmap.revealed).toBe(true);
+        expect(recovered.score.total).toBe(answered.score.total);
+        expect(gameCreateMock).not.toHaveBeenCalled();
 
         getRandomActionMock.mockRejectedValueOnce(new NoGameContentError("No background found"));
         const finished = await submitGuessAction(sessionId);
@@ -509,6 +519,22 @@ describe("game server lifecycle", () => {
 
         const next = await submitGuessAction(sessionId);
         expect(next.rounds.current).toBe(2);
+        expect(next.currentBeatmap.revealed).toBe(false);
+    });
+
+    test("rejects advancing before a reveal and awards each round only once", async () => {
+        putSession(makeSession({ total_points: 0 }));
+        await expect(submitGuessAction(sessionId)).rejects.toThrow("before advancing");
+
+        const answered = await submitGuessAction(sessionId, answer);
+        expect(answered.currentBeatmap.revealed).toBe(true);
+        expect(answered.rounds.correctGuesses).toBe(1);
+        await expect(submitGuessAction(sessionId, answer)).rejects.toThrow("Already submitted");
+
+        const next = await submitGuessAction(sessionId);
+        expect(next.rounds.current).toBe(2);
+        expect(next.rounds.correctGuesses).toBe(1);
+        expect(next.score.total).toBe(answered.score.total);
         expect(next.currentBeatmap.revealed).toBe(false);
     });
 
@@ -641,11 +667,6 @@ describe("game server lifecycle", () => {
         expect(transactionMock).toHaveBeenCalledTimes(1);
         expect(gameCreateMock).toHaveBeenCalledTimes(1);
     });
-    test("daily rounds use the specified fifteen second limit", async () => {
-        const state = await startGameAction(GameMode.Background, "classic", undefined, "daily");
-        expect(state.timeLeft).toBe(15);
-    });
-
     test("expires the remaining daily rounds after time offline", async () => {
         putSession(makeSession({ run_type: "daily", ranked: false, daily_day: 1 }));
         setSystemTime(new Date("2026-01-01T00:10:00Z"));

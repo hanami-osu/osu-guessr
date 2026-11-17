@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DAILY_ROUNDS, createDailyRandom, formatDailyShareResult, getDailyChallengeDay, getDailyDate, getDailyItemId, getNextDailyReset, parseFutureDailyDate } from "@/lib/game/daily";
+import { DAILY_ROUNDS, formatDailyShareResult, getDailyChallengeDay, getDailyDate, getDailyItemId, getNextDailyReset, parseFutureDailyDate } from "@/lib/game/daily";
 import { shouldAutoClaimGuestDailyResult } from "@/lib/game/daily-client";
 
 describe("daily challenge helpers", () => {
@@ -9,18 +9,12 @@ describe("daily challenge helpers", () => {
         expect(getDailyChallengeDay(new Date("2026-11-16T00:00:00.000Z"), 3)).toBe(5);
     });
 
-    test("normalizes daily dates and reset time to UTC midnight", () => {
-        const now = new Date("2026-11-16T18:24:00.000Z");
-        expect(getDailyDate(now).toISOString()).toBe("2026-11-16T00:00:00.000Z");
-        expect(getNextDailyReset(now).toISOString()).toBe("2026-11-17T00:00:00.000Z");
-    });
-
-    test("applies debug offset to the UTC challenge date and its day number", () => {
+    test("aligns the current date, debug-offset challenge and next reset to UTC midnight", () => {
         const now = new Date("2026-11-17T18:24:00.000Z");
-
         const offsetDate = getDailyDate(now, 6);
+        expect(getDailyDate(now).toISOString()).toBe("2026-11-17T00:00:00.000Z");
+        expect(getNextDailyReset(now).toISOString()).toBe("2026-11-18T00:00:00.000Z");
         expect(offsetDate.toISOString()).toBe("2026-11-23T00:00:00.000Z");
-        expect(getDailyChallengeDay(now)).toBe(3);
         expect(getDailyChallengeDay(offsetDate)).toBe(9);
     });
 
@@ -54,16 +48,6 @@ describe("daily challenge helpers", () => {
         expect(getDailyItemId([1, 2, 3, 4], 1, "background", 1)).toBeUndefined();
         expect(getDailyItemId([1, 2, 3, 4, 5], 1, "background", 6)).toBeUndefined();
         expect(getDailyItemId([1, 2, 3, 4, 5], 1, "background", 1.5)).toBeUndefined();
-    });
-
-    test("creates a repeatable random stream for seeded daily pair selection", () => {
-        const first = createDailyRandom("daily:2026-11-16:score_pp:1");
-        const repeated = createDailyRandom("daily:2026-11-16:score_pp:1");
-        const nextDay = createDailyRandom("daily:2026-11-17:score_pp:1");
-        const firstValues = Array.from({ length: 5 }, () => first());
-
-        expect(firstValues).toEqual(Array.from({ length: 5 }, () => repeated()));
-        expect(firstValues).not.toEqual(Array.from({ length: 5 }, () => nextDay()));
     });
 
     test("formats the requested compact daily share result", () => {

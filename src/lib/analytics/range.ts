@@ -12,7 +12,7 @@ export type BucketSize = "day" | "week";
 const DAY_MS = 86_400_000;
 
 export function parseAnalyticsRange(value: string | string[] | undefined): AnalyticsRange {
-    return typeof value === "string" && value in ANALYTICS_RANGES ? (value as AnalyticsRange) : "30d";
+    return typeof value === "string" && Object.hasOwn(ANALYTICS_RANGES, value) ? (value as AnalyticsRange) : "30d";
 }
 
 export interface ResolvedRange {

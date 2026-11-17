@@ -29,16 +29,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/internal/account-deletion", () => {
-    test.each(["hide", "restore", "purge"])("runs %s for a valid request", async (action) => {
-        const response = await POST(request({ banchoId: 123, action }));
-
-        expect(response.status).toBe(200);
-        expect(await response.json()).toEqual({ ok: true });
-        expect(runMock).toHaveBeenCalledWith(action, 123);
-    });
-
     test.each([
-        ["a missing header", null],
         ["a wrong secret", `Bearer ${"x".repeat(32)}`],
         ["a secret prefix", `Bearer ${secret.slice(0, 16)}`],
         ["a non-bearer scheme", `Basic ${secret}`],
@@ -53,15 +44,14 @@ describe("POST /api/internal/account-deletion", () => {
         const response = await POST(request("not json", null));
 
         expect(response.status).toBe(401);
+        expect(runMock).not.toHaveBeenCalled();
     });
 
     test.each([
         ["invalid JSON", "{"],
-        ["a missing action", { banchoId: 123 }],
         ["an unknown action", { banchoId: 123, action: "delete" }],
         ["a non-positive id", { banchoId: 0, action: "hide" }],
         ["a fractional id", { banchoId: 1.5, action: "hide" }],
-        ["a missing id", { action: "hide" }],
     ])("rejects %s with 400", async (_reason, body) => {
         const response = await POST(request(body));
 

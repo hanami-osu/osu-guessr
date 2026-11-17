@@ -6,6 +6,7 @@ describe("analytics range", () => {
     test("falls back to 30 days for unknown values", () => {
         expect(parseAnalyticsRange("90d")).toBe("90d");
         expect(parseAnalyticsRange("bogus")).toBe("30d");
+        expect(parseAnalyticsRange("constructor")).toBe("30d");
         expect(parseAnalyticsRange(undefined)).toBe("30d");
     });
 

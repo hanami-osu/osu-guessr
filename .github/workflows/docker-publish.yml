@@ -20,6 +20,17 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: read
+        services:
+            mariadb:
+                image: mariadb:11.4
+                env:
+                    MARIADB_DATABASE: osu_guessr_test
+                    MARIADB_USER: test
+                    MARIADB_PASSWORD: test
+                    MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+                ports:
+                    - 3306/tcp
+                options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=5s --health-retries=10
 
         steps:
             - name: Checkout
@@ -37,7 +48,11 @@ jobs:
               run: bun run check
 
             - name: Test
-              run: bun run test
+              env:
+                  OSU_GUESSR_TEST_DATABASE_URL: mysql://test:test@127.0.0.1:${{ job.services.mariadb.ports['3306'] }}/osu_guessr_test
+              run: |
+                  DATABASE_URL="$OSU_GUESSR_TEST_DATABASE_URL" bun run db:migrate:deploy
+                  bun run test
 
             - name: Build
               run: bun run build

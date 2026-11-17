@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { GameState } from "@/actions/types";
-import { canPersistGameResult, isClassicGameIncomplete } from "@/lib/game/completion";
+import { isClassicGameIncomplete } from "@/lib/game/completion";
 
 const finalRound: GameState = {
     sessionId: "00000000-0000-4000-8000-000000000000",
@@ -12,20 +12,11 @@ const finalRound: GameState = {
     runType: "standard", variant: "classic",
 };
 
-describe("classic game completion", () => {
-    test("keeps an unanswered final round incomplete", () => {
+describe("classic game exit warning", () => {
+    test("warns until the final round is revealed", () => {
+        const answered = { ...finalRound, currentBeatmap: { revealed: true } };
+        expect(isClassicGameIncomplete({ ...answered, rounds: { ...answered.rounds, current: 14 } })).toBe(true);
         expect(isClassicGameIncomplete(finalRound)).toBe(true);
-    });
-
-    test("allows exit after the final round is answered", () => {
-        expect(isClassicGameIncomplete({ ...finalRound, currentBeatmap: { revealed: true } })).toBe(false);
-    });
-
-    test("does not persist an unanswered final round", () => {
-        expect(canPersistGameResult({ variant: "classic", currentRound: 15, hasGuessedCurrentRound: false }, 15)).toBe(false);
-    });
-
-    test("persists a survival run after any answered map", () => {
-        expect(canPersistGameResult({ variant: "survival", currentRound: 1, hasGuessedCurrentRound: true }, 10)).toBe(true);
+        expect(isClassicGameIncomplete(answered)).toBe(false);
     });
 });

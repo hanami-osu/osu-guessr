@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { OWNER_ID } from "@/lib/users/owner";
 
 const findUser = mock(async () => null as { isAdmin: boolean; deletionScheduledAt: Date | null } | null);
@@ -40,11 +40,21 @@ describe("getSessionUserAccess", () => {
         expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: true });
     });
 
-    test("serves repeated lookups from the cache while it is fresh", async () => {
-        findUser.mockResolvedValue({ isAdmin: false, deletionScheduledAt: null });
+    test("a cached admin loses access when the cache expires after account deletion is scheduled", async () => {
+        try {
+            const signedInAt = new Date("2026-11-18T12:00:00Z");
+            setSystemTime(signedInAt);
+            findUser.mockResolvedValue({ isAdmin: true, deletionScheduledAt: null });
+            expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: true });
 
-        expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: false });
-        expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: false });
-        expect(findUser).toHaveBeenCalledTimes(1);
+            findUser.mockResolvedValue({ isAdmin: true, deletionScheduledAt: signedInAt });
+            setSystemTime(new Date(signedInAt.getTime() + 29_999));
+            expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: true });
+
+            setSystemTime(new Date(signedInAt.getTime() + 30_000));
+            expect(await getSessionUserAccess(123)).toEqual({ active: false, isAdmin: false });
+        } finally {
+            setSystemTime();
+        }
     });
 });

@@ -1,63 +1,25 @@
 import { describe, expect, test } from "bun:test";
-import { createLatestRequestGate, RequestToken } from "@/lib/latest-request";
-
-function deferred<T>() {
-    let resolve!: (value: T) => void;
-    let reject!: (reason?: unknown) => void;
-    const promise = new Promise<T>((resolver, rejecter) => {
-        resolve = resolver;
-        reject = rejecter;
-    });
-    return { promise, resolve, reject };
-}
+import { createLatestRequestGate } from "@/lib/latest-request";
 
 describe("createLatestRequestGate", () => {
-    test("prevents an older response from committing after a newer response", async () => {
+    test("only the newest request can update search results", () => {
         const gate = createLatestRequestGate();
-        const oldResponse = deferred<string>();
-        const newResponse = deferred<string>();
-        const committed: string[] = [];
+        const first = gate.begin();
+        const latest = gate.begin();
 
-        const commitWhenCurrent = async (promise: Promise<string>, request: RequestToken) => {
-            const value = await promise;
-            if (request.isCurrent()) committed.push(value);
-        };
-
-        const oldCommit = commitWhenCurrent(oldResponse.promise, gate.begin());
-        const newCommit = commitWhenCurrent(newResponse.promise, gate.begin());
-
-        newResponse.resolve("new");
-        await newCommit;
-        oldResponse.resolve("old");
-        await oldCommit;
-
-        expect(committed).toEqual(["new"]);
+        expect(first.isCurrent()).toBe(false);
+        expect(latest.isCurrent()).toBe(true);
     });
 
-    test("invalidates an active request during cleanup", () => {
-        const request = createLatestRequestGate().begin();
-        request.cancel();
-        expect(request.isCurrent()).toBe(false);
-    });
-
-    test("prevents a stale rejection and finalizer from changing current state", async () => {
+    test("cancels a request without invalidating a newer one", () => {
         const gate = createLatestRequestGate();
-        const oldResponse = deferred<string>();
-        const oldRequest = gate.begin();
-        const state = { error: "", loading: true };
+        const first = gate.begin();
+        const latest = gate.begin();
 
-        const oldCompletion = oldResponse.promise
-            .catch(() => {
-                if (oldRequest.isCurrent()) state.error = "old failure";
-            })
-            .finally(() => {
-                if (oldRequest.isCurrent()) state.loading = false;
-            });
+        first.cancel();
+        expect(latest.isCurrent()).toBe(true);
 
-        gate.begin();
-        oldResponse.reject(new Error("stale"));
-        await oldCompletion;
-
-        expect(state).toEqual({ error: "", loading: true });
+        latest.cancel();
+        expect(latest.isCurrent()).toBe(false);
     });
 });

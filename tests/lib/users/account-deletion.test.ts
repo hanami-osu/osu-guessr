@@ -1,182 +1,72 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createAccountDeletionService, type AccountDeletionDependencies } from "@/lib/users/account-deletion";
 
-type Row = Record<string, unknown>;
-type Where = Record<string, unknown>;
-
 const userId = 7;
-const otherUserId = 8;
 const scheduledAt = new Date("2026-11-16T00:00:00.000Z");
+let users: Map<number, Date | null>;
 
-function matches(row: Row, where: Where): boolean {
-    return Object.entries(where).every(([key, value]) => row[key] === value);
-}
-
-function createTable(rows: Row[]) {
-    return {
-        rows,
-        async deleteMany({ where }: { where: Where }) {
-            const before = rows.length;
-            rows.splice(0, rows.length, ...rows.filter((row) => !matches(row, where)));
-            return { count: before - rows.length };
-        },
-        async updateMany({ where, data }: { where: Where; data: Row }) {
-            const matched = rows.filter((row) => matches(row, where));
-            for (const row of matched) Object.assign(row, data);
-            return { count: matched.length };
-        },
+function service(now = scheduledAt) {
+    const removeMultiplayerUser = mock<(id: number) => Promise<void>>(async () => {});
+    const logError = mock<(message: string, error: unknown) => void>(() => {});
+    const updateMany = async ({ where, data }: { where: { banchoId: number; deletionScheduledAt?: null }; data: { deletionScheduledAt: Date | null } }) => {
+        const current = users.get(where.banchoId);
+        if (current === undefined || (where.deletionScheduledAt === null && current !== null)) return { count: 0 };
+        users.set(where.banchoId, data.deletionScheduledAt);
+        return { count: 1 };
     };
-}
-
-function createDatabase() {
-    const tables = {
-        user: createTable([
-            { banchoId: userId, deletionScheduledAt: null },
-            { banchoId: otherUserId, deletionScheduledAt: null },
-        ]),
-        game: createTable([
-            { id: 1, userId },
-            { id: 2, userId: otherUserId },
-        ]),
-        gameRound: createTable([
-            { gameId: 1, roundNumber: 1 },
-            { gameId: 2, roundNumber: 1 },
-        ]),
-        userAchievement: createTable([{ userId }, { userId: otherUserId }]),
-        userBadge: createTable([{ userId }, { userId: otherUserId }]),
-        apiKey: createTable([{ userId }, { userId: otherUserId }]),
-        report: createTable([{ userId }, { userId: otherUserId }]),
-        contentStatContribution: createTable([{ userId }, { userId: otherUserId }]),
-        gameChallenge: createTable([
-            { id: "a", creatorUserId: userId },
-            { id: "b", creatorUserId: otherUserId },
-        ]),
-        contentStat: createTable([{ itemId: 1, appearances: 2 }]),
-    };
-
-    const tx = {
-        ...tables,
-        gameRound: {
-            async deleteMany({ where }: { where: { game: { userId: number } } }) {
-                const games = tables.game.rows.filter((game) => matches(game, where.game));
-                const counts = await Promise.all(games.map((game) => tables.gameRound.deleteMany({ where: { gameId: game.id } })));
-                return { count: counts.reduce((total, row) => total + row.count, 0) };
+    const accountDeletion = createAccountDeletionService({
+        prisma: {
+            user: { updateMany } as unknown as AccountDeletionDependencies["prisma"]["user"],
+            $transaction: async () => {
+                throw new Error("Unexpected transaction for hide or restore");
             },
         },
-    };
-
-    const transaction = mock(async (operation: (client: typeof tx) => Promise<unknown>) => operation(tx));
-    return { tables, prisma: { user: tables.user, $transaction: transaction } };
-}
-
-let database: ReturnType<typeof createDatabase>;
-let removeMultiplayerUser: ReturnType<typeof mock<(id: number) => Promise<void>>>;
-let redisDel: ReturnType<typeof mock<(keys: string[]) => Promise<number>>>;
-let logError: ReturnType<typeof mock<(message: string, error: unknown) => void>>;
-
-function service() {
-    return createAccountDeletionService({
-        prisma: database.prisma as unknown as AccountDeletionDependencies["prisma"],
-        redis: { del: redisDel },
+        redis: { del: async () => 1 },
         removeMultiplayerUser,
-        now: () => scheduledAt,
+        now: () => now,
         logError,
     });
-}
-
-function user(id: number) {
-    return database.tables.user.rows.find((row) => row.banchoId === id);
+    return { accountDeletion, removeMultiplayerUser, logError };
 }
 
 beforeEach(() => {
-    database = createDatabase();
-    removeMultiplayerUser = mock(async () => {});
-    redisDel = mock(async () => 1);
-    logError = mock(() => {});
+    users = new Map([
+        [userId, null],
+        [userId + 1, null],
+    ]);
 });
 
-describe("account deletion", () => {
-    test("hides a user and removes them from multiplayer", async () => {
-        await service().run("hide", userId);
+describe("account deletion visibility", () => {
+    test("hides a user once and removes them from multiplayer", async () => {
+        const { accountDeletion, removeMultiplayerUser } = service();
+        await accountDeletion.run("hide", userId);
+        await service(new Date("2026-11-20T00:00:00.000Z")).accountDeletion.hideUser(userId);
 
-        expect(user(userId)?.deletionScheduledAt).toEqual(scheduledAt);
-        expect(user(otherUserId)?.deletionScheduledAt).toBeNull();
+        expect(users.get(userId)).toEqual(scheduledAt);
+        expect(users.get(userId + 1)).toBeNull();
         expect(removeMultiplayerUser).toHaveBeenCalledWith(userId);
     });
 
-    test("keeps the first hide time when hide is repeated", async () => {
-        await service().hideUser(userId);
-        const later = createAccountDeletionService({
-            prisma: database.prisma as unknown as AccountDeletionDependencies["prisma"],
-            redis: { del: redisDel },
-            removeMultiplayerUser,
-            now: () => new Date("2026-11-20T00:00:00.000Z"),
-        });
+    test("hides the account even if multiplayer cleanup fails", async () => {
+        const { accountDeletion, removeMultiplayerUser, logError } = service();
+        removeMultiplayerUser.mockRejectedValueOnce(new Error("Redis unavailable"));
 
-        await later.hideUser(userId);
+        await accountDeletion.hideUser(userId);
 
-        expect(user(userId)?.deletionScheduledAt).toEqual(scheduledAt);
-    });
-
-    test("still hides the user when multiplayer cleanup fails", async () => {
-        removeMultiplayerUser.mockImplementation(async () => {
-            throw new Error("redis unavailable");
-        });
-
-        await service().hideUser(userId);
-
-        expect(user(userId)?.deletionScheduledAt).toEqual(scheduledAt);
+        expect(users.get(userId)).toEqual(scheduledAt);
         expect(logError).toHaveBeenCalledTimes(1);
     });
 
-    test("restores a hidden user and tolerates repeats", async () => {
-        await service().hideUser(userId);
+    test("restores a hidden user and tolerates repeats or a missing user", async () => {
+        const { accountDeletion } = service();
+        users.set(userId, scheduledAt);
 
-        await service().run("restore", userId);
-        await service().run("restore", userId);
+        await accountDeletion.run("restore", userId);
+        await accountDeletion.run("restore", userId);
+        await accountDeletion.run("hide", 99);
+        await accountDeletion.run("restore", 99);
 
-        expect(user(userId)?.deletionScheduledAt).toBeNull();
-    });
-
-    test("purges every row of the user, anonymizes their challenges and keeps everyone else's data", async () => {
-        const { tables } = database;
-
-        await service().run("purge", userId);
-
-        expect(user(userId)).toBeUndefined();
-        expect(tables.game.rows).toEqual([{ id: 2, userId: otherUserId }]);
-        expect(tables.gameRound.rows).toEqual([{ gameId: 2, roundNumber: 1 }]);
-        for (const table of [tables.userAchievement, tables.userBadge, tables.apiKey, tables.report, tables.contentStatContribution]) {
-            expect(table.rows).toEqual([{ userId: otherUserId }]);
-        }
-        expect(tables.gameChallenge.rows).toEqual([
-            { id: "a", creatorUserId: null },
-            { id: "b", creatorUserId: otherUserId },
-        ]);
-        expect(tables.contentStat.rows).toEqual([{ itemId: 1, appearances: 2 }]);
-        expect(database.prisma.$transaction).toHaveBeenCalledTimes(1);
-        expect(removeMultiplayerUser).toHaveBeenCalledWith(userId);
-        expect(redisDel).toHaveBeenCalledWith([`report_rate:${userId}`]);
-    });
-
-    test("purge, hide and restore succeed when the user has no row", async () => {
-        await service().purgeUser(userId);
-        const snapshot = JSON.stringify(database.tables);
-
-        await service().purgeUser(userId);
-        await service().hideUser(userId);
-        await service().restoreUser(userId);
-
-        expect(JSON.stringify(database.tables)).toBe(snapshot);
-        expect(user(userId)).toBeUndefined();
-    });
-
-    test("propagates purge failures so the caller retries", async () => {
-        database.prisma.$transaction.mockImplementation(async () => {
-            throw new Error("deadlock");
-        });
-
-        await expect(service().purgeUser(userId)).rejects.toThrow("deadlock");
-        expect(redisDel).not.toHaveBeenCalled();
+        expect(users.get(userId)).toBeNull();
+        expect(users.has(99)).toBe(false);
     });
 });

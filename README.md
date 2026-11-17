@@ -108,6 +108,13 @@ bun run test
 bun run build
 ```
 
+The quality job runs the database tests against a fresh MariaDB database. To run them locally, set `OSU_GUESSR_TEST_DATABASE_URL` to a fresh test database and run:
+
+```bash
+DATABASE_URL="$OSU_GUESSR_TEST_DATABASE_URL" bun run db:migrate:deploy
+bun test --isolate tests/integration
+```
+
 ## Production notes
 
 - Use production-specific secrets and HTTPS URLs.
