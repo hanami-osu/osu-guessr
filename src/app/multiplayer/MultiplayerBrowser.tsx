@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-export default function MultiplayerBrowser() {
+export default function MultiplayerBrowser({ initialLobbies = [] }: { initialLobbies?: MultiplayerLobbySummary[] }) {
     const { data: session } = useSession();
     const router = useRouter();
-    const [lobbies, setLobbies] = useState<MultiplayerLobbySummary[]>([]);
+    const [lobbies, setLobbies] = useState<MultiplayerLobbySummary[]>(initialLobbies);
     const [name, setName] = useState("");
     const [maxPlayers, setMaxPlayers] = useState(8);
     const [isPrivate, setIsPrivate] = useState(false);
