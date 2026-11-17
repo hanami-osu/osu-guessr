@@ -5,9 +5,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Check, Globe } from "lucide-react";
 import { languages, Locale } from "@/hooks/use-translations";
 import { useTranslationsContext } from "@/context/translations-provider";
+import { useRouter } from "next/navigation";
 
 export function LanguageSwitcher() {
     const { locale, setLanguage, t } = useTranslationsContext();
+    const router = useRouter();
 
     return (
         <DropdownMenu>
@@ -22,7 +24,10 @@ export function LanguageSwitcher() {
                         key={code}
                         role="menuitemradio"
                         aria-checked={locale === code}
-                        onClick={() => setLanguage(code as Locale)}
+                        onClick={() => {
+                            setLanguage(code as Locale);
+                            router.refresh();
+                        }}
                         className={`${locale === code ? "bg-accent" : ""} hover:cursor-pointer`}
                     >
                         <Check className={`mr-2 h-4 w-4 ${locale === code ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
