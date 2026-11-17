@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { requireAdmin } from "@/actions/require-admin";
 import { OWNER_ID } from "@/lib";
+import { clearSessionUserAccessCache } from "@/lib/admin";
 import { query } from "@/lib/database";
 
 const userIdSchema = z.number().int().positive();
@@ -38,5 +39,6 @@ export async function setAdmin(rawUserId: number, isAdmin: boolean): Promise<str
     }
 
     await query("UPDATE users SET is_admin = ? WHERE bancho_id = ?", [isAdmin, userId]);
+    clearSessionUserAccessCache();
     return `${isAdmin ? "Granted admin to" : "Removed admin from"} ${user.username} (${userId})`;
 }

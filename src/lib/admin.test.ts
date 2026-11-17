@@ -10,11 +10,12 @@ const queryMock = mock(async (sql: string, values?: unknown[]) => {
 mock.module("server-only", () => ({}));
 mock.module("@/lib/database", () => ({ query: queryMock }));
 
-const { getSessionUserAccess } = await import("./admin");
+const { getSessionUserAccess, clearSessionUserAccessCache } = await import("./admin");
 
 beforeEach(() => {
     queryMock.mockReset();
     queryMock.mockImplementation(async () => []);
+    clearSessionUserAccessCache();
 });
 
 describe("getSessionUserAccess", () => {
@@ -39,6 +40,15 @@ describe("getSessionUserAccess", () => {
         expect(await getSessionUserAccess(OWNER_ID)).toEqual({ active: true, isAdmin: true });
 
         queryMock.mockImplementation(async () => [{ is_admin: 1, deletion_scheduled_at: null }]);
+    clearSessionUserAccessCache();
         expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: true });
+    });
+
+    test("serves repeated lookups from the cache while it is fresh", async () => {
+        queryMock.mockImplementation(async () => [{ is_admin: 0, deletion_scheduled_at: null }]);
+
+        expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: false });
+        expect(await getSessionUserAccess(123)).toEqual({ active: true, isAdmin: false });
+        expect(queryMock).toHaveBeenCalledTimes(1);
     });
 });
