@@ -1,0 +1,16 @@
+import { describe, expect, test } from "bun:test";
+import { GameMode } from "@/actions/types";
+import { parseProfileFilters } from "@/lib/users/profile-params";
+
+describe("parseProfileFilters", () => {
+    test("accepts supported profile filters", () => {
+        expect(parseProfileFilters("audio", "survival")).toEqual({ mode: GameMode.Audio, variant: "survival" });
+        expect(parseProfileFilters("audio", "death")).toEqual({ mode: GameMode.Audio, variant: "death" });
+        expect(parseProfileFilters("score_pp", "classic")).toEqual({ mode: GameMode.ScorePp, variant: "classic" });
+    });
+
+    test("falls back when profile filters are missing or invalid", () => {
+        expect(parseProfileFilters()).toEqual({ mode: GameMode.Background, variant: "daily" });
+        expect(parseProfileFilters("invalid", "endless")).toEqual({ mode: GameMode.Background, variant: "daily" });
+    });
+});

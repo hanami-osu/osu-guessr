@@ -7,7 +7,7 @@
         "dev": "dotenv -e .env -- bun server.ts",
         "build": "prisma generate && IS_DOCKER_BUILD=true next build && NODE_ENV=production bun build server.ts --target=node --format=cjs --outfile=.server/server.js --packages external",
         "start": "dotenv -e .env -- env NODE_ENV=production node .server/server.js",
-        "check": "prisma generate && eslint src && tsc --noEmit",
+        "check": "prisma generate && eslint src tests && tsc --noEmit",
         "format": "prettier --write .",
         "test": "bun test --isolate",
         "sync": "bun scripts/sync-translations",
