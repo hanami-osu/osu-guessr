@@ -1,5 +1,7 @@
 "use client";
 
+import { DAILY_ROUND_TIME } from "@/lib/game/daily";
+
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -162,7 +164,7 @@ export default function PreGameMenu({ onStart, onCancel, gameMode, dailyModePick
             <ul className={listClass}>
                 <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{gameDescription}</li>
                 <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.howToPlay.daily.rounds.replace("{count}", DAILY_ROUNDS.toString())}</li>
-                <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.howToPlay.classic.time.replace("{seconds}", ROUND_TIME.toString())}</li>
+                <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.howToPlay.classic.time.replace("{seconds}", DAILY_ROUND_TIME.toString())}</li>
                 <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.howToPlay.daily.seeded}</li>
                 {activeGameMode === GameMode.ScorePp && <li className={listItemClass}><span aria-hidden="true" className={markerClass} />{t.game.preGame.howToPlay.scorePp.choose}</li>}
             </ul>
@@ -203,7 +205,10 @@ export default function PreGameMenu({ onStart, onCancel, gameMode, dailyModePick
                                 className={`rounded-md px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === "daily" ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                                 aria-checked={selectedMode === "daily"}
                             >
-                                <span className="flex min-h-10 items-center text-sm font-semibold">{t.game.preGame.modes.daily.title}</span>
+                                <span className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                                    <span className="text-sm font-semibold">{t.game.preGame.modes.daily.title}</span>
+                                    <span className="text-xs text-muted-foreground">{t.game.preGame.modes.classic.description.replace("{count}", DAILY_ROUNDS.toString())}</span>
+                                </span>
                             </button>
                         )}
                         <button

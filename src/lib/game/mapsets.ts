@@ -5,11 +5,13 @@ import { getMediaData } from "@/actions/media";
 
 import { GameMode, type MapsetTags, type MapsetData, type MapsetDataWithTags, type SkinData } from "@/actions/types";
 import { NoGameContentError } from "./content-errors";
-import { DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, DAILY_EPOCH_UTC, DAILY_ROUNDS, getDailyItemId } from "./daily";
+import { DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, DAILY_EPOCH_UTC, DAILY_ROUNDS, DAILY_ROUND_TIME, getDailyItemId } from "./daily";
 import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "./versioning";
 import { acquireRedisLock, releaseRedisLock } from "../redis-lock-core";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
+import { normalizeString as normalizeSongTitle } from "../guess-checker";
 
 export async function getRandomAudio(sessionId?: string) {
     const audio = await getRandomMapset("audio_filename", sessionId);
@@ -28,7 +30,7 @@ export async function getRandomAudio(sessionId?: string) {
 export async function getDailyAudio(day: number, round: number) {
     const audio = await getDailyMapset("audio_filename", day, GameMode.Audio, round);
     if (!audio) throw new NoGameContentError("No daily audio found");
-    return { data: audio, audioData: await getMediaData(GameMode.Audio, audio.audio_filename) };
+    return { data: audio, challengeId: audio.challengeId, audioData: await getMediaData(GameMode.Audio, audio.audio_filename) };
 }
 
 export async function getRandomBackground(sessionId?: string) {
@@ -48,7 +50,7 @@ export async function getRandomBackground(sessionId?: string) {
 export async function getDailyBackground(day: number, round: number) {
     const background = await getDailyMapset("image_filename", day, GameMode.Background, round);
     if (!background) throw new NoGameContentError("No daily background found");
-    return { data: background, backgroundData: await getMediaData(GameMode.Background, background.image_filename) };
+    return { data: background, challengeId: background.challengeId, backgroundData: await getMediaData(GameMode.Background, background.image_filename) };
 }
 
 async function getExcludedIds(sessionId: string | undefined, itemType: "mapset" | "skin"): Promise<number[]> {
@@ -71,7 +73,7 @@ async function getRandomMapset(filenameColumn: "audio_filename" | "image_filenam
     return getMapsetWithTags(tags);
 }
 
-async function getDailyMapset(filenameColumn: "audio_filename" | "image_filename", day: number, gameMode: GameMode, round: number): Promise<MapsetDataWithTags | null> {
+async function getDailyMapset(filenameColumn: "audio_filename" | "image_filename", day: number, gameMode: GameMode, round: number): Promise<(MapsetDataWithTags & { challengeId: string }) | null> {
     const dailyDate = new Date(DAILY_EPOCH_UTC + (day - 1) * 86_400_000);
     let challenge = await prisma.gameChallenge.findUnique({
         where: { dailyDate_gameMode_variant: { dailyDate, gameMode, variant: "classic" } },
@@ -94,7 +96,8 @@ async function getDailyMapset(filenameColumn: "audio_filename" | "image_filename
     });
     if (!challengeRound || challengeRound.itemType !== "mapset") return null;
     const [selectedTags] = await query<MapsetTags>(`SELECT * FROM mapset_tags WHERE mapset_id = ? AND ${filenameColumn} IS NOT NULL AND ${filenameColumn} <> ''`, [challengeRound.itemId]);
-    return selectedTags ? getMapsetWithTags(selectedTags) : null;
+    const mapset = selectedTags ? await getMapsetWithTags(selectedTags) : null;
+    return mapset ? { ...mapset, title: challengeRound.answerSnapshot, challengeId: challenge.id } : null;
 }
 
 async function createDailyMapChallenge(filenameColumn: "audio_filename" | "image_filename", dailyDate: Date, day: number, gameMode: GameMode, checkRepetition: boolean, manuallySet = false) {
@@ -137,7 +140,7 @@ async function createDailyMapChallenge(filenameColumn: "audio_filename" | "image
 
     const challengeId = crypto.randomUUID();
     const seed = `daily:${currentDate}:${gameMode}`;
-    const challengeData = {
+    const challengeData: Prisma.GameChallengeCreateInput = {
         id: challengeId,
         challengeType: "daily",
         gameMode,
@@ -147,13 +150,13 @@ async function createDailyMapChallenge(filenameColumn: "audio_filename" | "image
         seed,
         configSnapshot,
         roundCount: DAILY_ROUNDS,
-        timerMs: 30_000,
+        timerMs: DAILY_ROUND_TIME * 1000,
         ranked: false,
         dailyDate,
     };
 
     const selectedMapsets = await Promise.all(selected.map((tags) => getMapsetWithTags(tags!)));
-    const roundRows = [];
+    const roundRows: Prisma.GameChallengeRoundCreateManyInput[] = [];
     for (const [index, mapset] of selectedMapsets.entries()) {
         if (!mapset) throw new NoGameContentError("Daily mapset metadata is unavailable");
         roundRows.push({
@@ -184,10 +187,11 @@ async function createDailyMapChallenge(filenameColumn: "audio_filename" | "image
 }
 
 async function excludeRecentDailyMapsets(availableTags: MapsetTags[], dailyDate: Date, gameMode: GameMode): Promise<MapsetTags[]> {
+    if (availableTags.length === 0) return [];
     const pastWeekStart = new Date(dailyDate.getTime() - 7 * 86_400_000);
     const otherMapMode = gameMode === GameMode.Audio ? GameMode.Background : GameMode.Audio;
-    const recentRows = await query<{ item_id: number }>(
-        `SELECT DISTINCT used.item_id FROM (
+    const recentRows = await query<{ item_id: number; title?: string }>(
+        `SELECT DISTINCT used.item_id, data.title FROM (
             SELECT rounds.item_id
             FROM game_challenge_rounds AS rounds
             INNER JOIN game_challenges AS challenges ON challenges.id = rounds.challenge_id
@@ -207,11 +211,16 @@ async function excludeRecentDailyMapsets(availableTags: MapsetTags[], dailyDate:
                 (games.game_mode = ? AND games.ended_at >= ? AND games.ended_at < ?)
                 OR (games.game_mode = ? AND games.ended_at >= ? AND games.ended_at < DATE_ADD(?, INTERVAL 1 DAY))
               )
-        ) AS used`,
+        ) AS used LEFT JOIN mapset_data AS data ON data.mapset_id = used.item_id`,
         [gameMode, pastWeekStart, dailyDate, otherMapMode, dailyDate, gameMode, pastWeekStart, dailyDate, otherMapMode, dailyDate, dailyDate],
     );
     const recentIds = new Set(recentRows.map(({ item_id }) => Number(item_id)));
-    return availableTags.filter(({ mapset_id }) => !recentIds.has(mapset_id));
+    const recentTitles = new Set(recentRows.map(row => normalizeSongTitle(row.title ?? "")).filter(Boolean));
+    const metadata = recentTitles.size === 0 ? [] : await query<{ mapset_id: number; title: string }>(
+        `SELECT mapset_id, title FROM mapset_data WHERE mapset_id IN (${availableTags.map(() => "?").join(",")})`, availableTags.map(tag => tag.mapset_id),
+    );
+    const titles = new Map(metadata.map(row => [Number(row.mapset_id), normalizeSongTitle(row.title ?? "")]));
+    return availableTags.filter(({ mapset_id }) => !recentIds.has(mapset_id) && !recentTitles.has(titles.get(mapset_id) ?? ""));
 }
 
 export async function createManualDailyChallenge(dailyDate: Date, gameMode: GameMode, ignoreRepetitionChecks: boolean, selectedItemIds: number[], overwrite = false): Promise<void> {
@@ -274,13 +283,13 @@ export async function createManualDailyChallenge(dailyDate: Date, gameMode: Game
 async function persistDailyChallenge(
     dailyDate: Date,
     gameMode: GameMode,
-    rounds: Array<{ itemType: "mapset" | "skin"; itemId: number; answerSnapshot: string; contentSnapshot: Record<string, unknown> }>,
-    configSnapshot: Record<string, unknown>,
+    rounds: Array<{ itemType: "mapset" | "skin"; itemId: number; answerSnapshot: string; contentSnapshot: Prisma.InputJsonObject; difficultySnapshot?: number }>,
+    configSnapshot: Prisma.InputJsonObject,
     overwrite: boolean,
 ) {
     const challengeId = crypto.randomUUID();
-    await prisma.$transaction(async (transaction) => {
-        const uniqueKey = { dailyDate_gameMode_variant: { dailyDate, gameMode, variant: "classic" } };
+    return prisma.$transaction(async (transaction) => {
+        const uniqueKey: Prisma.GameChallengeWhereUniqueInput = { dailyDate_gameMode_variant: { dailyDate, gameMode, variant: "classic" } };
         const existing = overwrite ? await transaction.gameChallenge.findUnique({ where: uniqueKey, select: { id: true } }) : null;
         if (existing) {
             await transaction.gameChallengeRound.deleteMany({ where: { challengeId: existing.id } });
@@ -295,16 +304,17 @@ async function persistDailyChallenge(
                 rulesetVersion: CURRENT_RULESET_VERSION,
                 ppVersion: CURRENT_PP_VERSION,
                 seed: `daily:${dailyDate.toISOString().slice(0, 10)}:${gameMode}`,
-                configSnapshot: { ...configSnapshot, manuallySet: true },
+                configSnapshot: { ...configSnapshot, manuallySet: configSnapshot.manuallySet ?? true },
                 roundCount: DAILY_ROUNDS,
-                timerMs: 30_000,
+                timerMs: DAILY_ROUND_TIME * 1000,
                 ranked: false,
                 dailyDate,
             },
         });
         await transaction.gameChallengeRound.createMany({
-            data: rounds.map((round, index) => ({ challengeId: challenge.id, roundNumber: index + 1, ...round, difficultySnapshot: 1 })),
+            data: rounds.map((round, index) => ({ difficultySnapshot: 1, ...round, challengeId: challenge.id, roundNumber: index + 1 })),
         });
+        return challenge;
     });
 }
 
@@ -362,24 +372,38 @@ export async function getRandomSkin(sessionId?: string) {
 
 export async function getDailySkin(day: number, round: number) {
     const dailyDate = new Date(DAILY_EPOCH_UTC + (day - 1) * 86_400_000);
-    const challenge = await prisma.gameChallenge.findUnique({ where: { dailyDate_gameMode_variant: { dailyDate, gameMode: GameMode.Skin, variant: "classic" } } });
-    if (challenge) {
-        const challengeRound = await prisma.gameChallengeRound.findUnique({ where: { challengeId_roundNumber: { challengeId: challenge.id, roundNumber: round } } });
-        if (!challengeRound || challengeRound.itemType !== "skin") throw new NoGameContentError("Daily skin challenge is invalid");
-        const [skin] = await query<SkinData>(`SELECT * FROM skins WHERE id = ? AND image_filename IS NOT NULL AND image_filename <> ''`, [challengeRound.itemId]);
-        if (!skin) throw new NoGameContentError("Daily skin is unavailable");
-        return { data: skin, skinData: await getMediaData(GameMode.Skin, skin.image_filename) };
+    const key: Prisma.GameChallengeWhereUniqueInput = { dailyDate_gameMode_variant: { dailyDate, gameMode: GameMode.Skin, variant: "classic" } };
+    let challenge = await prisma.gameChallenge.findUnique({ where: key });
+    if (!challenge) {
+        const lock = await acquireRedisLock(`daily_map_pool:${dailyDate.toISOString().slice(0, 10)}`, 60_000);
+        if (!lock) throw new Error("Daily skin pool is being initialized; retry shortly");
+        try {
+            challenge = await prisma.gameChallenge.findUnique({ where: key });
+            if (!challenge) {
+                const recent = env.DEBUG_DAILY_REUSE_CHECK ? await query<{ item_id: number }>(
+                    `SELECT rounds.item_id FROM game_challenge_rounds rounds INNER JOIN game_challenges challenges ON challenges.id = rounds.challenge_id
+                     WHERE challenges.challenge_type = 'daily' AND challenges.game_mode = 'skin' AND challenges.daily_date >= ? AND challenges.daily_date < ?`,
+                    [new Date(dailyDate.getTime() - 7 * 86_400_000), dailyDate],
+                ) : [];
+                const used = new Set(recent.map(row => Number(row.item_id)));
+                const skins = (await query<SkinData>(`SELECT * FROM skins WHERE image_filename IS NOT NULL AND image_filename <> '' ORDER BY id`)).filter(skin => !used.has(skin.id));
+                const stats = await prisma.contentStat.findMany({ where: { gameMode: GameMode.Skin, itemType: "skin", rulesetVersion: CURRENT_RULESET_VERSION, ppVersion: CURRENT_PP_VERSION }, select: { itemId: true, empiricalDifficulty: true } });
+                const difficulty = new Map(stats.map(stat => [stat.itemId, Number(stat.empiricalDifficulty ?? 1)]));
+                skins.sort((a, b) => (difficulty.get(a.id) ?? 1) - (difficulty.get(b.id) ?? 1) || a.id - b.id);
+                const size = Math.max(DAILY_ROUNDS, Math.ceil(skins.length * 0.6));
+                const start = Math.max(0, Math.min(Math.floor(skins.length * 0.2), skins.length - size));
+                const pool = skins.slice(start, start + size);
+                const selected = Array.from({ length: DAILY_ROUNDS }, (_, i) => pool.find(skin => skin.id === getDailyItemId(pool.map(skin => skin.id), day, GameMode.Skin, i + 1)));
+                if (selected.some(skin => !skin)) throw new NoGameContentError("Not enough unused skins for today's Daily Challenge");
+                challenge = await persistDailyChallenge(dailyDate, GameMode.Skin, selected.map(skin => ({ itemType: "skin", itemId: skin!.id, answerSnapshot: skin!.name, contentSnapshot: { imageFilename: skin!.image_filename }, difficultySnapshot: difficulty.get(skin!.id) ?? 1 })), { manuallySet: false }, false);
+            }
+        } finally { await releaseRedisLock(lock); }
     }
-    const skins = await query<SkinData>(`SELECT * FROM skins WHERE image_filename IS NOT NULL AND image_filename <> '' ORDER BY id`);
-    const skinId = getDailyItemId(
-        skins.map(({ id }) => id),
-        day,
-        GameMode.Skin,
-        round,
-    );
-    const skin = skins.find(({ id }) => id === skinId);
-    if (!skin) throw new NoGameContentError("No daily skin found");
-    return { data: skin, skinData: await getMediaData(GameMode.Skin, skin.image_filename) };
+    const challengeRound = await prisma.gameChallengeRound.findUnique({ where: { challengeId_roundNumber: { challengeId: challenge.id, roundNumber: round } } });
+    if (!challengeRound || challengeRound.itemType !== "skin") throw new NoGameContentError("Daily skin challenge is invalid");
+    const [skin] = await query<SkinData>(`SELECT * FROM skins WHERE id = ? AND image_filename IS NOT NULL AND image_filename <> ''`, [challengeRound.itemId]);
+    if (!skin) throw new NoGameContentError("Daily skin is unavailable");
+    return { data: { ...skin, name: challengeRound.answerSnapshot }, challengeId: challenge.id, skinData: await getMediaData(GameMode.Skin, skin.image_filename) };
 }
 
 async function selectRandomSkin(sessionId?: string): Promise<SkinData | null> {

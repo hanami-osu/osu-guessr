@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { env } from "@/lib/env";
+import { env } from "../env";
+import { cookies } from "next/headers";
 
 const GUEST_DAILY_COOKIE_PREFIX = "osu-guessr.guest-daily.";
 
@@ -22,4 +23,16 @@ export function hasGuestDailyAccess(sessionId: string, token: string | undefined
     const provided = Buffer.from(providedSignature);
     const expected = Buffer.from(expectedSignature);
     return provided.length === expected.length && timingSafeEqual(provided, expected);
+}
+
+export async function requireGuestDailySessionAccess(sessionId: string): Promise<void> {
+    const store = await cookies();
+    if (!hasGuestDailyAccess(sessionId, store.get(getGuestDailyCookieName(sessionId))?.value)) throw new Error("Game session not found or expired");
+}
+
+export async function setGuestDailySessionAccess(sessionId: string): Promise<void> {
+    const store = await cookies();
+    store.set(getGuestDailyCookieName(sessionId), createGuestDailyAccessToken(sessionId), {
+        httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 7 * 24 * 60 * 60,
+    });
 }

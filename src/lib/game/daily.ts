@@ -1,19 +1,20 @@
 export const DAILY_EPOCH_UTC = Date.UTC(2026, 10, 15); // The day of the first daily challenge
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const DAILY_ROUNDS = 5;
+export const DAILY_ROUND_TIME = 15;
 export const DAILY_CHALLENGE_ALREADY_PLAYED = "DAILY_CHALLENGE_ALREADY_PLAYED";
 export const DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED = "DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED";
 
 export type DailyOutcome = "correct" | "incorrect" | "skip" | "timeout";
 
-export function formatDailyShareResult(gameMode: string, day: number, correct: number, totalPoints: number, responseTimeMs: number, outcomes: DailyOutcome[]): string {
+export function formatDailyShareResult(gameMode: string, day: number, correct: number, totalPoints: number, responseTimeMs: number, outcomes: DailyOutcome[], origin = "https://osuguessr.com"): string {
     const circles = Array.from({ length: DAILY_ROUNDS }, (_, index) => {
         const outcome = outcomes[index];
-        return outcome === "correct" ? "🟢" : outcome === "incorrect" ? "🔴" : "⚫";
+        return outcome === "correct" ? "🟢" : outcome === "incorrect" ? "🔴" : outcome === "skip" ? "🟠" : "⬛";
     }).join("");
     const normalizedMode = gameMode.replaceAll("_", " ");
     const seconds = Math.round(responseTimeMs / 1000);
-    return `osu!guessr daily ${normalizedMode} #${day}\n${circles}  ${correct}/${DAILY_ROUNDS} · ${totalPoints.toLocaleString("en-US")} pts · ${seconds}s\nosuguessr.com`;
+    return `osu!guessr daily ${normalizedMode} #${day}\n${circles}  ${correct}/${DAILY_ROUNDS} · ${totalPoints.toLocaleString("en-US")} pts · ${seconds}s\n${origin}${getDailySharePath(gameMode, day, totalPoints, responseTimeMs, outcomes)}`;
 }
 
 export function getDailyChallengeDay(now: Date = new Date(), dayOffset = 0): number {
@@ -75,4 +76,25 @@ export function getDailyItemId(ids: number[], day: number, gameMode: string, rou
     });
 
     return orderedIds[round - 1];
+}
+
+
+export function getDailyStreaks(dates: string[], today: Date = getDailyDate()): { current: number; best: number } {
+    const ordered = [...new Set(dates)].sort();
+    let current = 0;
+    let best = 0;
+    let previous = 0;
+    for (const date of ordered) {
+        const timestamp = Date.parse(`${date}T00:00:00Z`);
+        current = timestamp - previous === DAY_MS ? current + 1 : 1;
+        best = Math.max(best, current);
+        previous = timestamp;
+    }
+    return { current: previous < today.getTime() - DAY_MS ? 0 : current, best };
+}
+
+
+export function getDailySharePath(gameMode: string, day: number, points: number, responseTimeMs: number, outcomes: DailyOutcome[]): string {
+    const rounds = Array.from({ length: DAILY_ROUNDS }, (_, i) => outcomes[i] === "correct" ? "c" : outcomes[i] === "incorrect" ? "i" : outcomes[i] === "skip" ? "s" : "t").join("");
+    return `/daily/share?${new URLSearchParams({ mode: gameMode, day: String(day), points: String(points), time: String(responseTimeMs), rounds })}`;
 }

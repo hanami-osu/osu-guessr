@@ -68,7 +68,7 @@ describe("daily challenge helpers", () => {
 
     test("formats the requested compact daily share result", () => {
         expect(formatDailyShareResult("background", 213, 3, 2140, 40_000, ["correct", "correct", "skip", "incorrect", "correct"])).toBe(
-            "osu!guessr daily background #213\n🟢🟢⚫🔴🟢  3/5 · 2,140 pts · 40s\nosuguessr.com",
+            "osu!guessr daily background #213\n🟢🟢🟠🔴🟢  3/5 · 2,140 pts · 40s\nhttps://osuguessr.com/daily/share?mode=background&day=213&points=2140&time=40000&rounds=ccsic",
         );
     });
 });

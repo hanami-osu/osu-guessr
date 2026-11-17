@@ -6,7 +6,7 @@ export enum GuessDifficulty {
     Impossible = 0.95,
 }
 
-function normalizeString(str: string): string {
+export function normalizeString(str: string): string {
     let normalized = str.toLowerCase();
 
     // Ignore version labels such as "(TV Size)".

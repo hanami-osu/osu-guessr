@@ -363,6 +363,7 @@ function DailyProfileStats({ stats, locale, t }: { stats?: UserDailyStats | null
         <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 rounded-xl bg-muted/45 p-4 text-sm sm:p-5">
             <DetailMetric label={t.dailiesPlayed} value={(stats?.dailies_played ?? 0).toLocaleString(locale)} />
             <DetailMetric label={t.totalPoints} value={(stats?.total_points ?? 0n).toLocaleString(locale)} />
+            <DetailMetric label={t.currentStreak} value={(stats?.current_streak ?? 0).toLocaleString(locale)} />
             <DetailMetric label={t.bestStreak} value={(stats?.best_streak ?? 0).toLocaleString(locale)} />
             <DetailMetric label={t.timeAnswering} value={formatDuration(stats?.total_response_time_ms ?? 0n, locale)} />
         </dl>
@@ -405,7 +406,7 @@ function DailyProfileCalendar({ stats, locale, t }: { stats?: UserDailyStats | n
     const daysInMonth = new Date(Date.UTC(visibleMonthDate.getUTCFullYear(), visibleMonthDate.getUTCMonth() + 1, 0)).getUTCDate();
     const monthStartOffset = visibleMonthDate.getUTCDay();
     const calendarDayClass = (status: UserDailyStats["calendar"][number]["status"] | undefined) =>
-        status === "played" ? "bg-emerald-500 text-white" : status === "missed" ? "bg-rose-500/15 text-white" : status === "today" ? "bg-background text-muted-foreground ring-1 ring-inset ring-border" : "text-muted-foreground/50";
+        status === "perfect" ? "bg-amber-400 text-black ring-2 ring-amber-400/40" : status === "played" ? "bg-emerald-500 text-white" : status === "missed" ? "bg-rose-500/15 text-white" : status === "today" ? "bg-background text-muted-foreground ring-1 ring-inset ring-border" : "text-muted-foreground/50";
 
     return (
         <div className="min-w-0 rounded-xl bg-muted/35 p-3 sm:p-4">
@@ -455,7 +456,7 @@ function DailyProfileCalendar({ stats, locale, t }: { stats?: UserDailyStats | n
                                         const dayNumber = index + 1;
                                         const day = monthDays.get(dayNumber);
                                         const date = `${visibleMonth}-${String(dayNumber).padStart(2, "0")}`;
-                                        const statusLabel = day ? (day.status === "played" ? t.played : day.status === "today" ? t.today : t.missed) : null;
+                                        const statusLabel = day ? (day.status === "perfect" ? t.perfect : day.status === "played" ? t.played : day.status === "today" ? t.today : t.missed) : null;
                                         const dateLabel = new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, { dateStyle: "full", timeZone: "UTC" });
                                         const label = statusLabel ? `${dateLabel}: ${statusLabel}` : dateLabel;
                                         return <span key={date} role="gridcell" aria-label={label} title={label} className={`mx-auto grid size-9 place-items-center rounded-full text-sm font-medium tabular-nums ${calendarDayClass(day?.status)}`}>{dayNumber}</span>;
@@ -479,7 +480,7 @@ function DailyProfileCalendar({ stats, locale, t }: { stats?: UserDailyStats | n
                             {weekdays.map((weekday, index) => <span key={`${weekday}-${index}`} className="truncate pb-1 text-center text-[0.55rem] text-muted-foreground">{weekday}</span>)}
                             {visibleWeekDays.map((day, index) => {
                                 if (!day) return <span key={`empty-${index}`} aria-hidden="true" />;
-                                const statusLabel = day.status === "played" ? t.played : day.status === "today" ? t.today : t.missed;
+                                const statusLabel = day.status === "perfect" ? t.perfect : day.status === "played" ? t.played : day.status === "today" ? t.today : t.missed;
                                 const dayNumber = Number(day.date.slice(-2));
                                 return <span key={day.date} role="gridcell" aria-label={`${new Date(`${day.date}T00:00:00Z`).toLocaleDateString(locale, { dateStyle: "full", timeZone: "UTC" })}: ${statusLabel}`} title={`${day.date}: ${statusLabel}`} className={`mx-auto grid size-6 place-items-center rounded-full text-[0.65rem] font-medium tabular-nums ${calendarDayClass(day.status)}`}>{dayNumber}</span>;
                             })}

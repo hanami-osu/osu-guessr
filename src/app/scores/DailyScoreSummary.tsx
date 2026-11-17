@@ -20,14 +20,14 @@ interface DailyScoreSummaryProps {
 function outcomeColor(outcome: DailyScoreSummaryProps["outcomes"][number]): string {
     if (outcome.correct) return "bg-emerald-500";
     if (outcome.resultType === "guess") return "bg-destructive";
-    return "bg-black";
+    return outcome.resultType === "skip" ? "bg-orange-500" : "bg-zinc-600";
 }
 
 export default function DailyScoreSummary({ gameMode, day, points, responseTimeMs, outcomes, debugUnlimitedAttempts }: DailyScoreSummaryProps) {
     const { t } = useTranslationsContext();
     const [copied, setCopied] = useState(false);
     const modeLabel = gameMode === "score_pp" ? "Score pp" : gameMode.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-    const displayTitle = `Daily ${modeLabel} Challenge`;
+    const displayTitle = `osu!guessr daily ${modeLabel.toLowerCase()} #${day}`;
 
     async function copyResults() {
         const resultText = formatDailyShareResult(
@@ -37,6 +37,7 @@ export default function DailyScoreSummary({ gameMode, day, points, responseTimeM
             points,
             responseTimeMs,
             outcomes.map(({ correct, resultType }) => (correct ? "correct" : resultType === "guess" ? "incorrect" : resultType)) as DailyOutcome[],
+            window.location.origin,
         );
 
         try {

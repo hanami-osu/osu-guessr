@@ -1,5 +1,6 @@
 "use server";
 
+import { requireGuestDailySessionAccess, setGuestDailySessionAccess } from "@/lib/game/guest-daily-access";
 import { authenticatedAction } from "./server";
 import type { GameRunType, GameVariant } from "./types";
 import type { ScorePpRoundLoad, ScorePpRunState } from "@/lib/score-pp/types";
@@ -10,7 +11,9 @@ export async function startScorePpRunAction(variant: GameVariant, multiplayerLob
         return await authenticatedAction((session) => startScorePpRunForUser(session.user.banchoId, variant, multiplayerLobbyCode, runType));
     } catch (error) {
         if (runType === "daily" && !multiplayerLobbyCode && error instanceof Error && error.message === "Unauthorized") {
-            return startScorePpRunForUser(0, variant, undefined, "daily");
+            const sessionId = await startScorePpRunForUser(0, variant, undefined, "daily");
+            await setGuestDailySessionAccess(sessionId);
+            return sessionId;
         }
         throw error;
     }
@@ -20,7 +23,10 @@ export async function getScorePpRoundAction(sessionId: string, round: number, ex
     try {
         return await authenticatedAction((session) => getScorePpRoundForUser(session.user.banchoId, sessionId, round, exclusions));
     } catch (error) {
-        if (error instanceof Error && error.message === "Unauthorized") return getScorePpRoundForUser(0, sessionId, round, exclusions);
+        if (error instanceof Error && error.message === "Unauthorized") {
+            await requireGuestDailySessionAccess(sessionId);
+            return getScorePpRoundForUser(0, sessionId, round, exclusions);
+        }
         throw error;
     }
 }
@@ -29,7 +35,10 @@ export async function getScorePpRunStateAction(sessionId: string): Promise<Score
     try {
         return await authenticatedAction((session) => getScorePpRunStateForUser(session.user.banchoId, sessionId));
     } catch (error) {
-        if (error instanceof Error && error.message === "Unauthorized") return getScorePpRunStateForUser(0, sessionId);
+        if (error instanceof Error && error.message === "Unauthorized") {
+            await requireGuestDailySessionAccess(sessionId);
+            return getScorePpRunStateForUser(0, sessionId);
+        }
         throw error;
     }
 }
@@ -38,7 +47,10 @@ export async function endScorePpRunAction(sessionId: string): Promise<import("@/
     try {
         return await authenticatedAction((session) => endScorePpRunForUser(session.user.banchoId, sessionId));
     } catch (error) {
-        if (error instanceof Error && error.message === "Unauthorized") return endScorePpRunForUser(0, sessionId);
+        if (error instanceof Error && error.message === "Unauthorized") {
+            await requireGuestDailySessionAccess(sessionId);
+            return endScorePpRunForUser(0, sessionId);
+        }
         throw error;
     }
 }
@@ -47,7 +59,10 @@ export async function submitScorePpGuessAction(sessionId: string, pairId: number
     try {
         return await authenticatedAction((session) => submitScorePpGuessForUser(session.user.banchoId, sessionId, pairId, selectedScoreId, submissionType));
     } catch (error) {
-        if (error instanceof Error && error.message === "Unauthorized") return submitScorePpGuessForUser(0, sessionId, pairId, selectedScoreId, submissionType);
+        if (error instanceof Error && error.message === "Unauthorized") {
+            await requireGuestDailySessionAccess(sessionId);
+            return submitScorePpGuessForUser(0, sessionId, pairId, selectedScoreId, submissionType);
+        }
         throw error;
     }
 }

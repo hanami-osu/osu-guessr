@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { GameMode } from "./types";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
 
@@ -61,7 +61,10 @@ const gameFindManyMock = mock(async (args: { where?: Where }) => {
 const gameCountMock = mock(async () => 4);
 const queryMock = mock(async () => [] as Row[]);
 
+const dailyAttempts: Row[] = [];
+const dailyGames: Row[] = [];
 const prismaMock = {
+    dailyGameAttempt: { findMany: mock(async ({ where }: { where?: Where }) => filter(dailyAttempts, where)) },
     user: {
         findFirst: mock(async ({ where }: { where: Where }) => filter(users, where)[0] ?? null),
         findMany: mock(async ({ where, take }: { where: Where; take?: number }) => filter(users, where).slice(0, take)),
@@ -145,4 +148,53 @@ describe("users scheduled for deletion", () => {
     test("do not count towards the total number of users", async () => {
         expect((await actions.getHighestStatsAction()).total_users).toBe(2);
     });
+});
+
+
+describe("daily participation", () => {
+    beforeEach(() => {
+        setSystemTime(new Date("2026-11-20T12:00:00Z"));
+        dailyAttempts.length = 0;
+        dailyGames.length = 0;
+        for (const [index, [date, gameMode]] of [
+            ["2026-11-18", GameMode.Background],
+            ["2026-11-19", GameMode.Audio],
+            ["2026-11-19", GameMode.Background],
+        ].entries()) {
+            const sessionId = `daily-${index}`;
+            dailyAttempts.push({ userId: visibleId, dailyDate: new Date(`${date}T00:00:00Z`), gameMode, sessionId });
+            dailyGames.push({ userId: visibleId, gameMode, sessionId, runType: "daily", endReason: "completed", roundsPlayed: 5, correctCount: 5, points: 100, streak: 5, totalResponseTimeMs: 1000n, endedAt: new Date(`${date}T12:00:00Z`) });
+        }
+        gameFindManyMock.mockImplementation(async ({ where }) => filter(dailyGames, where));
+    });
+    afterEach(() => { setSystemTime(); gameFindManyMock.mockImplementation(async () => []); });
+
+    test("combines modes for day streaks and leaves dates before the first daily blank", async () => {
+        const stats = await actions.getUserDailyStatsAction(visibleId, GameMode.Background);
+        expect(stats.best_streak).toBe(2);
+        expect(stats.dailies_played).toBe(3);
+        expect(stats.calendar).toEqual([
+            { date: "2026-11-18", status: "perfect" },
+            { date: "2026-11-19", status: "perfect" },
+            { date: "2026-11-20", status: "today" },
+        ]);
+    });
+
+    test("excludes hidden players and ranks participation without using points", async () => {
+        dailyAttempts.push({ userId: hiddenId, gameMode: GameMode.Background, dailyDate: new Date("2026-11-19Z"), sessionId: "hidden-daily" });
+        dailyGames.push({ ...dailyGames[0], userId: hiddenId, sessionId: "hidden-daily" });
+        const players = await actions.getDailyTopPlayersAction(GameMode.Background);
+        expect(players.map(player => player.bancho_id)).toEqual([visibleId]);
+        expect(players[0]).toMatchObject({ best_daily_streak: 2, games_played: 3 });
+    });
+    test("offers separate rankings for day streaks and total completed dailies", async () => {
+        for (const [index, gameMode] of Object.values(GameMode).entries()) {
+            const sessionId = `other-${index}`;
+            dailyAttempts.push({ userId: otherVisibleId, gameMode, sessionId, dailyDate: new Date("2026-11-19Z") });
+            dailyGames.push({ ...dailyGames[0], userId: otherVisibleId, gameMode, sessionId, points: 10000 });
+        }
+        expect((await actions.getDailyTopPlayersAction(GameMode.Background)).map(player => player.bancho_id)).toEqual([visibleId, otherVisibleId]);
+        expect((await actions.getDailyTopPlayersAction(GameMode.Background, 10, 0, "played")).map(player => player.bancho_id)).toEqual([otherVisibleId, visibleId]);
+    });
+
 });

@@ -1,11 +1,10 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { getAuthSession } from "./server";
 import { GameMode, type GameRunType, type GameState } from "./types";
 import type { GameVariant } from "@/app/games/config";
-import { claimGuestDailyResult, endGameForUser, getDailyChallengeInfo, getDailyStatusForUser, getGameStateForUser, getGuestDailyResult, getSuggestions, startGameForUser, submitGuessForUser } from "@/lib/game/server";
-import { createGuestDailyAccessToken, getGuestDailyCookieName, hasGuestDailyAccess } from "@/lib/game/guest-daily-access";
+import { beginDailyGameForUser, claimGuestDailyResult, endGameForUser, getDailyChallengeInfo, getDailyStatusForUser, getGameStateForUser, getGuestDailyResult, getSuggestions, startGameForUser, submitGuessForUser } from "@/lib/game/server";
+import { requireGuestDailySessionAccess, setGuestDailySessionAccess } from "@/lib/game/guest-daily-access";
 
 async function getActionUserId(allowGuestDaily = false): Promise<number> {
     try {
@@ -16,24 +15,11 @@ async function getActionUserId(allowGuestDaily = false): Promise<number> {
     }
 }
 
-async function requireGuestDailySessionAccess(sessionId: string): Promise<void> {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(getGuestDailyCookieName(sessionId))?.value;
-    if (!hasGuestDailyAccess(sessionId, token)) throw new Error("Game session not found or expired");
-}
-
 export async function startGameAction(gameMode: GameMode, variant: GameVariant = "classic", multiplayerLobbyCode?: string, runType: GameRunType = "standard"): Promise<GameState> {
     const userId = await getActionUserId(runType === "daily" && !multiplayerLobbyCode);
     const gameState = await startGameForUser(userId, gameMode, variant, multiplayerLobbyCode, runType);
     if (userId === 0 && runType === "daily" && !multiplayerLobbyCode) {
-        const cookieStore = await cookies();
-        cookieStore.set(getGuestDailyCookieName(gameState.sessionId), createGuestDailyAccessToken(gameState.sessionId), {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: process.env.NODE_ENV === "production",
-            path: "/",
-            maxAge: 7 * 24 * 60 * 60,
-        });
+        await setGuestDailySessionAccess(gameState.sessionId);
     }
     return gameState;
 }
@@ -83,4 +69,11 @@ export async function getSuggestionsAction(str: string, gamemode: GameMode) {
         // Guest Daily sessions still need suggestion autocompletion without a signed-in user.
     }
     return getSuggestions(str, gamemode);
+}
+
+
+export async function beginDailyGameAction(sessionId: string): Promise<GameState> {
+    const userId = await getActionUserId(true);
+    if (userId === 0) await requireGuestDailySessionAccess(sessionId);
+    return beginDailyGameForUser(userId, sessionId);
 }

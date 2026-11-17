@@ -158,7 +158,7 @@ mock.module("@/lib/multiplayer", () => ({
 }));
 mock.module("server-only", () => ({}));
 
-const { claimGuestDailyResultAction, endGameAction, getGameStateAction, getGuestDailyResultAction, startGameAction, submitGuessAction } = await import("./game-server");
+const { beginDailyGameAction, claimGuestDailyResultAction, endGameAction, getGameStateAction, getGuestDailyResultAction, startGameAction, submitGuessAction } = await import("./game-server");
 
 function makeSession(overrides: Partial<DatabaseGameSession> = {}): DatabaseGameSession {
     return {
@@ -347,7 +347,6 @@ describe("game server lifecycle", () => {
         expect(resumed.sessionId).toBe(sessionId);
         expect(resumed.rounds.current).toBe(3);
         expect(dailyGameAttemptCreateMock).not.toHaveBeenCalled();
-        expect(getRandomActionMock).not.toHaveBeenCalled();
     });
 
     test("returns the existing completed daily score when a guest claim conflicts", async () => {
@@ -370,17 +369,17 @@ describe("game server lifecycle", () => {
         await expect(claimGuestDailyResultAction(sessionId)).rejects.toThrow("DAILY_CHALLENGE_ALREADY_PLAYED");
     });
 
-    test("counts an interrupted daily round as a skip and preserves the next round", async () => {
-        putSession(makeSession({ run_type: "daily", daily_day: 1, current_round: 2, total_points: 150 }));
+    test("counts unplayed daily rounds as timeouts when leaving", async () => {
+        putSession(makeSession({ run_type: "daily", ranked: false, daily_day: 1, current_round: 1, total_points: 0 }));
 
         const result = await endGameAction(sessionId);
         const continued = JSON.parse(redisValues.get(`game_session:${sessionId}`)!);
 
-        expect(result).toBeNull();
-        expect(continued.is_active).toBe(true);
-        expect(continued.current_round).toBe(3);
-        expect(continued.round_history).toHaveLength(1);
-        expect(continued.round_history[0]).toMatchObject({ result_type: "skip", correct: false, round_number: 2 });
+        expect(result).toBe(0);
+        expect(continued.is_active).toBe(false);
+        expect(continued.current_round).toBe(5);
+        expect(continued.round_history).toHaveLength(5);
+        expect(continued.round_history[0]).toMatchObject({ result_type: "timeout", correct: false, round_number: 1 });
     });
 
     test("shares multiplayer first-round start time and reuses the active session", async () => {
@@ -642,4 +641,28 @@ describe("game server lifecycle", () => {
         expect(transactionMock).toHaveBeenCalledTimes(1);
         expect(gameCreateMock).toHaveBeenCalledTimes(1);
     });
+    test("daily rounds use the specified fifteen second limit", async () => {
+        const state = await startGameAction(GameMode.Background, "classic", undefined, "daily");
+        expect(state.timeLeft).toBe(15);
+    });
+
+    test("expires the remaining daily rounds after time offline", async () => {
+        putSession(makeSession({ run_type: "daily", ranked: false, daily_day: 1 }));
+        setSystemTime(new Date("2026-01-01T00:10:00Z"));
+        const resumed = await getGameStateAction(sessionId);
+        expect(resumed.gameStatus).toBe("finished");
+        expect(resumed.rounds.current).toBe(5);
+        expect(gameRoundCreateManyMock.mock.calls.at(-1)?.[0].data).toHaveLength(5);
+    });
+
+    test("starts daily time after preloading and never resets an acknowledged timer", async () => {
+        const state = await startGameAction(GameMode.Background, "classic", undefined, "daily");
+        expect(state.dailyMedia).toHaveLength(5);
+        setSystemTime(new Date("2026-01-01T00:01:00Z"));
+        const ready = await beginDailyGameAction(state.sessionId);
+        expect(ready.timeLeft).toBe(15);
+        setSystemTime(new Date("2026-01-01T00:01:05Z"));
+        expect((await beginDailyGameAction(state.sessionId)).timeLeft).toBe(10);
+    });
+
 });

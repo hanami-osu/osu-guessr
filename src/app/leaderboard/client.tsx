@@ -19,13 +19,15 @@ interface LeaderboardClientProps {
     initialMode: GameMode;
     initialVariant: LeaderboardVariant;
     initialError?: string | null;
+    initialDailySort?: "streak" | "played";
 }
 
 type LeaderboardVariant = GameVariant | "daily";
 
-export default function LeaderboardClient({ initialData, initialMode, initialVariant, initialError = null }: LeaderboardClientProps) {
+export default function LeaderboardClient({ initialData, initialMode, initialVariant, initialDailySort = "streak", initialError = null }: LeaderboardClientProps) {
     const { t, locale } = useTranslationsContext();
     const { data: session } = useSession();
+    const [dailySort, setDailySort] = useState<"streak" | "played">(initialDailySort);
     const [selectedMode, setSelectedMode] = useState<GameMode>(initialMode);
     const [selectedVariant, setSelectedVariant] = useState<LeaderboardVariant>(initialVariant);
     const [leaderboardData, setLeaderboardData] = useState<Array<TopPlayer>>(initialData);
@@ -42,6 +44,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
         const url = new URL(window.location.href);
         url.searchParams.set("mode", mode);
         url.searchParams.set("variant", variant);
+        if (variant === "daily") url.searchParams.set("dailySort", dailySort);
         window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
 
@@ -60,7 +63,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
             try {
                 const offset = (page - 1) * pageSize;
                 const data = selectedVariant === "daily"
-                    ? await getDailyTopPlayersAction(selectedMode, pageSize, offset)
+                    ? await getDailyTopPlayersAction(selectedMode, pageSize, offset, dailySort)
                     : await getTopPlayersAction(selectedMode, selectedVariant, pageSize, offset);
                 if (request.isCurrent()) {
                     setLeaderboardData(data);
@@ -79,7 +82,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
 
         void fetchLeaderboard();
         return () => request.cancel();
-    }, [selectedMode, selectedVariant, page, pageSize, errorMessage]);
+    }, [selectedMode, selectedVariant, dailySort, page, pageSize, errorMessage]);
 
     const gameModes: GameMode[] = [GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp];
 
@@ -92,7 +95,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                 </header>
 
                 <div className="flex flex-col gap-3 rounded-t-lg bg-card/60 px-4 pt-4 sm:flex-row sm:items-end sm:gap-6 sm:px-5">
-                    <div>
+                    {selectedVariant !== "daily" && <div>
                         <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.modeLabel}</p>
                         <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.modeLabel}>
                             {gameModes.map((mode) => (
@@ -112,7 +115,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </div>}
 
                     <div>
                         <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.variantLabel}</p>
@@ -136,6 +139,13 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                         </div>
                     </div>
                 </div>
+
+                {selectedVariant === "daily" && <div className="flex gap-2 bg-card/60 px-4 pt-4 sm:px-5" role="group" aria-label={t.game.daily.title}>
+                    {(["streak", "played"] as const).map(sort => <Button key={sort} size="sm" variant={dailySort === sort ? "default" : "outline"} aria-pressed={dailySort === sort} onClick={() => {
+                        setDailySort(sort); setPage(1);
+                        const url = new URL(window.location.href); url.searchParams.set("dailySort", sort); window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+                    }}>{sort === "streak" ? t.leaderboard.table.bestDailyStreak : t.leaderboard.table.gamesPlayed}</Button>)}
+                </div>}
 
                 <div className="bg-card/60 pt-4">
                     {isLoading ? (
@@ -179,9 +189,9 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                                     {t.leaderboard.table.bestStreak}
                                                 </th>
                                             )}
-                                            <th scope="col" className="hidden px-5 py-2.5 text-right md:table-cell">
+                                            {selectedVariant !== "daily" && <th scope="col" className="hidden px-5 py-2.5 text-right md:table-cell">
                                                 {t.leaderboard.table.gamesPlayed}
-                                            </th>
+                                            </th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/25">
@@ -240,7 +250,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                                         {player.highest_streak.toLocaleString(locale)}
                                                     </td>
                                                 )}
-                                                <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground md:table-cell">{player.games_played}</td>
+                                                {selectedVariant !== "daily" && <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground md:table-cell">{player.games_played}</td>}
                                             </tr>
                                         ))}
                                     </tbody>

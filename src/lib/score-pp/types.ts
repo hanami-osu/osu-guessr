@@ -113,4 +113,4 @@ export interface ScorePpRunState {
     runPp?: number;
 }
 
-export type ScorePpRunEndResult = number | null | { pending: true } | { paused: true };
+export type ScorePpRunEndResult = number | null | { pending: true };

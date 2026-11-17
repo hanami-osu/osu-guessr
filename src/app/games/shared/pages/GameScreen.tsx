@@ -361,7 +361,7 @@ export default function GameScreen({ onExit, gameVariant, gameRunType, gameMode,
                 const now = performance.now();
                 const delta = now - lastTick;
                 lastTick = now;
-                if (advancePausedRef.current) return;
+                if (gameRunType !== "daily" && advancePausedRef.current) return;
 
                 elapsed += delta;
                 setCountdown(Math.max(0, Math.ceil((AUTO_ADVANCE_DELAY_MS - elapsed) / 1000)));
@@ -373,7 +373,7 @@ export default function GameScreen({ onExit, gameVariant, gameRunType, gameMode,
 
             return () => window.clearInterval(tick);
         }
-    }, [actionError, gameState, handleNextRound, isLoading, isReportDialogOpen, multiplayerLobbyCode, showAdvanceCountdown]);
+    }, [actionError, gameRunType, gameState, handleNextRound, isLoading, isReportDialogOpen, multiplayerLobbyCode, showAdvanceCountdown]);
 
     if (!gameState && startupError) {
         return <GameStartError message={startupError} onRetry={handleStartGame} />;

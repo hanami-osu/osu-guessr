@@ -10,8 +10,9 @@ import { createPageMetadata } from "@/lib/social-metadata";
 import { visibleUserWhere } from "@/lib/user-visibility";
 import { getTranslations, isLocale } from "@/lib/translations";
 import { cache } from "react";
-import DailyScoreSummary from "@/app/scores/DailyScoreSummary";
-import ScoreResultCard from "@/app/scores/ScoreResultCard";
+import DailyScoreSummary from "../DailyScoreSummary";
+import ScoreResultCard from "../ScoreResultCard";
+import { getDailyDate } from "@/lib/game/daily";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -184,7 +185,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             });
         }
 
-        if (game.runType === "daily") {
+        if (game.runType === "daily" && getDailyDate(new Date(String(asSnapshot(game.configSnapshot).dailyDate ?? game.startedAt))).getTime() >= getDailyDate().getTime()) {
             const session = await auth();
             if (session?.user?.banchoId !== game.userId) {
                 return createPageMetadata({ title: "Score", description: "Daily score.", path: `/scores/${id}` });
@@ -196,7 +197,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         const accuracy = roundsPlayed > 0 ? (game.correctCount / roundsPlayed) * 100 : 0;
         const descriptionParts = [
             `${formatMode(game.gameMode)} · ${formatMode(game.variant)}`,
-            game.ppVersion > 0 ? `${Number(game.pp).toLocaleString("en-US", { maximumFractionDigits: 1 })} pp` : null,
+            game.ppVersion > 0 && game.runType !== "daily" ? `${Number(game.pp).toLocaleString("en-US", { maximumFractionDigits: 1 })} pp` : null,
             roundsPlayed > 0 ? `${accuracy.toLocaleString("en-US", { maximumFractionDigits: 1 })}% accuracy` : null,
             `${game.points.toLocaleString("en-US")} points`,
         ].filter(Boolean);
@@ -225,7 +226,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
     const game = await findGameByRouteId(id);
     if (!game) notFound();
 
-    if (game.runType === "daily") {
+    if (game.runType === "daily" && getDailyDate(new Date(String(asSnapshot(game.configSnapshot).dailyDate ?? game.startedAt))).getTime() >= getDailyDate().getTime()) {
         const session = await auth();
         if (!session?.user?.banchoId) redirect(`/signin?callbackUrl=${encodeURIComponent(`/scores/${game.id.toString()}`)}`);
         if (session.user.banchoId !== game.userId) notFound();

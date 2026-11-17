@@ -32,3 +32,22 @@ export function writeGuestDailyAttempt(gameMode: GameMode, attempt: GuestDailyAt
         console.warn("Could not save this browser's daily challenge status:", error);
     }
 }
+
+
+export async function preloadDailyMedia(urls: string[], audio: boolean): Promise<void> {
+    await Promise.all(urls.map(url => new Promise<void>((resolve, reject) => {
+        if (audio) {
+            const media = document.createElement("audio");
+            media.preload = "auto";
+            media.oncanplaythrough = () => resolve();
+            media.onerror = () => reject(new Error("Daily audio could not be loaded"));
+            media.src = url;
+            media.load();
+        } else {
+            const media = new Image();
+            media.onload = () => resolve();
+            media.onerror = () => reject(new Error("Daily image could not be loaded"));
+            media.src = url;
+        }
+    })));
+}

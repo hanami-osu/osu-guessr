@@ -14,12 +14,15 @@ const initialGameState = {
     sessionId: "mock-session-id",
     timeLeft: 10,
     gameStatus: "active" as const,
-    variant: "classic" as const,
+    runType: "standard" as const, variant: "classic" as const,
     score: { total: 0, current: 0, streak: 0, highestStreak: 0 },
     rounds: { current: 1, total: 10, correctGuesses: 0, totalTimeUsed: 0, mistakes: 0 },
     currentBeatmap: { revealed: false },
 };
-const startGameActionMock = mock(async () => initialGameState);
+const startGameActionMock = mock(async (): Promise<GameState> => initialGameState);
+const beginDailyGameActionMock = mock(async (): Promise<GameState> => initialGameState);
+const preloadDailyMediaMock = mock(async (_urls: string[], _audio: boolean) => { void _urls; void _audio; });
+mock.module("./daily-client", () => ({ preloadDailyMedia: preloadDailyMediaMock }));
 const submitGuessActionMock = mock(async (): Promise<GameState> => ({
     ...initialGameState,
     score: { total: 100, current: 100, streak: 1, highestStreak: 1 },
@@ -31,6 +34,7 @@ const storageValues = new Map<string, string>();
 type WindowEvent = { type: string; persisted?: boolean };
 
 mock.module("@/actions/game-server", () => ({
+    beginDailyGameAction: beginDailyGameActionMock,
     startGameAction: startGameActionMock,
     submitGuessAction: submitGuessActionMock,
     endGameAction: endGameActionMock,
@@ -67,7 +71,8 @@ describe("GameClient", () => {
                     windowListeners.get(event.type)?.forEach((listener) => listener(event));
                     return true;
                 },
-                sessionStorage: {
+                localStorage: { getItem: (key: string) => storageValues.get(key) ?? null, setItem: (key: string, value: string) => storageValues.set(key, value), removeItem: (key: string) => storageValues.delete(key) },
+            sessionStorage: {
                     getItem: (key: string) => storageValues.get(key) ?? null,
                     removeItem: (key: string) => storageValues.delete(key),
                     setItem: (key: string, value: string) => storageValues.set(key, value),
@@ -347,4 +352,22 @@ describe("GameClient", () => {
         resolveEnd();
         await Promise.all([endCall, mutationCall]);
     });
+    test("preloads daily media before acknowledging the first round", async () => {
+        let loaded!: () => void;
+        preloadDailyMediaMock.mockImplementationOnce(() => new Promise<void>(resolve => { loaded = resolve; }));
+        const daily = { ...initialGameState, runType: "daily" as const, timeLeft: 15, dailyMedia: ["one", "two", "three", "four", "five"] };
+        startGameActionMock.mockResolvedValueOnce(daily);
+        beginDailyGameActionMock.mockResolvedValueOnce(daily);
+        const client = new GameClient(events, GameMode.Audio, "classic", {}, undefined, undefined, "daily");
+        const starting = client.startGame();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(beginDailyGameActionMock).not.toHaveBeenCalled();
+        expect(events.onStateUpdate).not.toHaveBeenCalled();
+        loaded();
+        await starting;
+        expect(preloadDailyMediaMock).toHaveBeenCalledWith(daily.dailyMedia, true);
+        expect(events.onStateUpdate.mock.calls.at(-1)?.[0].currentBeatmap.audioUrl).toBe("one");
+        client.dispose();
+    });
+
 });

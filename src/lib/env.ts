@@ -61,4 +61,16 @@ if (!parsed.success && !isDockerBuild) {
     throw new Error("Invalid environment variables");
 }
 
-export const env: z.infer<typeof envSchema> = parsed.success ? parsed.data : (processEnv as z.infer<typeof envSchema>);
+export const env: z.infer<typeof envSchema> = parsed.success ? parsed.data : {
+    ...processEnv,
+    DB_HOST: processEnv.DB_HOST ?? "127.0.0.1",
+    REDIS_URL: processEnv.REDIS_URL ?? "redis://127.0.0.1:6379",
+    AUTH_SECRET: processEnv.AUTH_SECRET ?? "",
+    HANAMI_ISSUER: processEnv.HANAMI_ISSUER ?? "http://localhost:3000",
+    HANAMI_CLIENT_ID: processEnv.HANAMI_CLIENT_ID ?? "",
+    OSU_API_KEY: processEnv.OSU_API_KEY ?? "",
+    NEXT_PUBLIC_APP_URL: processEnv.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    DEBUG_DAILY_DAY_OFFSET: Number(processEnv.DEBUG_DAILY_DAY_OFFSET ?? 0),
+    DEBUG_DAILY_UNLIMITED_ATTEMPTS: processEnv.DEBUG_DAILY_UNLIMITED_ATTEMPTS === "true",
+    DEBUG_DAILY_REUSE_CHECK: processEnv.DEBUG_DAILY_REUSE_CHECK !== "false",
+};

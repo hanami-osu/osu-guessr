@@ -7,7 +7,7 @@ const selectedTags: TestMapsetTag[] = [1, 2, 3, 4, 5].map((mapset_id) => ({
     image_filename: `${mapset_id}.webp`,
     audio_filename: `${mapset_id}.mp3`,
 }));
-const queryMock = mock(async (sql: string, params: unknown[] = []) => {
+const queryMock = mock<(sql: string, params?: unknown[]) => Promise<Record<string, unknown>[]>>(async (sql: string, params: unknown[] = []) => {
     if (sql.includes("SELECT DISTINCT used.item_id")) return [];
     if (sql.includes("FROM mapset_tags")) return selectedTags.filter(({ mapset_id }) => params.includes(mapset_id));
     if (sql.includes("FROM mapset_data")) {
@@ -16,11 +16,12 @@ const queryMock = mock(async (sql: string, params: unknown[] = []) => {
     }
     return [];
 });
-const challengeFindUniqueMock = mock(async () => null);
+const challengeFindUniqueMock = mock(async () => null as { id: string } | null);
 const challengeCreateMock = mock(async (args: { data: Record<string, unknown> }) => args.data);
 const challengeRoundCreateManyMock = mock(async (args: { data: Array<Record<string, unknown>> }) => ({ count: args.data.length }));
 const challengeRoundDeleteManyMock = mock(async () => ({ count: 5 }));
 const challengeDeleteMock = mock(async () => ({}));
+const challengeRoundFindUniqueMock = mock(async (_args: { where: { challengeId_roundNumber: { roundNumber: number } } }) => { void _args; return null as Record<string, unknown> | null; });
 const transactionMock = mock(async (operation: (transaction: unknown) => Promise<unknown>) =>
     operation({
         gameChallenge: { create: challengeCreateMock, findUnique: challengeFindUniqueMock, delete: challengeDeleteMock },
@@ -32,6 +33,8 @@ mock.module("@/lib/database", () => ({ query: queryMock }));
 mock.module("@/lib/database/prisma", () => ({
     prisma: {
         gameChallenge: { findUnique: challengeFindUniqueMock },
+        gameChallengeRound: { findUnique: challengeRoundFindUniqueMock },
+        contentStat: { findMany: async () => [] },
         $transaction: transactionMock,
     },
 }));
@@ -41,7 +44,7 @@ mock.module("@/lib/env", () => ({ env: { DEBUG_DAILY_REUSE_CHECK: false, OSU_API
 mock.module("@/lib/redis-lock-core", () => ({ acquireRedisLock: mock(async () => ({ key: "lock", token: "token" })), releaseRedisLock: mock(async () => {}) }));
 mock.module("@/lib/game/versioning", () => ({ CURRENT_PP_VERSION: 1, CURRENT_RULESET_VERSION: 1 }));
 
-const { createManualDailyChallenge } = await import("./mapsets");
+const { createManualDailyChallenge, getDailySkin } = await import("./mapsets");
 
 describe("manual daily mapset choices", () => {
     beforeEach(() => {
@@ -95,4 +98,29 @@ describe("manual daily mapset choices", () => {
         expect(challengeCreateMock).toHaveBeenCalledTimes(1);
         expect(challengeRoundCreateManyMock).toHaveBeenCalledTimes(1);
     });
+    test("persists automatic skin rounds so pool changes cannot change today's challenge", async () => {
+        let challenge: { id: string } | null = null;
+        let saved: Array<Record<string, unknown>> = [];
+        let skins = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: `Skin ${i + 1}`, image_filename: `${i + 1}.webp` }));
+        challengeFindUniqueMock.mockImplementation(async () => challenge);
+        challengeCreateMock.mockImplementation(async ({ data }) => { challenge = { id: String(data.id) }; return data; });
+        challengeRoundCreateManyMock.mockImplementation(async ({ data }) => { saved = data; return { count: data.length }; });
+        challengeRoundFindUniqueMock.mockImplementation(async ({ where }) => saved.find(round => round.roundNumber === where.challengeId_roundNumber.roundNumber) ?? null);
+        queryMock.mockImplementation(async (sql, params = []) => sql.includes("FROM skins") ? (sql.includes("WHERE id =") ? skins.filter(skin => skin.id === params[0]) : skins) : []);
+        const first = await getDailySkin(3, 1);
+        expect(saved).toHaveLength(5);
+        skins = [...skins, { id: 100, name: "New skin", image_filename: "100.webp" }];
+        expect((await getDailySkin(3, 1)).data.id).toBe(first.data.id);
+    });
+
+    test("rejects a different mapset containing a song already used that day", async () => {
+        queryMock.mockImplementation(async (sql, params = []) => {
+            if (sql.includes("SELECT DISTINCT used.item_id")) return [{ item_id: 999, title: " SONG 3 (TV Size) " }];
+            if (sql.includes("FROM mapset_tags")) return selectedTags.filter(tag => params.includes(tag.mapset_id));
+            if (sql.includes("FROM mapset_data")) return selectedTags.map(tag => ({ mapset_id: tag.mapset_id, title: `Song ${tag.mapset_id}`, artist: "Artist", mapper: "Mapper" }));
+            return [];
+        });
+        await expect(createManualDailyChallenge(new Date("2026-11-18Z"), GameMode.Audio, false, [1, 2, 3, 4, 5])).rejects.toThrow("repetition checks");
+    });
+
 });

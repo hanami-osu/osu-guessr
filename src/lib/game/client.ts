@@ -1,6 +1,7 @@
-import { endGameAction, getGameStateAction, getSuggestionsAction, startGameAction, submitGuessAction } from "@/actions/game-server";
+import { beginDailyGameAction, endGameAction, getGameStateAction, getSuggestionsAction, startGameAction, submitGuessAction } from "@/actions/game-server";
 import { GameMode, type GameRunType, type GameState, type GameVariant } from "@/actions/types";
-import type { MultiplayerRpcAction } from "@/lib/multiplayer-protocol";
+import type { MultiplayerRpcAction } from "../multiplayer-protocol";
+import { preloadDailyMedia } from "./daily-client";
 import { GameError, handleGameError } from "./errors";
 import type { GameClientConfig, GameClientEvents, GameSession } from "./types";
 
@@ -15,6 +16,7 @@ type MultiplayerRequest = <T>(action: MultiplayerRpcAction, payload: Record<stri
 
 export class GameClient {
     private session: GameSession | null = null;
+    private dailyMedia: string[] = [];
     private mutationPromise: Promise<void> | null = null;
     private endGamePromise: Promise<number | null> | null = null;
     private disposed = false;
@@ -41,7 +43,7 @@ export class GameClient {
     }
 
     private get storageKey(): string {
-        const baseKey = `osu-guessr:game-session:${this.gameMode}:${this.gameVariant}:${this.gameRunType}`;
+        const baseKey = `osu-guessr:game-session:${this.gameMode}:${this.gameVariant}${this.gameRunType === "daily" ? ":daily" : ""}`;
         return this.multiplayerLobbyCode ? `${baseKey}:multiplayer:${this.multiplayerLobbyCode}` : baseKey;
     }
 
@@ -112,11 +114,12 @@ export class GameClient {
 
     async startGame(): Promise<void> {
         if (this.disposed) return;
-        const initialState = await this.execute(
+        let initialState = await this.execute(
             () => this.request("game.start", { gameMode: this.gameMode, variant: this.gameVariant, runType: this.gameRunType }, () => startGameAction(this.gameMode, this.gameVariant, undefined, this.gameRunType)),
             "startGame",
             false,
         );
+        initialState = await this.prepareDaily(initialState);
         if (this.disposed) return;
         this.session = { id: initialState.sessionId, state: initialState, timer: null, isActive: true };
         this.persistSessionId(initialState.sessionId);
@@ -130,14 +133,15 @@ export class GameClient {
         if (!sessionId) return false;
 
         try {
-            const state = await this.execute(() => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)), "resumeStoredGame");
+            let state = await this.execute(() => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)), "resumeStoredGame");
+            state = await this.prepareDaily(state);
             if (this.disposed) return false;
-            if (state.gameStatus !== "active") {
+            if (state.gameStatus !== "active" && this.gameRunType !== "daily") {
                 this.clearStoredSessionId();
                 return false;
             }
 
-            this.session = { id: state.sessionId, state, timer: null, isActive: true };
+            this.session = { id: state.sessionId, state, timer: null, isActive: state.gameStatus === "active" };
             this.getStorage()?.removeItem(ACTION_RELOAD_ATTEMPTED_KEY);
             this.persistSessionId(state.sessionId);
             this.events.onStateUpdate(state);
@@ -150,6 +154,22 @@ export class GameClient {
             this.clearStoredSessionId();
             return false;
         }
+    }
+
+    private async prepareDaily(state: GameState): Promise<GameState> {
+        if (this.gameRunType !== "daily") return state;
+        if (state.dailyMedia) {
+            this.dailyMedia = state.dailyMedia;
+            await preloadDailyMedia(state.dailyMedia, this.gameMode === GameMode.Audio);
+            state = await beginDailyGameAction(state.sessionId);
+        }
+        return this.withDailyMedia(state);
+    }
+
+    private withDailyMedia(state: GameState): GameState {
+        const url = this.dailyMedia[state.rounds.current - 1];
+        if (!url) return state;
+        return { ...state, currentBeatmap: { ...state.currentBeatmap, ...(this.gameMode === GameMode.Audio ? { audioUrl: url } : { imageUrl: url }) } };
     }
 
     private startTimer(): void {
@@ -244,6 +264,7 @@ export class GameClient {
 
     private updateState(state: GameState): void {
         if (!this.session) return;
+        state = this.withDailyMedia(state);
         this.session.state = state;
         this.events.onStateUpdate(state);
 

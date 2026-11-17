@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/database/prisma";
 import redisClient from "../redis";
 import { z } from "zod";
-import { GAME_VARIANTS, ROUND_TIME, getGameRoundLimit, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
+import { AUTO_ADVANCE_DELAY_MS, GAME_VARIANTS, getRoundTime, getGameRoundLimit, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
 import { getDailyAudio, getDailyBackground, getDailySkin, getRandomAudio, getRandomBackground, getRandomSkin } from "./mapsets";
 import { GameMode, type GameRunType, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "@/actions/types";
 import { getMediaData } from "@/actions/media";
@@ -18,7 +18,6 @@ import { DAILY_CHALLENGE_ALREADY_PLAYED, DAILY_ROUNDS, getDailyChallengeDay, get
 import { env } from "../env";
 
 const GRACE_PERIOD = 1;
-const ROUND_TIME_MS = ROUND_TIME * 1000;
 const TRANSACTION_RETRY_LIMIT = 4;
 
 function isTransactionWriteConflict(error: unknown): boolean {
@@ -64,6 +63,7 @@ async function releaseSessionLock(lock: Parameters<typeof releaseGameSessionLock
 type GuessRoundItem = {
     data: MapsetDataWithTags | SkinData;
     difficultySnapshot?: number;
+    challengeId?: string;
     backgroundData?: string;
     audioData?: string;
     skinData?: string;
@@ -75,15 +75,15 @@ async function getGuessRoundItem(gameMode: GameMode, sessionId: string, lobbyCod
             if (dailyDay === undefined) throw new Error("Daily challenge date is missing");
             if (gameMode === GameMode.Audio) {
                 const audio = await getDailyAudio(dailyDay, round);
-                return { data: audio.data, audioData: audio.audioData };
+                return { data: audio.data, challengeId: audio.challengeId, audioData: audio.audioData };
             }
             if (gameMode === GameMode.Background) {
                 const background = await getDailyBackground(dailyDay, round);
-                return { data: background.data, backgroundData: background.backgroundData };
+                return { data: background.data, challengeId: background.challengeId, backgroundData: background.backgroundData };
             }
             if (gameMode === GameMode.Skin) {
                 const skin = await getDailySkin(dailyDay, round);
-                return { data: skin.data, skinData: skin.skinData };
+                return { data: skin.data, challengeId: skin.challengeId, skinData: skin.skinData };
             }
             throw new Error("Unsupported daily game mode");
         }
@@ -237,7 +237,7 @@ export async function finishGameSession(sessionId: string, userId: number, reque
     const rulesetVersion = gameState.ruleset_version ?? 0;
     const ppVersion = gameState.pp_version ?? 0;
     const ranked = gameState.ranked ?? true;
-    const runPp = calculateRunPp(gameState.variant === "classic" ? await withItemStats(gameState.game_mode, roundHistory, rulesetVersion, ppVersion) : roundHistory, gameState.variant);
+    const runPp = ranked ? calculateRunPp(gameState.variant === "classic" ? await withItemStats(gameState.game_mode, roundHistory, rulesetVersion, ppVersion) : roundHistory, gameState.variant) : 0;
     const finalizingState = { ...pendingState, round_history: roundHistory, pp: runPp };
     await writeGameSession(finalizingState);
 
@@ -459,6 +459,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
     gameMode = gameModeSchema.parse(gameMode);
     variant = gameVariantSchema.parse(variant);
     const runType = gameRunTypeSchema.parse(requestedRunType);
+    const roundTime = getRoundTime(runType);
     if (runType === "daily" && (variant !== "classic" || multiplayerLobbyCode)) throw new Error("Daily challenges are available in single-player Classic mode only");
     const lobbyCode = multiplayerLobbyCode ? normalizeLobbyCode(multiplayerLobbyCode) : undefined;
     const lobby = lobbyCode ? await requireActiveMultiplayerLobby(lobbyCode, userId, gameMode, variant) : null;
@@ -506,7 +507,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
 
     const roundStartedAt = lobby?.startAt ?? Date.now();
     const startedAt = new Date(roundStartedAt).toISOString();
-    const initialTimeLeft = lobby ? Math.max(0, Math.min(ROUND_TIME, ROUND_TIME - Math.floor((Date.now() - roundStartedAt) / 1000))) : ROUND_TIME;
+    const initialTimeLeft = lobby ? Math.max(0, Math.min(roundTime, roundTime - Math.floor((Date.now() - roundStartedAt) / 1000))) : roundTime;
     await writeGameSession({
         id: sessionId,
         user_id: userId,
@@ -517,7 +518,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         current_round: 1,
         current_item_id: itemId,
         current_difficulty_snapshot: difficultySnapshot,
-        time_left: ROUND_TIME,
+        time_left: roundTime,
         last_guess: null,
         last_guess_correct: null,
         last_points: null,
@@ -527,7 +528,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         is_active: true,
         variant: variant,
         run_type: runType,
-        challenge_id: null,
+        challenge_id: item.challengeId ?? null,
         seed: dailyDate ? `daily:${dailyDate.toISOString().slice(0, 10)}:${gameMode}` : null,
         config_snapshot: dailyDate ? { dailyDay, dailyDate: dailyDate.toISOString().slice(0, 10), debugUnlimitedAttempts: env.DEBUG_DAILY_UNLIMITED_ATTEMPTS } : lobby ? { multiplayer: { matchId: lobby.matchId } } : null,
         ranked: runType !== "daily",
@@ -543,7 +544,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         has_guessed_current_round: false,
         multiplayer_lobby_id: lobbyCode ?? null,
         multiplayer_match_id: lobby?.matchId ?? null,
-        ...(dailyDate && { daily_date: dailyDate.toISOString(), daily_day: dailyDay }),
+        ...(dailyDate && { daily_date: dailyDate.toISOString(), daily_day: dailyDay, daily_started_at: null }),
         last_action_at: startedAt,
     }, runType === "daily" ? 24 * 60 * 60 : undefined);
 
@@ -572,6 +573,10 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         );
     }
 
+    const dailyMedia = runType === "daily" ? await Promise.all(Array.from({ length: DAILY_ROUNDS }, async (_, i) => {
+        const round = i === 0 ? item : await getGuessRoundItem(gameMode, sessionId, undefined, i + 1, undefined, "daily", contentDay);
+        return round.audioData ?? round.backgroundData ?? round.skinData ?? "";
+    })) : undefined;
     const currentBeatmap =
         gameMode === GameMode.Audio
             ? { audioUrl: "audioData" in item ? item.audioData : undefined, revealed: false }
@@ -600,6 +605,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         variant,
         runType,
         dailyDay,
+        dailyMedia,
     };
 }
 
@@ -664,8 +670,11 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
     }
 
     try {
-        const gameState = await validateGameSession(validated.sessionId, userId);
+        const gameState = await expireDailyGame(await validateGameSession(validated.sessionId, userId));
+        if (!gameState.is_active) throw new Error("Daily challenge is complete");
+        if (gameState.daily_started_at === null) throw new Error("Daily media has not finished loading");
 
+        const roundTime = getRoundTime(gameState.run_type);
         const submittedGuess = validated.guess;
 
         if (submittedGuess !== undefined && gameState.has_guessed_current_round) {
@@ -686,7 +695,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
         const actionTimeMs = Date.now();
         const timeElapsedMs = gameState.has_guessed_current_round ? 0 : Math.max(0, actionTimeMs - new Date(gameState.last_action_at).getTime());
         const timeElapsed = Math.floor(timeElapsedMs / 1000);
-        const rawTimeLeft = gameState.time_left - timeElapsed;
+        const rawTimeLeft = Math.min(gameState.time_left, roundTime) - timeElapsed;
         const timeLeft = Math.max(0, rawTimeLeft);
 
         const guessingDifficulty: GuessDifficulty = 0.5;
@@ -730,14 +739,14 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
 
         const currentMedia: { backgroundData?: string; audioData?: string; skinData?: string } = {};
         if (gameState.game_mode === GameMode.Background) {
-            currentMedia.backgroundData = await getMediaData(GameMode.Background, gameState.image_filename);
+            currentMedia.backgroundData = gameState.run_type === "daily" ? undefined : await getMediaData(GameMode.Background, gameState.image_filename);
         } else if (gameState.game_mode === GameMode.Audio) {
-            currentMedia.audioData = await getMediaData(GameMode.Audio, gameState.audio_filename);
+            currentMedia.audioData = gameState.run_type === "daily" ? undefined : await getMediaData(GameMode.Audio, gameState.audio_filename);
         } else if (gameState.game_mode === GameMode.Skin) {
-            currentMedia.skinData = await getMediaData(GameMode.Skin, gameState.image_filename);
+            currentMedia.skinData = gameState.run_type === "daily" ? undefined : await getMediaData(GameMode.Skin, gameState.image_filename);
         }
 
-        const currentAnswer = gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).name : (currentItem as MapsetDataWithTags).title;
+        const currentAnswer = gameState.run_type === "daily" ? gameState.title : gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).name : (currentItem as MapsetDataWithTags).title;
 
         const isCorrect = isGuess && !isSkipped ? checkGuess(effectiveGuess || "", currentAnswer, guessingDifficulty) : false;
         const points = isNextRound ? 0 : calculateArcadeScore(isCorrect, timeLeft, gameState.current_streak);
@@ -803,7 +812,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
         const newStreak = isNextRound ? gameState.current_streak : isCorrect ? gameState.current_streak + 1 : 0;
         const resultType = isTimeout ? "timeout" : isSkipped ? "skip" : "guess";
         const currentMapset = gameState.game_mode === GameMode.Skin ? null : (currentItem as MapsetDataWithTags);
-        const responseTimeMs = Math.min(timeElapsedMs, ROUND_TIME_MS);
+        const responseTimeMs = Math.min(timeElapsedMs, (roundTime * 1000));
         const roundRecord: PersistedGameRound | null = isNextRound
             ? null
             : {
@@ -815,7 +824,7 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
                   result_type: resultType,
                   correct: isCorrect,
                   response_time_ms: responseTimeMs,
-                  time_limit_ms: ROUND_TIME_MS,
+                  time_limit_ms: (roundTime * 1000),
                   answered_at: new Date(actionTimeMs).toISOString(),
                   points_earned: points,
                   streak_before: gameState.current_streak,
@@ -851,14 +860,14 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
             highest_streak: Math.max(gameState.highest_streak, isCorrect ? gameState.current_streak + 1 : gameState.highest_streak),
             current_item_id: nextBeatmap ? ("mapset_id" in nextBeatmap.data ? nextBeatmap.data.mapset_id : nextBeatmap.data.id) : gameState.current_item_id,
             current_difficulty_snapshot: nextDifficultySnapshot,
-            time_left: nextBeatmap ? ROUND_TIME : timeLeft,
+            time_left: nextBeatmap ? roundTime : timeLeft,
             last_action_at: new Date().toISOString(),
             last_guess: isTimeout ? "TIMEOUT" : isSkipped ? "SKIPPED" : effectiveGuess,
             last_guess_correct: isCorrect ? 1 : 0,
             last_points: points,
             current_round: gameState.current_round + (isNextRound ? 1 : 0),
             correct_guesses: gameState.correct_guesses + (isCorrect ? 1 : 0),
-            total_time_used: gameState.total_time_used + (!isNextRound ? ROUND_TIME - timeLeft : 0),
+            total_time_used: gameState.total_time_used + (!isNextRound ? roundTime - timeLeft : 0),
             total_response_time_ms: (gameState.total_response_time_ms ?? 0) + (roundRecord?.response_time_ms ?? 0),
             round_history: roundRecord ? [...(gameState.round_history ?? []), roundRecord] : (gameState.round_history ?? []),
             has_guessed_current_round: isNextRound ? false : true,
@@ -909,13 +918,13 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
             currentBeatmap: {
                 imageUrl:
                     gameState.game_mode === GameMode.Background
-                        ? (nextBeatmap?.backgroundData ?? currentMedia.backgroundData)
+                        ? (gameState.run_type === "daily" ? undefined : nextBeatmap?.backgroundData ?? currentMedia.backgroundData)
                         : gameState.game_mode === GameMode.Skin
-                          ? (nextBeatmap?.skinData ?? currentMedia.skinData)
+                          ? (gameState.run_type === "daily" ? undefined : nextBeatmap?.skinData ?? currentMedia.skinData)
                           : undefined,
-                audioUrl: gameState.game_mode === GameMode.Audio ? (nextBeatmap?.audioData ?? currentMedia.audioData) : undefined,
+                audioUrl: gameState.game_mode === GameMode.Audio ? (gameState.run_type === "daily" ? undefined : nextBeatmap?.audioData ?? currentMedia.audioData) : undefined,
                 revealed: !isNextRound,
-                title: !isNextRound ? (gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).name : (currentItem as MapsetDataWithTags).title) : undefined,
+                title: !isNextRound ? currentAnswer : undefined,
                 artist: !isNextRound ? (currentItem as MapsetDataWithTags).artist : undefined,
                 mapper: !isNextRound ? (currentItem as MapsetDataWithTags).mapper : undefined,
                 mapsetId: !isNextRound ? (gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).id : (currentItem as MapsetDataWithTags).mapset_id) : undefined,
@@ -930,10 +939,10 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
                 current: gameState.current_round + (isNextRound ? 1 : 0),
                 total: runFailed ? gameState.current_round : roundLimit,
                 correctGuesses: gameState.correct_guesses + (isCorrect ? 1 : 0),
-                totalTimeUsed: gameState.total_time_used + (!isNextRound ? ROUND_TIME - timeLeft : 0),
+                totalTimeUsed: gameState.total_time_used + (!isNextRound ? roundTime - timeLeft : 0),
                 mistakes,
             },
-            timeLeft: runFailed ? 0 : nextBeatmap ? ROUND_TIME : timeLeft,
+            timeLeft: runFailed ? 0 : nextBeatmap ? roundTime : timeLeft,
             gameStatus: runFailed ? "finished" : "active",
             variant: gameState.variant as GameVariant,
             runType: gameState.run_type ?? "standard",
@@ -951,12 +960,70 @@ export async function submitGuessForUser(userId: number, sessionId: string, gues
     }
 }
 
-export async function getGameStateForUser(userId: number, sessionId: string): Promise<GameState> {
+async function expireDailyGame(game: DatabaseGameSession, force = false): Promise<DatabaseGameSession> {
+    if (game.run_type !== "daily" || !game.is_active || game.daily_started_at === null) return game;
+    const now = Date.now();
+    let changed = false;
+    while (game.is_active) {
+        if (game.has_guessed_current_round) {
+            if (game.current_round >= DAILY_ROUNDS) break;
+            const nextAt = new Date(game.last_action_at).getTime() + AUTO_ADVANCE_DELAY_MS;
+            if (!force && now < nextAt) break;
+            const item = await getGuessRoundItem(game.game_mode, game.id, undefined, game.current_round + 1, undefined, "daily", game.daily_day);
+            game = { ...game, current_round: game.current_round + 1, current_item_id: "mapset_id" in item.data ? item.data.mapset_id : item.data.id,
+                title: "mapset_id" in item.data ? item.data.title : item.data.name, artist: (item.data as MapsetDataWithTags).artist, mapper: (item.data as MapsetDataWithTags).mapper,
+                image_filename: item.data.image_filename, audio_filename: "mapset_id" in item.data ? item.data.audio_filename : "",
+                last_action_at: new Date(force ? now : nextAt).toISOString(), has_guessed_current_round: false, last_guess: null, time_left: getRoundTime("daily"),
+            };
+            changed = true;
+        }
+        const deadline = new Date(game.last_action_at).getTime() + getRoundTime("daily") * 1000;
+        if (!force && now < deadline) break;
+        const points = calculateArcadeScore(false, 0, game.current_streak);
+        const round: PersistedGameRound = { round_number: game.current_round, item_type: game.game_mode === GameMode.Skin ? "skin" : "mapset", item_id: game.current_item_id,
+            submitted_guess: null, answer_snapshot: game.title, result_type: "timeout", correct: false, response_time_ms: getRoundTime("daily") * 1000, time_limit_ms: getRoundTime("daily") * 1000,
+            answered_at: new Date(force ? now : deadline).toISOString(), points_earned: points, streak_before: game.current_streak, streak_after: 0, difficulty_snapshot: game.current_difficulty_snapshot ?? 1,
+            content_snapshot: { title: game.title, artist: game.artist, mapper: game.mapper },
+        };
+        game = { ...game, total_points: game.total_points + points, current_streak: 0, total_time_used: game.total_time_used + getRoundTime("daily"),
+            total_response_time_ms: game.total_response_time_ms + round.response_time_ms, round_history: [...game.round_history, round], last_action_at: round.answered_at!,
+            has_guessed_current_round: true, last_guess: "TIMEOUT", last_guess_correct: 0, last_points: points, time_left: 0 };
+        changed = true;
+    }
+    if (changed) await writeGameSession(game, 24 * 60 * 60);
+    if (game.current_round === DAILY_ROUNDS && game.has_guessed_current_round) {
+        await finishGameSession(game.id, game.user_id, "completed");
+        return getGameSession(game.id, game.user_id);
+    }
+    return game;
+}
+
+export async function beginDailyGameForUser(userId: number, sessionId: string): Promise<GameState> {
+    const lock = await acquireGameSessionLock(z.string().uuid().parse(sessionId));
+    if (!lock) throw new Error("Action in progress, please wait");
+    try {
+        const game = await validateGameSession(sessionId, userId);
+        if (game.run_type !== "daily") throw new Error("Not a daily session");
+        if (game.daily_started_at === null) {
+            const started = new Date().toISOString();
+            await writeGameSession({ ...game, daily_started_at: started, started_at: started, last_action_at: started }, 24 * 60 * 60);
+        }
+    } finally { await releaseSessionLock(lock); }
+    return getGameStateForUser(userId, sessionId, false);
+}
+
+export async function getGameStateForUser(userId: number, sessionId: string, includeDailyMedia = true): Promise<GameState> {
     sessionId = z.string().uuid().parse(sessionId);
 
     let gameState = await getGameSession(sessionId, userId);
     if (!gameModeSchema.safeParse(gameState.game_mode).success) throw new Error("Game session not found or expired");
     if (userId === 0 && gameState.run_type !== "daily") throw new Error("Game session not found or expired");
+    if (gameState.run_type === "daily" && gameState.is_active && gameState.daily_started_at !== null) {
+        const lock = await acquireGameSessionLock(sessionId);
+        if (!lock) throw new Error("Action in progress, please wait");
+        try { gameState = await expireDailyGame(await getGameSession(sessionId, userId)); }
+        finally { await releaseSessionLock(lock); }
+    }
     if (gameState.end_pending) {
         const lock = await acquireGameSessionLock(sessionId);
         if (!lock) throw new Error("Action in progress, please wait");
@@ -969,15 +1036,22 @@ export async function getGameStateForUser(userId: number, sessionId: string): Pr
         }
     }
 
-    const timeElapsed = gameState.has_guessed_current_round ? 0 : Math.floor((Date.now() - new Date(gameState.last_action_at).getTime()) / 1000);
-    const timeLeft = Math.max(0, gameState.time_left - timeElapsed);
+    const timeElapsed = gameState.has_guessed_current_round || gameState.daily_started_at === null ? 0 : Math.floor((Date.now() - new Date(gameState.last_action_at).getTime()) / 1000);
+    const timeLeft = Math.max(0, Math.min(gameState.time_left, getRoundTime(gameState.run_type)) - timeElapsed);
 
+    let dailyMedia: string[] | undefined;
+    if (includeDailyMedia && gameState.run_type === "daily" && gameState.is_active) {
+        dailyMedia = await Promise.all(Array.from({ length: DAILY_ROUNDS }, async (_, i) => {
+            const item = await getGuessRoundItem(gameState.game_mode, sessionId, undefined, i + 1, undefined, "daily", gameState.daily_day);
+            return item.audioData ?? item.backgroundData ?? item.skinData ?? "";
+        }));
+    }
     let mediaData: string | undefined;
-    if (gameState.game_mode === GameMode.Background) {
+    if (gameState.game_mode === GameMode.Background && gameState.run_type !== "daily") {
         mediaData = await getMediaData(GameMode.Background, gameState.image_filename);
-    } else if (gameState.game_mode === GameMode.Audio) {
+    } else if (gameState.game_mode === GameMode.Audio && gameState.run_type !== "daily") {
         mediaData = await getMediaData(GameMode.Audio, gameState.audio_filename);
-    } else if (gameState.game_mode === GameMode.Skin) {
+    } else if (gameState.game_mode === GameMode.Skin && gameState.run_type !== "daily") {
         mediaData = await getMediaData(GameMode.Skin, gameState.image_filename);
     }
 
@@ -1011,6 +1085,7 @@ export async function getGameStateForUser(userId: number, sessionId: string): Pr
         variant: gameState.variant as GameVariant,
         runType: gameState.run_type ?? "standard",
         dailyDay: gameState.daily_day,
+        dailyMedia,
         lastGuess: gameState.last_guess
             ? {
                   correct: gameState.last_guess_correct === 1,
@@ -1025,15 +1100,12 @@ export async function endGameForUser(userId: number, sessionId: string): Promise
     sessionId = z.string().uuid().parse(sessionId);
     const session = await getGameSession(sessionId, userId);
     if (session.run_type === "daily" && session.is_active) {
-        if (!session.has_guessed_current_round) {
-            await submitGuessForUser(userId, sessionId, null);
-        }
-
-        const afterSubmission = await getGameSession(sessionId, userId);
-        const roundLimit = getGameRoundLimit("daily", afterSubmission.variant);
-        if (afterSubmission.current_round >= roundLimit) return finishGameSession(sessionId, userId, "quit");
-        if (afterSubmission.has_guessed_current_round) await submitGuessForUser(userId, sessionId);
-        return null;
+        const lock = await acquireGameSessionLock(sessionId);
+        if (!lock) throw new Error("Action in progress, please wait");
+        try {
+            await expireDailyGame({ ...await getGameSession(sessionId, userId), daily_started_at: session.daily_started_at ?? new Date().toISOString() }, true);
+            return (await getGameSession(sessionId, userId)).pp ?? null;
+        } finally { await releaseSessionLock(lock); }
     }
 
     const lock = await acquireGameSessionLock(sessionId);

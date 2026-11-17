@@ -9,7 +9,7 @@ const finalRound: GameState = {
     rounds: { current: 15, total: 15, correctGuesses: 0, totalTimeUsed: 0, mistakes: 0 },
     timeLeft: 30,
     gameStatus: "active",
-    variant: "classic",
+    runType: "standard", variant: "classic",
 };
 
 describe("classic game completion", () => {

@@ -385,7 +385,7 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
             const now = performance.now();
             const delta = now - lastTick;
             lastTick = now;
-            if (advancePausedRef.current) return;
+            if (gameRunType !== "daily" && advancePausedRef.current) return;
 
             elapsed += delta;
             setRevealCountdown(Math.max(0, Math.ceil((AUTO_ADVANCE_DELAY_MS - elapsed) / 1000)));
@@ -396,7 +396,7 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
         }, 250);
 
         return () => window.clearInterval(tick);
-    }, [error, isLoading, isReportDialogOpen, multiplayerLobbyCode, nextRound, round, sessionId, showAdvanceCountdown]);
+    }, [error, gameRunType, isLoading, isReportDialogOpen, multiplayerLobbyCode, nextRound, round, sessionId, showAdvanceCountdown]);
 
     const skipRound = useCallback(() => {
         void resolveGuess(null, "skip");
@@ -431,11 +431,6 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
                 if (typeof result === "object" && result !== null && "pending" in result) {
                     setExitDialogOpen(false);
                     setPendingLeaveHref(null);
-                    return;
-                }
-                if (typeof result === "object" && result !== null && "paused" in result) {
-                    if (href) router.push(href);
-                    else router.replace("/");
                     return;
                 }
                 if (href) router.push(href);

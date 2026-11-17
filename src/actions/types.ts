@@ -85,6 +85,7 @@ export interface GameState {
     variant: GameVariant;
     runType: GameRunType;
     dailyDay?: number;
+    dailyMedia?: string[];
 }
 
 export interface UserBadge {
@@ -160,8 +161,9 @@ export interface UserDailyStats {
     dailies_played: number;
     total_points: bigint;
     best_streak: number;
+    current_streak: number;
     total_response_time_ms: bigint;
-    calendar: Array<{ date: string; status: "played" | "missed" | "today" }>;
+    calendar: Array<{ date: string; status: "played" | "perfect" | "missed" | "today" }>;
 }
 
 export interface UserRankHistoryPoint {
@@ -230,6 +232,7 @@ export interface DatabaseGameSession {
     end_reason?: GameEndReason;
     variant: GameVariant;
     run_type: GameRunType;
+    daily_started_at?: string | null;
     daily_day?: number;
     daily_date?: string;
     challenge_id: string | null;

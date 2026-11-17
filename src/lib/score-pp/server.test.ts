@@ -39,8 +39,8 @@ const dailyAttemptCreateMock = mock(async (args: { data: Record<string, unknown>
 const dailyAttemptUpsertMock = mock(async (args: { create: Record<string, unknown> }) => args.create);
 const dailyAttemptFindUniqueMock = mock(async () => null as { sessionId: string } | null);
 const gameChallengeFindUniqueMock = mock(async () => null as { id: string } | null);
-const gameChallengeRoundFindUniqueMock = mock(async () => null as { itemType: string; itemId: number; contentSnapshot: unknown } | null);
-const selectStoredScorePpPairMock = mock(async () => pair);
+const gameChallengeRoundFindUniqueMock = mock(async (_args: { where: { challengeId_roundNumber: { roundNumber: number } } }) => { void _args; return null as { itemType: string; itemId: number; contentSnapshot: unknown } | null; });
+const selectStoredScorePpPairMock = mock(async (_round?: number) => { void _round; return pair; });
 const gameChallengeCreateMock = mock(async (args: { data: Record<string, unknown> }) => args.data);
 const gameChallengeRoundCreateManyMock = mock(async (args: { data: Array<Record<string, unknown>> }) => ({ count: args.data.length }));
 const gameChallengeDeleteMock = mock(async () => ({}));
@@ -91,6 +91,8 @@ const pair: ScorePpPairSnapshot = {
 };
 const getStoredScorePpPairsByIdsMock = mock(async (_batchId: string, ids: number[]) => ids.map((id) => ({ ...pair, id })));
 
+mock.module("@/lib/redis-lock-core", () => ({ acquireRedisLock: async () => ({ key: "daily", token: "daily" }), releaseRedisLock: async () => {} }));
+mock.module("@/lib/env", () => ({ env: { DEBUG_DAILY_REUSE_CHECK: false, DEBUG_DAILY_DAY_OFFSET: 0 } }));
 mock.module("@/lib/game/server", () => ({ finishGameSession: finishGameSessionMock, getRoundDifficultySnapshot: getRoundDifficultySnapshotMock }));
 mock.module("@/lib/game/session-storage", () => ({
     acquireGameSessionLock: acquireGameSessionLockMock,
@@ -250,6 +252,7 @@ describe("Score PP multiplayer reveal boundary", () => {
     });
 
     test("starts a non-ranked five-round Daily Score PP session and claims its attempt", async () => {
+        selectStoredScorePpPairMock.mockImplementation(async (round = 1) => ({ ...pair, id: round }));
         const startedId = await startScorePpRunForUser(1, "classic", undefined, "daily");
         const started = sessions.get(startedId)!;
         expect(started.run_type).toBe("daily");
@@ -291,7 +294,7 @@ describe("Score PP multiplayer reveal boundary", () => {
         expect(gameChallengeRoundCreateManyMock).toHaveBeenCalledTimes(1);
     });
 
-    test("skips an unanswered Daily Score PP round on exit and advances the same session", async () => {
+    test("times out all unanswered Daily Score PP rounds on exit", async () => {
         const dailyRun: DatabaseGameSession = {
             ...makeRun(),
             multiplayer_lobby_id: null,
@@ -299,6 +302,7 @@ describe("Score PP multiplayer reveal boundary", () => {
             variant: "classic",
             run_type: "daily",
             seed: "daily:2026-01-01:score_pp",
+            challenge_id: "daily",
             current_round: 2,
             current_item_id: pair.id,
             round_history: [previousRound(1)],
@@ -307,9 +311,11 @@ describe("Score PP multiplayer reveal boundary", () => {
         };
         sessions.set(sessionId, dailyRun);
 
-        expect(await endScorePpRunForUser(1, sessionId)).toEqual({ paused: true });
-        expect(sessions.get(sessionId)).toMatchObject({ is_active: true, current_round: 3, run_type: "daily" });
-        expect(sessions.get(sessionId)?.round_history.at(-1)).toMatchObject({ round_number: 2, result_type: "skip", correct: false });
+        gameChallengeRoundFindUniqueMock.mockImplementation(async ({ where }) => ({ itemType: "score_pair", itemId: pair.id, contentSnapshot: { pair: { ...pair, id: pair.id } }, roundNumber: where.challengeId_roundNumber.roundNumber }));
+        expect(await endScorePpRunForUser(1, sessionId)).toBe(37);
+        expect(sessions.get(sessionId)).toMatchObject({ is_active: false, current_round: 5, run_type: "daily" });
+        expect(sessions.get(sessionId)?.round_history).toHaveLength(5);
+        expect(sessions.get(sessionId)?.round_history.at(-1)).toMatchObject({ round_number: 5, result_type: "timeout", correct: false });
     });
 
     test("withholds a terminal answer until everyone submits, then recovers it with the frozen pair difficulty", async () => {
@@ -426,4 +432,20 @@ describe("Score PP multiplayer reveal boundary", () => {
         expect(finishingLocks).toEqual([{ id: sessionId, held: [sessionId] }]);
         expect(sessionLocks.size).toBe(0);
     });
+    test("uses one persisted automatic daily even when another player changes exclusions", async () => {
+        let challenge: { id: string } | null = null;
+        let rounds: Array<Record<string, unknown>> = [];
+        gameChallengeFindUniqueMock.mockImplementation(async () => challenge);
+        gameChallengeCreateMock.mockImplementation(async ({ data }) => { challenge = { id: String(data.id) }; return data; });
+        gameChallengeRoundCreateManyMock.mockImplementation(async ({ data }) => { rounds = data; return { count: data.length }; });
+        gameChallengeRoundFindUniqueMock.mockImplementation(async ({ where }) => rounds.find(round => round.roundNumber === where.challengeId_roundNumber.roundNumber) as { itemType: string; itemId: number; contentSnapshot: unknown } ?? null);
+        selectStoredScorePpPairMock.mockImplementation(async (round = 1) => ({ ...pair, id: 200 + round }));
+        const firstId = await startScorePpRunForUser(1, "classic", undefined, "daily");
+        const first = await getScorePpRoundForUser(1, firstId, 1, { scoreIds: [], userIds: [], beatmapIds: [] });
+        expect(rounds).toHaveLength(5);
+        const secondId = await startScorePpRunForUser(2, "classic", undefined, "daily");
+        const second = await getScorePpRoundForUser(2, secondId, 1, { scoreIds: [pair.left.sourceScoreId], userIds: [], beatmapIds: [] });
+        expect(second.pair).toEqual(first.pair);
+    });
+
 });

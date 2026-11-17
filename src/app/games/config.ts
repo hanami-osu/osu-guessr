@@ -1,5 +1,5 @@
 import { GameMode, type GameRunType, type GameVariant } from "@/actions/types";
-import { DAILY_ROUNDS } from "@/lib/game/daily";
+import { DAILY_ROUNDS, DAILY_ROUND_TIME } from "@/lib/game/daily";
 
 export { GAME_VARIANTS, type GameVariant } from "@/actions/types";
 
@@ -24,6 +24,10 @@ export function isContinuousVariant(variant: GameVariant): boolean {
 
 export function getVariantLives(variant: GameVariant): number {
     return variant === "death" ? DEATH_LIVES : SURVIVAL_LIVES;
+}
+
+export function getRoundTime(runType: GameRunType = "standard"): number {
+    return runType === "daily" ? DAILY_ROUND_TIME : ROUND_TIME;
 }
 
 export function getGameRoundLimit(runType: GameRunType, variant: GameVariant): number {
