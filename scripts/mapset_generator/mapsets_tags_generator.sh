@@ -39,8 +39,10 @@ while IFS= read -r line; do
 
         echo "  Downloading beatmap..."
         # wget -q "https://api.nerinyan.moe/d/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
-        wget -q "https://beatconnect.io/b/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
-
+        # wget -q "https://beatconnect.io/b/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
+        # wget -q "https://mirror.hinamizawa.ai/d/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
+        wget -q "https://osu.direct/api/d/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
+        # wget -q "https://catboy.best/d/$mapset_id" -O "$mapset_temp_dir/$mapset_id.osz"
         if [ ! -f "$mapset_temp_dir/$mapset_id.osz" ]; then
             echo "  Failed to download .osz file"
             rm -rf "$mapset_temp_dir"
