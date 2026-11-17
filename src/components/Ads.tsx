@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Translations } from "@/lib/translations";
 import { useTranslationsContext } from "@/context/translations-provider";
-import { AtSign, Coffee, Gamepad2, MessagesSquare, type LucideIcon } from "lucide-react";
+import { AtSign, Gamepad2, Heart, MessagesSquare, type LucideIcon } from "lucide-react";
 
 interface LinkPromo {
     id: string;
@@ -14,7 +14,7 @@ interface LinkPromo {
 const promoIcons: Record<string, LucideIcon> = {
     twitter: AtSign,
     osu: Gamepad2,
-    buymeacoffe: Coffee,
+    buymeacoffe: Heart,
     discord: MessagesSquare,
 };
 
@@ -32,7 +32,7 @@ const createPromos = (t: Translations): Array<LinkPromo> => [
     {
         id: "buymeacoffe",
         title: t.components.ads.buymeacoffe.title,
-        link: "https://ko-fi.com/yorunoken",
+        link: "/support",
     },
     {
         id: "discord",
@@ -75,7 +75,11 @@ export function AdSlider({ compact = false }: { compact?: boolean }) {
     return (
         <div className={compact ? "mt-5 text-xs text-muted-foreground" : "max-w-md mx-auto my-8"}>
             <div className="h-full">
-                <a href={currentPromo.link} target="_blank" rel="noopener noreferrer" className={`block h-full ${compact ? "py-3" : "p-4"} hover:opacity-80 transition-opacity`}>
+                <a
+                    href={currentPromo.link}
+                    {...(currentPromo.link.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                    className={`block h-full ${compact ? "py-3" : "p-4"} hover:opacity-80 transition-opacity`}
+                >
                     <div className={`flex items-center justify-center text-center h-full ${compact ? "gap-2" : "flex-col gap-3"}`}>
                         {(() => {
                             const Icon = promoIcons[currentPromo.id];

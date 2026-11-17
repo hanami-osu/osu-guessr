@@ -1,10 +1,10 @@
-import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiUserIdSchema } from "@/app/api/_lib/schemas";
 import { createAccountDeletionService } from "@/lib/account-deletion";
 import { prisma } from "@/lib/database/prisma";
 import { env } from "@/lib/env";
+import { hasValidInternalSecret } from "@/lib/internal-auth";
 import { removeMultiplayerUser } from "@/lib/multiplayer";
 import redisClient from "@/lib/redis";
 
@@ -19,22 +19,13 @@ const accountDeletion = createAccountDeletionService({
     removeMultiplayerUser,
 });
 
-function hasValidSecret(header: string | null, secret: string): boolean {
-    const match = header?.match(/^Bearer (.+)$/);
-    if (!match) return false;
-
-    const expected = crypto.createHash("sha256").update(secret).digest();
-    const received = crypto.createHash("sha256").update(match[1]).digest();
-    return crypto.timingSafeEqual(expected, received);
-}
-
 export async function POST(request: Request) {
     const secret = env.HANAMI_INTERNAL_SECRET;
     if (!secret) {
         return NextResponse.json({ ok: false, error: "Account deletion is not configured" }, { status: 503 });
     }
 
-    if (!hasValidSecret(request.headers.get("Authorization"), secret)) {
+    if (!hasValidInternalSecret(request.headers.get("Authorization"), secret)) {
         return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 

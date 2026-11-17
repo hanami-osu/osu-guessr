@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
+import type { SupporterListEntry } from "@/actions/user-server";
 import { SupportPageLink } from "@/components/SupportDialogWrapper";
-import { supporters } from "@/config/supporters";
 import { useTranslationsContext } from "@/context/translations-provider";
 
-export function SupportersSection() {
+export function SupportersSection({ supporters }: { supporters: SupporterListEntry[] }) {
     const { t } = useTranslationsContext();
 
     return (
@@ -15,31 +17,16 @@ export function SupportersSection() {
             </div>
 
             {supporters.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {supporters.map((supporter, index) => (
-                        <div key={index} className="py-2">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="font-semibold">
-                                    {supporter.url ? (
-                                        <a href={supporter.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                                            {supporter.name}
-                                        </a>
-                                    ) : (
-                                        supporter.name
-                                    )}
-                                </div>
-                                <div className="text-sm text-primary">${supporter.amount}</div>
-                            </div>
-                            {supporter.message && (
-                                <p className="text-sm text-foreground/70 italic">
-                                    {'"'}
-                                    {supporter.message}
-                                    {'"'}
-                                </p>
-                            )}
-                        </div>
+                <ul className="flex flex-wrap gap-x-6 gap-y-3">
+                    {supporters.map((supporter) => (
+                        <li key={supporter.bancho_id}>
+                            <Link href={`/user/${supporter.bancho_id}`} className="flex items-center gap-2.5 font-semibold transition-colors hover:text-primary">
+                                <Image src={supporter.avatar_url || "/placeholder.svg"} alt="" width={28} height={28} unoptimized className="size-7 rounded-xl" />
+                                {supporter.username}
+                            </Link>
+                        </li>
                     ))}
-                </div>
+                </ul>
             ) : (
                 <div className="text-center text-foreground/70">
                     <p>{t.home.supporters.beFirst}</p>

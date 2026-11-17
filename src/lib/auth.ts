@@ -2,6 +2,8 @@ import { env } from "@/lib/env";
 import { HanamiProvider, parseHanamiProfile } from "@/lib/hanami-auth";
 import { getSessionUserAccess } from "@/lib/admin";
 import { upsertUser } from "@/lib/user-service";
+import { prisma } from "@/lib/database/prisma";
+import { applySupporterBadge, parseSupporterBadge } from "@/lib/supporter";
 import NextAuth, { DefaultSession } from "next-auth";
 
 const developmentCookies =
@@ -35,6 +37,12 @@ export const { auth, handlers } = NextAuth({
                 const user = parseHanamiProfile(profile);
 
                 await upsertUser(user.banchoId, user.username, user.avatarUrl);
+                const badge = parseSupporterBadge(profile);
+                if (badge === true) {
+                    await applySupporterBadge(prisma, user.banchoId, badge).catch((error: unknown) => {
+                        console.error("Failed to store supporter status at sign-in:", error);
+                    });
+                }
 
                 return {
                     banchoId: user.banchoId,

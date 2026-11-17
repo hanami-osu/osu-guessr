@@ -78,7 +78,7 @@ describe("Hanami authentication configuration", () => {
             issuer: "https://hanami.example.com/api/auth",
             clientId: "client-id",
             checks: ["pkce", "state"],
-            authorization: { params: { scope: "openid osu" } },
+            authorization: { params: { scope: "openid osu supporter" } },
             client: { token_endpoint_auth_method: "none" },
         });
         expect(provider.clientSecret).toBeUndefined();

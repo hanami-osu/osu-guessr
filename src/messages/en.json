@@ -859,19 +859,20 @@
     },
     "support": {
         "title": "Support {osu_guessr}",
-        "description": "Donations fund {osu_guessr} development and server costs.",
+        "description": "Hanami supporter funds {osu_guessr} and the rest of Hanami: $3 a month, or any one-time amount where every dollar is 10 days.",
         "benefits": {
-            "title": "Supporter Benefits",
+            "title": "Supporter benefits",
             "items": {
-                "badge": "Supporter badge on your profile",
-                "homepage": "Your name on the homepage"
+                "badge": "A supporter badge on your profile and the leaderboards, kept even after your support ends",
+                "homepage": "Your name in the supporters list on the homepage",
+                "ranked": "Ranked play stays the same for everyone. Supporter extras are planned."
             }
         },
         "donate": {
-            "title": "Become a Supporter",
-            "button": "Buy me a Coffee",
-            "description": "A one-time donation of any amount through Buy Me a Coffee grants permanent supporter status on {osu_guessr}.",
-            "reminder": "Include your osu!guessr username or user ID in the donation message to receive supporter benefits."
+            "title": "Become a supporter",
+            "button": "Become a supporter on Hanami",
+            "description": "Pay on Patreon, GitHub Sponsors, or Buy Me a Coffee, then link that account on your Hanami profile. Your badge shows up here automatically.",
+            "reminder": "Supported us before through Buy Me a Coffee? You keep your badge."
         }
     },
     "components": {
@@ -883,7 +884,7 @@
                 "title": "Add me on osu!"
             },
             "buymeacoffe": {
-                "title": "Support on Ko-fi"
+                "title": "Become a supporter"
             },
             "discord": {
                 "title": "Join our Discord"

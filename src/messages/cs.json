@@ -729,19 +729,20 @@
     },
     "support": {
         "title": "Podpořit {osu_guessr}",
-        "description": "Příspěvky financují vývoj a servery {osu_guessr}.",
+        "description": "Hanami supporter financuje {osu_guessr} a zbytek Hanami: 3 $ měsíčně, nebo jakákoli jednorázová částka, kde každý dolar znamená 10 dní.",
         "benefits": {
-            "title": "Supporter Benefits",
+            "title": "Výhody podporovatelů",
             "items": {
-                "badge": "Odznak podporovatele na profilu",
-                "homepage": "Vaše jméno na hlavní stránce"
+                "badge": "Odznak podporovatele na profilu a v žebříčcích, který ti zůstane i po skončení podpory",
+                "homepage": "Tvé jméno v seznamu podporovatelů na hlavní stránce",
+                "ranked": "Hodnocená hra zůstává pro všechny stejná. Extra funkce pro podporovatele jsou v plánu."
             }
         },
         "donate": {
-            "title": "Become a Supporter",
-            "button": "Buy me a Coffee",
-            "description": "Jednorázový příspěvek v libovolné výši přes Buy Me a Coffee uděluje trvalý status podporovatele na {osu_guessr}.",
-            "reminder": "Pro získání výhod uveďte ve zprávě k příspěvku své uživatelské jméno nebo ID v osu!guessr."
+            "title": "Staň se podporovatelem",
+            "button": "Staň se podporovatelem na Hanami",
+            "description": "Zaplať přes Patreon, GitHub Sponsors nebo Buy Me a Coffee a pak tento účet propoj na svém profilu Hanami. Odznak se tu objeví automaticky.",
+            "reminder": "Podpořil(a) jsi nás dříve přes Buy Me a Coffee? Odznak ti zůstává."
         }
     },
     "components": {
@@ -756,7 +757,7 @@
                 "title": "Join our Discord"
             },
             "buymeacoffe": {
-                "title": "Podpořit na Ko-fi"
+                "title": "Staň se podporovatelem"
             }
         },
         "header": {

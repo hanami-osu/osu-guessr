@@ -729,19 +729,20 @@
     },
     "support": {
         "title": "Apoya a {osu_guessr}",
-        "description": "Las donaciones financian el desarrollo y los servidores de {osu_guessr}.",
+        "description": "Hanami supporter financia {osu_guessr} y el resto de Hanami: 3 $ al mes, o cualquier cantidad única en la que cada dólar equivale a 10 días.",
         "benefits": {
             "title": "Beneficios para colaboradores",
             "items": {
-                "badge": "Insignia de colaborador en tu perfil",
-                "homepage": "Tu nombre en la página principal"
+                "badge": "Una insignia de colaborador en tu perfil y en las clasificaciones, que conservas aunque termine tu apoyo",
+                "homepage": "Tu nombre en la lista de colaboradores de la página principal",
+                "ranked": "El juego clasificatorio es igual para todos. Hay extras para colaboradores en camino."
             }
         },
         "donate": {
-            "title": "Conviértete en colaborador",
-            "button": "Buy me a Coffee",
-            "description": "Una donación única de cualquier importe a través de Buy Me a Coffee otorga el estado de colaborador permanente en {osu_guessr}.",
-            "reminder": "Incluye tu nombre de usuario o ID de osu!guessr en el mensaje de la donación para recibir los beneficios."
+            "title": "Hazte colaborador",
+            "button": "Hazte colaborador en Hanami",
+            "description": "Paga en Patreon, GitHub Sponsors o Buy Me a Coffee y luego vincula esa cuenta en tu perfil de Hanami. Tu insignia aparecerá aquí automáticamente.",
+            "reminder": "¿Ya apoyaste antes con Buy Me a Coffee? Conservas tu insignia."
         }
     },
     "components": {
@@ -753,7 +754,7 @@
                 "title": "Agrégame en osu!"
             },
             "buymeacoffe": {
-                "title": "Colabora en Ko-fi"
+                "title": "Hazte colaborador"
             },
             "discord": {
                 "title": "Únete a nuestro Discord"

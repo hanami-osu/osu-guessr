@@ -1,7 +1,7 @@
 import Hero from "./components/Hero";
 import GameModeCards from "./components/GameModeCards";
 import { HomeAnnouncementsSection, HomeStatsSection } from "./HomeContent";
-import { getHighestStatsAction } from "@/actions/user-server";
+import { getHighestStatsAction, getSupportersAction } from "@/actions/user-server";
 import { readChangelogs } from "@/actions/changelogs";
 import { listRecentAnnouncements } from "@/actions/announcements";
 import { SupportersSection } from "./components/Supporters";
@@ -10,12 +10,13 @@ import { ChangelogsSection } from "./components/Changelogs";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-    const [classicStats, survivalStats, deathStats, announcements, changelogs] = await Promise.all([
+    const [classicStats, survivalStats, deathStats, announcements, changelogs, supporters] = await Promise.all([
         getHighestStatsAction("classic"),
         getHighestStatsAction("survival"),
         getHighestStatsAction("death"),
         listRecentAnnouncements(1),
         readChangelogs(),
+        getSupportersAction(),
     ]);
     const highStats = {
         total_users: classicStats.total_users,
@@ -30,7 +31,7 @@ export default async function Home() {
             <GameModeCards />
             <HomeAnnouncementsSection latestAnnouncement={announcements[0] ?? null} />
             <HomeStatsSection highStats={highStats} />
-            <SupportersSection />
+            <SupportersSection supporters={supporters} />
             {changelogs.length > 0 && <ChangelogsSection changelogs={changelogs} />}
         </>
     );

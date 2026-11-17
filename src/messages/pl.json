@@ -795,19 +795,20 @@
     },
     "support": {
         "title": "Wesprzyj {osu_guessr}",
-        "description": "Darowizny pokrywają koszty rozwoju i serwerów {osu_guessr}.",
+        "description": "Hanami supporter finansuje {osu_guessr} i resztę Hanami: 3 $ miesięcznie albo dowolna jednorazowa kwota, gdzie każdy dolar to 10 dni.",
         "benefits": {
-            "title": "Supporter Benefits",
+            "title": "Korzyści dla wspierających",
             "items": {
-                "badge": "Odznaka wspierającego na profilu",
-                "homepage": "Twoja nazwa na stronie głównej"
+                "badge": "Odznaka wspierającego na profilu i w rankingach, która zostaje nawet po zakończeniu wsparcia",
+                "homepage": "Twoja nazwa na liście wspierających na stronie głównej",
+                "ranked": "Gra rankingowa jest taka sama dla wszystkich. Dodatki dla wspierających są w planach."
             }
         },
         "donate": {
-            "title": "Become a Supporter",
-            "button": "Buy me a Coffee",
-            "description": "Jednorazowa darowizna dowolnej kwoty przez Buy Me a Coffee daje stały status wspierającego w {osu_guessr}.",
-            "reminder": "Podaj nazwę użytkownika lub ID z osu!guessr w wiadomości do darowizny, aby otrzymać korzyści wspierającego."
+            "title": "Zostań wspierającym",
+            "button": "Zostań wspierającym na Hanami",
+            "description": "Zapłać przez Patreon, GitHub Sponsors lub Buy Me a Coffee, a potem połącz to konto na swoim profilu Hanami. Odznaka pojawi się tu automatycznie.",
+            "reminder": "Wspierałeś(-aś) nas wcześniej przez Buy Me a Coffee? Odznaka zostaje."
         }
     },
     "components": {
@@ -819,7 +820,7 @@
                 "title": "Dodaj mnie w osu!"
             },
             "buymeacoffe": {
-                "title": "Wesprzyj na Ko-fi"
+                "title": "Zostań wspierającym"
             },
             "discord": {
                 "title": "Dołącz do naszego Discorda"

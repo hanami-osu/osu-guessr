@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS badges (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+INSERT IGNORE INTO badges (name, color) VALUES ('Supporter', '#ff69b4');
+
 CREATE TABLE IF NOT EXISTS user_badges (
     user_id INT NOT NULL,
     badge_name VARCHAR(255) NOT NULL,

@@ -3,7 +3,7 @@
 import { useTranslationsContext } from "@/context/translations-provider";
 import { SectionLabel } from "@/components/page-heading";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Check, Coffee, Info } from "lucide-react";
+import { ArrowUpRight, Check, Heart, Info } from "lucide-react";
 
 export function SupportPageContent() {
     const { t } = useTranslationsContext();
@@ -37,7 +37,7 @@ export function SupportPageContent() {
 
                     <section className="py-6 lg:pl-9">
                         <div className="mb-4 flex items-center gap-2 text-primary">
-                            <Coffee className="size-4" />
+                            <Heart className="size-4" />
                             <h2 className="text-sm font-semibold tracking-tight text-foreground">{t.support.donate.title}</h2>
                         </div>
 
@@ -49,9 +49,9 @@ export function SupportPageContent() {
                         </div>
 
                         <Button asChild size="lg" className="mt-6 w-full justify-between px-5 text-base sm:w-auto sm:min-w-72">
-                            <a href="https://www.buymeacoffee.com/yorunoken" target="_blank" rel="noopener noreferrer">
+                            <a href="https://hanami.yorunoken.com/supporter" target="_blank" rel="noopener noreferrer">
                                 <span className="flex items-center gap-2">
-                                    <Coffee className="size-4" />
+                                    <Heart className="size-4" />
                                     {t.support.donate.button}
                                 </span>
                                 <ArrowUpRight className="size-4" />

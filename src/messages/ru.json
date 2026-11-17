@@ -728,20 +728,21 @@
         }
     },
     "support": {
-        "title": "Support {osu_guessr}",
-        "description": "Пожертвования покрывают расходы на разработку и серверы {osu_guessr}.",
+        "title": "Поддержать {osu_guessr}",
+        "description": "Hanami supporter финансирует {osu_guessr} и остальной Hanami: 3 $ в месяц или любая разовая сумма, где каждый доллар — это 10 дней.",
         "benefits": {
-            "title": "Supporter Benefits",
+            "title": "Преимущества саппортеров",
             "items": {
-                "badge": "Значок спонсора в профиле",
-                "homepage": "Твоё имя на главной странице"
+                "badge": "Значок саппортера в профиле и в таблицах лидеров, который остаётся даже после окончания поддержки",
+                "homepage": "Ваше имя в списке саппортеров на главной странице",
+                "ranked": "Рейтинговая игра одинакова для всех. Дополнительные функции для саппортеров в планах."
             }
         },
         "donate": {
-            "title": "Become a Supporter",
-            "button": "Buy me a Coffee",
-            "description": "Разовое пожертвование любой суммы через Buy Me a Coffee даёт постоянный статус спонсора в {osu_guessr}.",
-            "reminder": "Укажи имя пользователя или ID в osu!guessr в сообщении к пожертвованию, чтобы получить преимущества спонсора."
+            "title": "Стать саппортером",
+            "button": "Стать саппортером на Hanami",
+            "description": "Оплатите через Patreon, GitHub Sponsors или Buy Me a Coffee, затем привяжите этот аккаунт в профиле Hanami. Значок появится здесь автоматически.",
+            "reminder": "Уже поддерживали нас через Buy Me a Coffee? Значок остаётся у вас."
         }
     },
     "components": {
@@ -808,7 +809,7 @@
                 "title": "Add me on osu!"
             },
             "buymeacoffe": {
-                "title": "Поддержать на Ko-fi"
+                "title": "Стать саппортером"
             },
             "discord": {
                 "title": "Join our Discord"

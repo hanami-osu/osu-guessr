@@ -7,6 +7,7 @@ import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioni
 import { calculateProfilePp } from "@/lib/game/performance-points";
 import { hasPlayedGame } from "@/lib/user-stats";
 import { getHiddenUserIds, isUserVisible, visibleUserWhere } from "@/lib/user-visibility";
+import { SUPPORTER_BADGE } from "@/lib/supporter";
 import { authenticatedAction } from "./server";
 import { z } from "zod";
 import { Game, GameMode, HighestStats, TopPlayer, User, UserAchievement, UserBadge, UserDailyStats, UserLifetimeModeStats, UserRankHistoryPoint, UserWithStats } from "./types";
@@ -602,6 +603,32 @@ export async function searchUsersPageAction(searchTerm: string, limit: number = 
     ]);
 
     return { users: users.map((user) => mapUser(user)), total };
+}
+
+export interface SupporterListEntry {
+    bancho_id: number;
+    username: string;
+    avatar_url: string;
+}
+
+/** Everyone with the supporter badge, oldest first, for the homepage list. */
+export async function getSupportersAction(): Promise<SupporterListEntry[]> {
+    const badges = await prisma.userBadge.findMany({
+        where: { badgeName: SUPPORTER_BADGE },
+        orderBy: { assignedAt: "asc" },
+        select: { userId: true },
+    });
+    if (badges.length === 0) return [];
+
+    const users = await prisma.user.findMany({
+        where: { banchoId: { in: badges.map((badge) => badge.userId) }, ...visibleUserWhere },
+        select: { banchoId: true, username: true, avatarUrl: true },
+    });
+    const byId = new Map(users.map((user) => [user.banchoId, user]));
+    return badges.flatMap((badge) => {
+        const user = byId.get(badge.userId);
+        return user ? [{ bancho_id: user.banchoId, username: user.username, avatar_url: user.avatarUrl }] : [];
+    });
 }
 
 export async function getHighestStatsAction(variant: GameVariant = "classic"): Promise<HighestStats> {

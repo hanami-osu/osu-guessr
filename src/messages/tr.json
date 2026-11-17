@@ -729,19 +729,20 @@
     },
     "support": {
         "title": "{osu_guessr}'ı Destekle",
-        "description": "Bağışlar, {osu_guessr} geliştirme ve sunucu giderlerini karşılar.",
+        "description": "Hanami destekçiliği {osu_guessr}'ı ve Hanami'nin geri kalanını finanse eder: ayda 3$ ya da her doların 10 gün sayıldığı tek seferlik herhangi bir tutar.",
         "benefits": {
-            "title": "Supporter Benefits",
+            "title": "Destekçi avantajları",
             "items": {
-                "badge": "Profilinde destekçi rozeti",
-                "homepage": "Ana sayfada adın"
+                "badge": "Profilinde ve sıralamalarda destekçi rozeti; desteğin bitse bile sende kalır",
+                "homepage": "Ana sayfadaki destekçiler listesinde adın",
+                "ranked": "Dereceli oyun herkes için aynı kalır. Destekçilere özel ekstralar planlanıyor."
             }
         },
         "donate": {
-            "title": "Become a Supporter",
-            "button": "Buy me a Coffee",
-            "description": "Buy Me a Coffee üzerinden tek seferlik herhangi bir bağış, {osu_guessr} üzerinde kalıcı destekçi statüsü sağlar.",
-            "reminder": "Destekçi avantajlarını almak için bağış mesajına osu!guessr kullanıcı adını veya kullanıcı ID'ni ekle."
+            "title": "Destekçi ol",
+            "button": "Hanami'de destekçi ol",
+            "description": "Patreon, GitHub Sponsors veya Buy Me a Coffee üzerinden ödeme yap, sonra o hesabı Hanami profiline bağla. Rozetin burada otomatik olarak görünür.",
+            "reminder": "Daha önce Buy Me a Coffee ile destek olduysan rozetin sende kalır."
         }
     },
     "components": {
@@ -756,7 +757,7 @@
                 "title": "Join our Discord"
             },
             "buymeacoffe": {
-                "title": "Ko-fi üzerinden destekle"
+                "title": "Destekçi ol"
             }
         },
         "header": {

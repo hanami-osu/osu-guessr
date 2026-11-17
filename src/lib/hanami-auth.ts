@@ -82,7 +82,7 @@ export function HanamiProvider({ issuer, clientId }: HanamiProviderOptions): OID
         issuer,
         clientId,
         checks: ["pkce", "state"],
-        authorization: { params: { scope: "openid osu" } },
+        authorization: { params: { scope: "openid osu supporter" } },
         client: { token_endpoint_auth_method: "none" },
         profile(profile): User {
             const user = parseHanamiProfile(profile);
