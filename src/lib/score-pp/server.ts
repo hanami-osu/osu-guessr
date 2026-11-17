@@ -10,7 +10,7 @@ import { DAILY_ROUNDS, GAME_VARIANTS, MAX_ROUNDS, ROUND_TIME, getVariantLives, i
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "../multiplayer";
 import { prisma } from "@/lib/database/prisma";
-import { env } from "@/lib/env";
+import { env } from "../env";
 import { DAILY_CHALLENGE_ALREADY_PLAYED, DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, createDailyRandom, getDailyChallengeDay, getDailyDate } from "@/lib/game/daily";
 
 const ROUND_TIME_MS = ROUND_TIME * 1000;

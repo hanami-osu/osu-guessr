@@ -4,8 +4,8 @@ import redisClient from "../redis";
 import { getMediaData } from "@/actions/media";
 
 import { GameMode, type MapsetTags, type MapsetData, type MapsetDataWithTags, type SkinData } from "@/actions/types";
-import { NoGameContentError } from "@/lib/game/content-errors";
-import { DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, DAILY_EPOCH_UTC, DAILY_ROUNDS, getDailyItemId } from "@/lib/game/daily";
+import { NoGameContentError } from "./content-errors";
+import { DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, DAILY_EPOCH_UTC, DAILY_ROUNDS, getDailyItemId } from "./daily";
 import { prisma } from "@/lib/database/prisma";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "./versioning";
 import { acquireRedisLock, releaseRedisLock } from "../redis-lock-core";

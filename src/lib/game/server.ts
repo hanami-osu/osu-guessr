@@ -2,7 +2,7 @@ import { prisma } from "@/lib/database/prisma";
 import redisClient from "../redis";
 import { z } from "zod";
 import { GAME_VARIANTS, ROUND_TIME, getGameRoundLimit, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
-import { getDailyAudio, getDailyBackground, getDailySkin, getRandomAudio, getRandomBackground, getRandomSkin } from "@/lib/game/mapsets";
+import { getDailyAudio, getDailyBackground, getDailySkin, getRandomAudio, getRandomBackground, getRandomSkin } from "./mapsets";
 import { GameMode, type GameRunType, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "@/actions/types";
 import { getMediaData } from "@/actions/media";
 import { checkGuess, GuessDifficulty } from "../guess-checker";
