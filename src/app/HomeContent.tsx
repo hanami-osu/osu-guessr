@@ -1,9 +1,8 @@
-"use client";
-
 import { StatsCard } from "./components/StatsCard";
 import { ArrowRight } from "lucide-react";
-import { useTranslationsContext } from "@/context/translations-provider";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { getTranslations, isLocale } from "@/lib/translations";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -16,8 +15,10 @@ interface HomeContentProps {
     latestAnnouncement?: { title: string; content: string; created_at: string } | null;
 }
 
-export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStats">) {
-    const { t, locale } = useTranslationsContext();
+export async function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStats">) {
+    const localeCookie = (await cookies()).get("locale")?.value;
+    const locale = isLocale(localeCookie) ? localeCookie : "en";
+    const t = getTranslations(locale);
 
     return (
         <section className="pb-6 pt-2">
@@ -37,8 +38,10 @@ export function HomeStatsSection({ highStats }: Pick<HomeContentProps, "highStat
     );
 }
 
-export function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeContentProps, "latestAnnouncement">) {
-    const { t, locale } = useTranslationsContext();
+export async function HomeAnnouncementsSection({ latestAnnouncement }: Pick<HomeContentProps, "latestAnnouncement">) {
+    const localeCookie = (await cookies()).get("locale")?.value;
+    const locale = isLocale(localeCookie) ? localeCookie : "en";
+    const t = getTranslations(locale);
 
     if (!latestAnnouncement) return null;
 

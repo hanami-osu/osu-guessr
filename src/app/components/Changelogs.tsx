@@ -1,13 +1,13 @@
-"use client";
-
-import { useTranslationsContext } from "@/context/translations-provider";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { getTranslations, isLocale } from "@/lib/translations";
 import { SectionLabel } from "@/components/page-heading";
 import type { Release } from "@/actions/changelogs";
 import { formatReleaseDate, ReleaseNotes } from "@/components/release-notes";
 
-export function ChangelogsSection({ changelogs }: { changelogs: Release[] }) {
-    const { t } = useTranslationsContext();
+export async function ChangelogsSection({ changelogs }: { changelogs: Release[] }) {
+    const localeCookie = (await cookies()).get("locale")?.value;
+    const t = getTranslations(isLocale(localeCookie) ? localeCookie : "en");
 
     return (
         <section className="page-container py-6">

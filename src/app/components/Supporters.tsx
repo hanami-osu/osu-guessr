@@ -1,13 +1,13 @@
-"use client";
-
 import Image from "next/image";
+import { cookies } from "next/headers";
+import { getTranslations, isLocale } from "@/lib/translations";
 import Link from "next/link";
 import type { SupporterListEntry } from "@/actions/user-server";
 import { SupportPageLink } from "@/components/SupportDialogWrapper";
-import { useTranslationsContext } from "@/context/translations-provider";
 
-export function SupportersSection({ supporters }: { supporters: SupporterListEntry[] }) {
-    const { t } = useTranslationsContext();
+export async function SupportersSection({ supporters }: { supporters: SupporterListEntry[] }) {
+    const localeCookie = (await cookies()).get("locale")?.value;
+    const t = getTranslations(isLocale(localeCookie) ? localeCookie : "en");
 
     return (
         <section className="page-container pb-12">
