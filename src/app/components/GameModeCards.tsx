@@ -91,7 +91,7 @@ export default function GameModeCards() {
 
             <Dialog open={Boolean(selectedGame) || dailyPickerOpen} onOpenChange={(open) => !open && closeGameModal()}>
                 {(selectedGame || dailyPickerOpen) && (
-                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border-border bg-card p-0 sm:max-w-2xl">
+                    <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-lg border-border bg-card p-0 sm:max-w-4xl">
                         <DialogTitle className="sr-only">{dailyPickerOpen ? t.game.daily.title : t.game.preGame.title[pickerGameMode]}</DialogTitle>
                         <DialogDescription className="sr-only">{dailyPickerOpen ? t.game.daily.chooseMode : t.game.preGame.description[pickerGameMode]}</DialogDescription>
                         <PreGameMenu
