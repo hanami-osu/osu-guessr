@@ -254,7 +254,6 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
             <div>
                 <header className="py-5 sm:py-6">
                     <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t.settings.title}</h1>
-                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{t.settings.description}</p>
                 </header>
                 <nav role="tablist" aria-label={t.settings.title} className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {sections.map((section, index) => (
@@ -279,7 +278,6 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         <h2 id="settings-profile-title" className="leading-none">
                             <SectionLabel>{t.settings.profile.title}</SectionLabel>
                         </h2>
-                        <p className="mt-1 text-sm text-muted-foreground">{t.settings.profile.description}</p>
 
                         <div className="mt-5">
                             <div className="relative h-40 overflow-hidden rounded-xl bg-muted sm:h-48 md:h-56">
@@ -347,7 +345,6 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium">{t.settings.preferences.language.title}</h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">{t.settings.preferences.language.description}</p>
                                 </div>
                                 <Select value={locale} onValueChange={(value) => setLanguage(value as Locale)}>
                                     <SelectTrigger className="w-full sm:w-48" aria-label={t.settings.preferences.language.title}>
@@ -419,7 +416,6 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         <h2 id="settings-account-title" className="leading-none">
                             <SectionLabel>{t.settings.account.title}</SectionLabel>
                         </h2>
-                        <p className="mt-1 text-sm text-muted-foreground">{t.settings.account.description}</p>
 
                         <div className="mt-5 space-y-6">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -454,7 +450,6 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                                 <h2 id="settings-apiKeys-title" className="leading-none">
                                     <SectionLabel>{t.settings.apiKeys.title}</SectionLabel>
                                 </h2>
-                                <p className="mt-1 text-sm text-muted-foreground">{t.settings.apiKeys.description}</p>
                             </div>
                             <div className="text-sm text-muted-foreground">{t.settings.apiKeys.usage.replace("{count}", apiKeys.length.toString())}</div>
                         </div>
@@ -500,13 +495,11 @@ export default function SettingsClient({ initialApiKeys, initialBannerUrl, initi
                         <h2 id="settings-privacy-title" className="leading-none">
                             <SectionLabel>{t.settings.privacy.title}</SectionLabel>
                         </h2>
-                        <p className="mt-1 text-sm text-muted-foreground">{t.settings.privacy.description}</p>
 
                         <div className="mt-5 space-y-6">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="font-medium">{t.settings.privacy.policy.title}</h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">{t.settings.privacy.policy.description}</p>
                                 </div>
                                 <Button variant="outline" asChild>
                                     <a href="https://hanami.yorunoken.com/legal/privacy" target="_blank" rel="noreferrer">

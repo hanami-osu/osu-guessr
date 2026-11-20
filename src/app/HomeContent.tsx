@@ -25,8 +25,8 @@ export async function HomeStatsSection({ highStats }: Pick<HomeContentProps, "hi
             <div className="page-container">
                 <h2 className="font-display mb-4 text-lg font-semibold tracking-tight">{t.home.statistics.title}</h2>
                 <Card className="grid grid-cols-1 divide-y divide-border/60 md:grid-cols-3 md:divide-x md:divide-y-0">
-                    <StatsCard title={t.home.statistics.totalPlayers.title} value={highStats.total_users.toLocaleString(locale)} description={t.home.statistics.totalPlayers.description} />
-                    <StatsCard title={t.home.statistics.gamesPlayed.title} value={highStats.total_games.toLocaleString(locale)} description={t.home.statistics.gamesPlayed.description} />
+                    <StatsCard title={t.home.statistics.totalPlayers.title} value={highStats.total_users.toLocaleString(locale)} />
+                    <StatsCard title={t.home.statistics.gamesPlayed.title} value={highStats.total_games.toLocaleString(locale)} />
                     <StatsCard
                         title={t.home.statistics.profilePp.title}
                         value={highStats.highest_run_pp.toLocaleString(locale, { maximumFractionDigits: 1 })}

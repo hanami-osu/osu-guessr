@@ -478,7 +478,6 @@ export default function LobbyClient({ code, userId, initialLobby }: { code: stri
                                     <div className="flex items-end justify-between gap-4">
                                         <div>
                                             <h2 className="text-2xl font-semibold tracking-tight">Final standings</h2>
-                                            <p className="mt-1 text-sm text-muted-foreground">Here&apos;s how everyone scored.</p>
                                         </div>
                                         <span className="shrink-0 text-xs text-muted-foreground">{finalStandings.length} players</span>
                                     </div>
@@ -610,7 +609,7 @@ export default function LobbyClient({ code, userId, initialLobby }: { code: stri
                                 }}
                             >
                                 {lobby.messages.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground">No messages yet. Say hello.</p>
+                                    <p className="text-sm text-muted-foreground">No messages yet.</p>
                                 ) : (
                                     lobby.messages.map((item, index) => {
                                         if (item.kind === "join" || item.kind === "leave" || item.kind === "system") {
@@ -761,7 +760,6 @@ export default function LobbyClient({ code, userId, initialLobby }: { code: stri
                                         <Play className="mt-0.5 size-6 text-primary" />
                                         <div>
                                             <h3 className="font-semibold">Starting {countdown === null ? "soon" : `in ${countdown}s`}</h3>
-                                            <p className="mt-1 text-sm text-muted-foreground">Stay here while the match is prepared.</p>
                                         </div>
                                     </div>
                                     {!isHost && (
@@ -798,10 +796,6 @@ export default function LobbyClient({ code, userId, initialLobby }: { code: stri
 
                             {isFinished && (
                                 <div className="space-y-5">
-                                    <div>
-                                        <h3 className="font-semibold">Results are ready</h3>
-                                        <p className="mt-1 text-sm text-muted-foreground">The full standings are shown on the left.</p>
-                                    </div>
                                     {isHost ? (
                                         <Button className="w-full" onClick={() => void resetLobby()} disabled={pendingAction !== null}>
                                             <RotateCcw className="size-4" />

@@ -19,12 +19,10 @@
         "statistics": {
             "title": "Estadísticas del juego",
             "totalPlayers": {
-                "title": "Jugadores totales",
-                "description": "Jugadores que se han registrado"
+                "title": "Jugadores totales"
             },
             "gamesPlayed": {
-                "title": "Partidas clasificadas",
-                "description": "Partidas clasificadas registradas de Clásico, Supervivencia y Muerte"
+                "title": "Partidas clasificadas"
             },
             "profilePp": {
                 "title": "pp más alto",
@@ -109,25 +107,6 @@
                 "title": "pp",
                 "description": "Las partidas clasificadas otorgan pp según la precisión por ronda, la velocidad de respuesta, la dificultad del contenido y la consistencia. Supervivencia también escala con el número de rondas acertadas. Muerte se ordena primero por racha; la velocidad, la consistencia y la dificultad sirven de desempate.",
                 "profile": "El pp del perfil para cada modo de juego y variante combina tus 100 mejores partidas clasificadas, y cada partida inferior pesa un 95 % de la anterior. Las clasificaciones usan ese pp. Muerte es la excepción: solo cuenta tu mejor partida."
-            }
-        },
-        "features": {
-            "title": "Características",
-            "leaderboards": {
-                "title": "Tablas de clasificación",
-                "description": "Clasificaciones por pp, junto con puntuaciones y rachas."
-            },
-            "autoComplete": {
-                "title": "Autocompletado",
-                "description": "Las sugerencias de respuesta aparecen al escribir."
-            },
-            "profiles": {
-                "title": "Perfiles de jugadores",
-                "description": "Consulta tus estadísticas y posiciones por modo de juego y variante."
-            },
-            "api": {
-                "title": "Acceso a la API",
-                "description": "Accede a estadísticas, historial de partidas y clasificaciones mediante la API."
             }
         },
         "documentation": {
@@ -523,8 +502,7 @@
             "previous": "Anterior",
             "page": "Página {page}",
             "next": "Siguiente"
-        },
-        "description": "Clasificación por pp del modo de juego y variante seleccionados."
+        }
     },
     "user": {
         "profile": {
@@ -615,10 +593,8 @@
     },
     "settings": {
         "title": "Ajustes",
-        "description": "Gestiona el comportamiento de osu!guessr, tu sesión, las opciones de privacidad y el acceso para desarrolladores.",
         "profile": {
             "title": "Perfil",
-            "description": "Personaliza el aspecto de tu perfil de osu!guessr.",
             "banner": {
                 "title": "Banner del perfil",
                 "description": "Usa una URL de imagen HTTPS para el banner que aparece en la parte superior de tu perfil.",
@@ -634,8 +610,7 @@
             "title": "Preferencias",
             "description": "Estas preferencias se guardan en este navegador.",
             "language": {
-                "title": "Idioma de la interfaz",
-                "description": "Elige el idioma que se usa en osu!guessr."
+                "title": "Idioma de la interfaz"
             },
             "audioVolume": {
                 "title": "Volumen de audio predeterminado",
@@ -652,7 +627,6 @@
         },
         "account": {
             "title": "Cuenta",
-            "description": "Gestiona tu cuenta de Hanami o cierra esta sesión de osu!guessr.",
             "hanami": {
                 "title": "Cuenta de Hanami",
                 "description": "Las cuentas de osu!guessr funcionan con Hanami, el inicio de sesión compartido de nuestros proyectos de osu!. Gestiona allí tus cuentas conectadas y tu perfil.",
@@ -666,7 +640,6 @@
         },
         "apiKeys": {
             "title": "Claves de API",
-            "description": "Crea y revoca claves para la API pública de osu!guessr.",
             "usage": "{count}/5 claves utilizadas",
             "security": {
                 "title": "Seguridad de las claves de API",
@@ -727,10 +700,8 @@
         },
         "privacy": {
             "title": "Privacidad y datos",
-            "description": "Hanami aloja la información de privacidad y el proceso de solicitudes de osu!guessr.",
             "policy": {
                 "title": "Política de privacidad",
-                "description": "Consulta cómo los servicios de Hanami, incluido osu!guessr, gestionan los datos.",
                 "action": "Ver política de privacidad"
             },
             "deletion": {
@@ -749,7 +720,7 @@
                 "badge": "Una insignia de colaborador en tu perfil y en las clasificaciones, que conservas aunque termine tu apoyo",
                 "homepage": "Tu nombre en la lista de colaboradores de la página principal"
             },
-            "ranked": "El juego clasificatorio es igual para todos. Hay extras para colaboradores en camino."
+            "ranked": "El juego clasificatorio es igual para todos."
         },
         "donate": {
             "button": "Continuar en Hanami",

@@ -102,7 +102,6 @@ export default function MultiplayerBrowser({ initialLobbies = [] }: { initialLob
                     Multiplayer
                 </div>
                 <h1 className="font-display text-3xl font-semibold tracking-tight">Play together</h1>
-                <p className="max-w-2xl text-sm text-muted-foreground">Create a room with your own settings or join an active lobby.</p>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">

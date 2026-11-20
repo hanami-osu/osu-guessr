@@ -117,28 +117,6 @@ export default async function AboutPage() {
                     </section>
 
                     <section className="py-5 sm:py-6">
-                        <SectionHeading>{t.about.features.title}</SectionHeading>
-                        <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
-                            <div className="min-w-0">
-                                <h3 className="mb-1.5 text-sm font-semibold text-foreground">{t.about.features.leaderboards.title}</h3>
-                                <p className="text-sm leading-6 text-muted-foreground">{t.leaderboard.description}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <h3 className="mb-1.5 text-sm font-semibold text-foreground">{t.about.features.autoComplete.title}</h3>
-                                <p className="text-sm leading-6 text-muted-foreground">{t.about.features.autoComplete.description}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <h3 className="mb-1.5 text-sm font-semibold text-foreground">{t.about.features.profiles.title}</h3>
-                                <p className="text-sm leading-6 text-muted-foreground">{t.about.features.profiles.description}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <h3 className="mb-1.5 text-sm font-semibold text-foreground">{t.about.features.api.title}</h3>
-                                <p className="text-sm leading-6 text-muted-foreground">{t.about.features.api.description}</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="py-5 sm:py-6">
                         <SectionHeading>{t.about.documentation.title}</SectionHeading>
                         <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                             <div className="min-w-0">

@@ -19,12 +19,10 @@
         "statistics": {
             "title": "Statistiky hry",
             "totalPlayers": {
-                "title": "Celkový počet hráčů",
-                "description": "Hráči, kteří se zaregistrovali"
+                "title": "Celkový počet hráčů"
             },
             "gamesPlayed": {
-                "title": "Hodnocené běhy",
-                "description": "Zaznamenané hodnocené běhy v klasickém režimu, režimu přežití a režimu smrti"
+                "title": "Hodnocené běhy"
             },
             "profilePp": {
                 "title": "Nejvyšší pp",
@@ -109,25 +107,6 @@
                 "title": "pp",
                 "description": "Hodnocené běhy získávají pp podle přesnosti kol, rychlosti odpovědí, obtížnosti obsahu a konzistence. Přežití navíc škáluje podle počtu správných kol v běhu. Režim smrti řadí hlavně podle série; rychlost, konzistence a obtížnost rozhodují při shodě.",
                 "profile": "Profilové pp pro každý herní režim a variantu kombinuje 100 nejsilnějších hodnocených běhů, přičemž každý další běh má 95 % váhy předchozího. Žebříčky používají toto pp. Výjimkou je režim smrti: počítá se jen váš nejlepší běh."
-            }
-        },
-        "features": {
-            "title": "Funkce",
-            "leaderboards": {
-                "title": "Žebříček",
-                "description": "Pořadí podle pp spolu se skóre a sériemi."
-            },
-            "autoComplete": {
-                "title": "Automatické doplňování",
-                "description": "Při psaní se zobrazují návrhy odpovědí."
-            },
-            "profiles": {
-                "title": "Profily hráčů",
-                "description": "Zobrazte své statistiky a pořadí podle herního režimu a varianty."
-            },
-            "api": {
-                "title": "Přístup k API",
-                "description": "Získejte statistiky hráčů, historii her a žebříčky přes API."
             }
         },
         "documentation": {
@@ -523,8 +502,7 @@
             "previous": "Předchozí",
             "page": "Stránka {page}",
             "next": "Další"
-        },
-        "description": "Pořadí podle pp zvoleného herního režimu a varianty."
+        }
     },
     "user": {
         "profile": {
@@ -615,10 +593,8 @@
     },
     "settings": {
         "title": "Nastavení",
-        "description": "Spravujte chování osu!guessr, relaci účtu, možnosti soukromí a přístup pro vývojáře.",
         "profile": {
             "title": "Profil",
-            "description": "Přizpůsobte vzhled svého profilu osu!guessr.",
             "banner": {
                 "title": "Banner profilu",
                 "description": "Použijte HTTPS adresu obrázku pro banner v horní části profilu.",
@@ -634,8 +610,7 @@
             "title": "Předvolby",
             "description": "Tyto předvolby se ukládají v tomto prohlížeči.",
             "language": {
-                "title": "Jazyk rozhraní",
-                "description": "Vyberte jazyk používaný v osu!guessr."
+                "title": "Jazyk rozhraní"
             },
             "audioVolume": {
                 "title": "Výchozí hlasitost zvuku",
@@ -652,7 +627,6 @@
         },
         "account": {
             "title": "Účet",
-            "description": "Spravujte účet Hanami nebo ukončete tuto relaci osu!guessr.",
             "hanami": {
                 "title": "Účet Hanami",
                 "description": "Účty osu!guessr běží na Hanami, společném přihlášení našich osu! projektů. Propojené účty a profil spravujete tam.",
@@ -666,7 +640,6 @@
         },
         "apiKeys": {
             "title": "Klíče API",
-            "description": "Vytvářejte a rušte klíče pro veřejné API osu!guessr.",
             "usage": "{count}/5 klíčů použito",
             "security": {
                 "title": "Zabezpečení API klíčů",
@@ -727,10 +700,8 @@
         },
         "privacy": {
             "title": "Soukromí a data",
-            "description": "Hanami hostuje informace o soukromí a proces žádostí pro osu!guessr.",
             "policy": {
                 "title": "Zásady ochrany soukromí",
-                "description": "Přečtěte si, jak služby Hanami včetně osu!guessr nakládají s daty.",
                 "action": "Zobrazit zásady soukromí"
             },
             "deletion": {
@@ -749,7 +720,7 @@
                 "badge": "Odznak podporovatele na profilu a v žebříčcích, který ti zůstane i po skončení podpory",
                 "homepage": "Tvé jméno v seznamu podporovatelů na hlavní stránce"
             },
-            "ranked": "Hodnocená hra zůstává pro všechny stejná. Extra funkce pro podporovatele jsou v plánu."
+            "ranked": "Hodnocená hra zůstává pro všechny stejná."
         },
         "donate": {
             "button": "Pokračovat na Hanami",

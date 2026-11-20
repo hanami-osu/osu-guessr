@@ -19,12 +19,10 @@
         "statistics": {
             "title": "Statystyki Gry",
             "totalPlayers": {
-                "title": "Ilość graczy",
-                "description": "Osoby, które zalogowały się, by zagrać"
+                "title": "Ilość graczy"
             },
             "gamesPlayed": {
-                "title": "Rankingowe rozgrywki",
-                "description": "Zapisane rankingowe rozgrywki w trybach Klasycznym, Przetrwania i Śmierci"
+                "title": "Rankingowe rozgrywki"
             },
             "profilePp": {
                 "title": "Najwyższe pp",
@@ -175,25 +173,6 @@
                 "title": "pp",
                 "description": "Rankingowe rozgrywki przyznają pp za celność rund, szybkość odpowiedzi, trudność zawartości i regularność. Przetrwanie dodatkowo skaluje się z liczbą poprawnych rund. Tryb Śmierci szereguje najpierw według serii; szybkość, regularność i trudność rozstrzygają remisy.",
                 "profile": "Profilowe pp dla każdego trybu gry i wariantu łączy 100 najlepszych rankingowych rozgrywek, a każda kolejna ma 95% wagi poprzedniej. Ranking używa tego pp. Wyjątkiem jest tryb Śmierci: liczy się tylko najlepsza rozgrywka."
-            }
-        },
-        "features": {
-            "title": "Cechy Gry",
-            "leaderboards": {
-                "title": "Rankingi",
-                "description": "Ranking według pp, wraz z wynikami i seriami."
-            },
-            "autoComplete": {
-                "title": "Automatyczne Uzupełnianie",
-                "description": "Podpowiedzi odpowiedzi pojawiają się podczas pisania."
-            },
-            "profiles": {
-                "title": "Profile Graczy",
-                "description": "Sprawdzaj statystyki i pozycje według trybu gry i wariantu."
-            },
-            "api": {
-                "title": "Dostęp API",
-                "description": "Pobieraj statystyki graczy, historię gier i rankingi przez API."
             }
         },
         "documentation": {
@@ -589,8 +568,7 @@
             "previous": "Poprzednia",
             "page": "Strona {page}",
             "next": "Następna"
-        },
-        "description": "Ranking według pp wybranego trybu gry i wariantu."
+        }
     },
     "user": {
         "profile": {
@@ -681,10 +659,8 @@
     },
     "settings": {
         "title": "Ustawienia",
-        "description": "Zarządzaj działaniem osu!guessr, sesją konta, opcjami prywatności i dostępem dla deweloperów.",
         "profile": {
             "title": "Profil",
-            "description": "Dostosuj wygląd swojego profilu osu!guessr.",
             "banner": {
                 "title": "Baner profilu",
                 "description": "Użyj adresu HTTPS obrazu jako banera wyświetlanego u góry profilu.",
@@ -700,8 +676,7 @@
             "title": "Preferencje",
             "description": "Te preferencje są zapisywane w tej przeglądarce.",
             "language": {
-                "title": "Język interfejsu",
-                "description": "Wybierz język używany w osu!guessr."
+                "title": "Język interfejsu"
             },
             "audioVolume": {
                 "title": "Domyślna głośność dźwięku",
@@ -718,7 +693,6 @@
         },
         "account": {
             "title": "Konto",
-            "description": "Zarządzaj kontem Hanami lub zakończ tę sesję osu!guessr.",
             "hanami": {
                 "title": "Konto Hanami",
                 "description": "Konta osu!guessr działają w oparciu o Hanami, wspólne logowanie naszych projektów osu!. Tam zarządzasz połączonymi kontami i profilem.",
@@ -732,7 +706,6 @@
         },
         "apiKeys": {
             "title": "Klucze API",
-            "description": "Twórz i unieważniaj klucze do publicznego API osu!guessr.",
             "usage": "{count}/5 użyte klucze",
             "security": {
                 "title": "Bezpieczeństwo kluczy API",
@@ -793,10 +766,8 @@
         },
         "privacy": {
             "title": "Prywatność i dane",
-            "description": "Hanami udostępnia informacje o prywatności i obsługuje proces zgłoszeń dla osu!guessr.",
             "policy": {
                 "title": "Polityka prywatności",
-                "description": "Przeczytaj, jak usługi Hanami, w tym osu!guessr, przetwarzają dane.",
                 "action": "Zobacz politykę prywatności"
             },
             "deletion": {
@@ -815,7 +786,7 @@
                 "badge": "Odznaka wspierającego na profilu i w rankingach, która zostaje nawet po zakończeniu wsparcia",
                 "homepage": "Twoja nazwa na liście wspierających na stronie głównej"
             },
-            "ranked": "Gra rankingowa jest taka sama dla wszystkich. Dodatki dla wspierających są w planach."
+            "ranked": "Gra rankingowa jest taka sama dla wszystkich."
         },
         "donate": {
             "button": "Przejdź do Hanami",

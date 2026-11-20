@@ -19,12 +19,10 @@
         "statistics": {
             "title": "Statistics",
             "totalPlayers": {
-                "title": "Total Players",
-                "description": "Players who signed up to play"
+                "title": "Total Players"
             },
             "gamesPlayed": {
-                "title": "Ranked Runs",
-                "description": "Classic, Survival, and Death ranked runs recorded"
+                "title": "Ranked Runs"
             },
             "profilePp": {
                 "title": "Top pp",
@@ -233,25 +231,6 @@
                 "title": "pp",
                 "description": "Ranked runs earn pp from round accuracy, response speed, content difficulty, and consistency. Survival also scales with the number of correct rounds in the run. Death ranks by streak first, with speed, consistency, and difficulty as tiebreakers.",
                 "profile": "Profile pp for each game mode and variant combines your 100 strongest ranked runs, with each lower run weighted at 95% of the previous one. Leaderboards use that pp. Death is the exception: only your best run counts."
-            }
-        },
-        "features": {
-            "title": "Features",
-            "leaderboards": {
-                "title": "Leaderboards",
-                "description": "Rankings by pp, alongside scores and streaks."
-            },
-            "autoComplete": {
-                "title": "Auto-Complete",
-                "description": "Answer suggestions appear as you type."
-            },
-            "profiles": {
-                "title": "Player Profiles",
-                "description": "View your stats and rankings by game mode and variant."
-            },
-            "api": {
-                "title": "API Access",
-                "description": "Access player stats, game history, and leaderboards through the API."
             }
         },
         "documentation": {
@@ -653,8 +632,7 @@
             "previous": "Previous",
             "page": "Page {page}",
             "next": "Next"
-        },
-        "description": "Ranked by pp for the selected game mode and variant."
+        }
     },
     "user": {
         "profile": {
@@ -746,10 +724,8 @@
     },
     "settings": {
         "title": "Settings",
-        "description": "Manage how osu!guessr behaves, your account session, privacy options, and developer access.",
         "profile": {
             "title": "Profile",
-            "description": "Customize how your osu!guessr profile looks.",
             "banner": {
                 "title": "Profile banner",
                 "description": "Use an HTTPS image URL for the banner shown at the top of your profile.",
@@ -765,8 +741,7 @@
             "title": "Preferences",
             "description": "These preferences are saved in this browser.",
             "language": {
-                "title": "Interface language",
-                "description": "Choose the language used across osu!guessr."
+                "title": "Interface language"
             },
             "audioVolume": {
                 "title": "Default audio volume",
@@ -783,7 +758,6 @@
         },
         "account": {
             "title": "Account",
-            "description": "Manage your Hanami account or end this osu!guessr session.",
             "hanami": {
                 "title": "Hanami account",
                 "description": "osu!guessr accounts run on Hanami, the shared sign-in for our osu! projects. Manage your linked accounts and profile there.",
@@ -797,7 +771,6 @@
         },
         "apiKeys": {
             "title": "API Keys",
-            "description": "Create and revoke keys for the public osu!guessr API.",
             "usage": "{count}/5 keys used",
             "security": {
                 "title": "API key security",
@@ -858,10 +831,8 @@
         },
         "privacy": {
             "title": "Privacy & data",
-            "description": "Hanami hosts the privacy information and request process for osu!guessr.",
             "policy": {
                 "title": "Privacy policy",
-                "description": "Read how Hanami services, including osu!guessr, handle data.",
                 "action": "View privacy policy"
             },
             "deletion": {
@@ -880,7 +851,7 @@
                 "badge": "A supporter badge on your profile and the leaderboards, kept even after your support ends",
                 "homepage": "Your name in the supporters list on the homepage"
             },
-            "ranked": "Ranked play stays the same for everyone. Supporter extras are planned."
+            "ranked": "Ranked play stays the same for everyone."
         },
         "donate": {
             "button": "Continue on Hanami",

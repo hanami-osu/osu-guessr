@@ -39,7 +39,6 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
         <div className="page-container pb-12 pt-3 md:pb-16 md:pt-4">
             <header className="py-5 sm:py-6">
                 <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Announcements &amp; changelog</h1>
-                <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">Service news, feature announcements, and the full osu!guessr release history.</p>
                 <nav className="mt-5 flex flex-wrap gap-1.5 border-b border-border" aria-label="Updates sections">
                     {TABS.map((item) => (
                         <Link

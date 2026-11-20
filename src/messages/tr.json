@@ -19,12 +19,10 @@
         "statistics": {
             "title": "Oyun İstatistikleri",
             "totalPlayers": {
-                "title": "Toplam Oyuncu",
-                "description": "Oynamak için kayıt olan oyuncular"
+                "title": "Toplam Oyuncu"
             },
             "gamesPlayed": {
-                "title": "Sıralamalı Koşular",
-                "description": "Kaydedilmiş Klasik, Hayatta Kalma ve Ölüm sıralamalı koşuları"
+                "title": "Sıralamalı Koşular"
             },
             "profilePp": {
                 "title": "En Yüksek pp",
@@ -109,25 +107,6 @@
                 "title": "pp",
                 "description": "Sıralamalı koşular tur doğruluğu, cevap hızı, içerik zorluğu ve tutarlılığa göre pp kazandırır. Hayatta Kalma ayrıca koşudaki doğru tur sayısına göre ölçeklenir. Ölüm önce seriye göre sıralanır; hız, tutarlılık ve zorluk eşitlikleri bozar.",
                 "profile": "Her oyun modu ve varyant için profil pp'si en iyi 100 sıralamalı koşunu birleştirir ve her alt koşuyu bir öncekine göre %95 ağırlıkla sayar. Liderlik tablosu bu pp'yi kullanır. Ölüm bunun istisnasıdır: yalnızca en iyi koşun sayılır."
-            }
-        },
-        "features": {
-            "title": "Özellikler",
-            "leaderboards": {
-                "title": "Sıralama Tabloları",
-                "description": "pp sıralamaları, skorlar ve seriler."
-            },
-            "autoComplete": {
-                "title": "Otomatik Tamamlama",
-                "description": "Yazarken cevap önerileri gösterilir."
-            },
-            "profiles": {
-                "title": "Oyuncu Profilleri",
-                "description": "Oyun modu ve varyanta göre istatistiklerini ve sıralamanı gör."
-            },
-            "api": {
-                "title": "API Erişimi",
-                "description": "API üzerinden oyuncu istatistiklerine, oyun geçmişine ve sıralamalara eriş."
             }
         },
         "documentation": {
@@ -523,8 +502,7 @@
             "previous": "Önceki",
             "page": "Sayfa {page}",
             "next": "Sonraki"
-        },
-        "description": "Seçili oyun modu ve varyantın pp değerine göre sıralanır."
+        }
     },
     "user": {
         "profile": {
@@ -615,10 +593,8 @@
     },
     "settings": {
         "title": "Ayarlar",
-        "description": "osu!guessr davranışını, hesap oturumunuzu, gizlilik seçeneklerini ve geliştirici erişimini yönetin.",
         "profile": {
             "title": "Profil",
-            "description": "osu!guessr profilinizin görünümünü özelleştirin.",
             "banner": {
                 "title": "Profil bannerı",
                 "description": "Profilinizin üstünde gösterilecek banner için bir HTTPS görsel adresi kullanın.",
@@ -634,8 +610,7 @@
             "title": "Tercihler",
             "description": "Bu tercihler bu tarayıcıya kaydedilir.",
             "language": {
-                "title": "Arayüz dili",
-                "description": "osu!guessr genelinde kullanılacak dili seçin."
+                "title": "Arayüz dili"
             },
             "audioVolume": {
                 "title": "Varsayılan ses düzeyi",
@@ -652,7 +627,6 @@
         },
         "account": {
             "title": "Hesap",
-            "description": "Hanami hesabınızı yönetin veya bu osu!guessr oturumunu sonlandırın.",
             "hanami": {
                 "title": "Hanami hesabı",
                 "description": "osu!guessr hesapları, osu! projelerimizin ortak giriş sistemi olan Hanami üzerinde çalışır. Bağlı hesaplarınızı ve profilinizi oradan yönetin.",
@@ -666,7 +640,6 @@
         },
         "apiKeys": {
             "title": "API Anahtarları",
-            "description": "Herkese açık osu!guessr API'si için anahtar oluşturun veya iptal edin.",
             "usage": "{count}/5 anahtar kullanılıyor",
             "security": {
                 "title": "API anahtarı güvenliği",
@@ -727,10 +700,8 @@
         },
         "privacy": {
             "title": "Gizlilik ve veriler",
-            "description": "Hanami, osu!guessr için gizlilik bilgilerini ve talep sürecini barındırır.",
             "policy": {
                 "title": "Gizlilik politikası",
-                "description": "osu!guessr dahil Hanami hizmetlerinin verileri nasıl işlediğini okuyun.",
                 "action": "Gizlilik politikasını görüntüle"
             },
             "deletion": {
@@ -749,7 +720,7 @@
                 "badge": "Profilinde ve sıralamalarda destekçi rozeti; desteğin bitse bile sende kalır",
                 "homepage": "Ana sayfadaki destekçiler listesinde adın"
             },
-            "ranked": "Dereceli oyun herkes için aynı kalır. Destekçilere özel ekstralar planlanıyor."
+            "ranked": "Dereceli oyun herkes için aynı kalır."
         },
         "donate": {
             "button": "Hanami'de devam et",
