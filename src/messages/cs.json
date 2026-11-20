@@ -730,19 +730,18 @@
     },
     "support": {
         "title": "Podpořit {osu_guessr}",
-        "description": "Hanami supporter financuje {osu_guessr} a zbytek Hanami: 3 $ měsíčně, nebo jakákoli jednorázová částka, kde každý dolar znamená 10 dní.",
+        "description": "Tvá podpora pomáhá udržet v provozu {osu_guessr} a další projekty Hanami. Přidej se za 3 dolary měsíčně, nebo přispěj jednorázově libovolnou částkou.",
         "benefits": {
             "title": "Výhody podporovatelů",
             "items": {
                 "badge": "Odznak podporovatele na profilu a v žebříčcích, který ti zůstane i po skončení podpory",
-                "homepage": "Tvé jméno v seznamu podporovatelů na hlavní stránce",
-                "ranked": "Hodnocená hra zůstává pro všechny stejná. Extra funkce pro podporovatele jsou v plánu."
-            }
+                "homepage": "Tvé jméno v seznamu podporovatelů na hlavní stránce"
+            },
+            "ranked": "Hodnocená hra zůstává pro všechny stejná. Extra funkce pro podporovatele jsou v plánu."
         },
         "donate": {
-            "title": "Staň se podporovatelem",
-            "button": "Staň se podporovatelem na Hanami",
-            "description": "Zaplať přes Patreon, GitHub Sponsors nebo Buy Me a Coffee a pak tento účet propoj na svém profilu Hanami. Odznak se tu objeví automaticky.",
+            "button": "Pokračovat na Hanami",
+            "description": "Platby probíhají na Hanami, tedy na stejném účtu, kterým se přihlašuješ do {osu_guessr}. Vyber si tam platformu a tvůj odznak se tu objeví automaticky.",
             "reminder": "Podpořil(a) jsi nás dříve přes Buy Me a Coffee? Odznak ti zůstává."
         }
     },

@@ -796,19 +796,18 @@
     },
     "support": {
         "title": "Wesprzyj {osu_guessr}",
-        "description": "Hanami supporter finansuje {osu_guessr} i resztę Hanami: 3 $ miesięcznie albo dowolna jednorazowa kwota, gdzie każdy dolar to 10 dni.",
+        "description": "Twoje wsparcie utrzymuje {osu_guessr} i inne projekty Hanami. Dołącz za 3 dolary miesięcznie albo wpłać jednorazowo dowolną kwotę.",
         "benefits": {
             "title": "Korzyści dla wspierających",
             "items": {
                 "badge": "Odznaka wspierającego na profilu i w rankingach, która zostaje nawet po zakończeniu wsparcia",
-                "homepage": "Twoja nazwa na liście wspierających na stronie głównej",
-                "ranked": "Gra rankingowa jest taka sama dla wszystkich. Dodatki dla wspierających są w planach."
-            }
+                "homepage": "Twoja nazwa na liście wspierających na stronie głównej"
+            },
+            "ranked": "Gra rankingowa jest taka sama dla wszystkich. Dodatki dla wspierających są w planach."
         },
         "donate": {
-            "title": "Zostań wspierającym",
-            "button": "Zostań wspierającym na Hanami",
-            "description": "Zapłać przez Patreon, GitHub Sponsors lub Buy Me a Coffee, a potem połącz to konto na swoim profilu Hanami. Odznaka pojawi się tu automatycznie.",
+            "button": "Przejdź do Hanami",
+            "description": "Płatności obsługuje Hanami, czyli to samo konto, którym logujesz się do {osu_guessr}. Wybierz tam platformę, a odznaka pojawi się tutaj automatycznie.",
             "reminder": "Wspierałeś(-aś) nas wcześniej przez Buy Me a Coffee? Odznaka zostaje."
         }
     },

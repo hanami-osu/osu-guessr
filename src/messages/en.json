@@ -862,19 +862,18 @@
     },
     "support": {
         "title": "Support {osu_guessr}",
-        "description": "Hanami supporter funds {osu_guessr} and the rest of Hanami: $3 a month, or any one-time amount where every dollar is 10 days.",
+        "description": "Your support keeps {osu_guessr} running, along with the other Hanami projects. Join for $3 a month or give any one-time amount.",
         "benefits": {
             "title": "Supporter benefits",
             "items": {
                 "badge": "A supporter badge on your profile and the leaderboards, kept even after your support ends",
-                "homepage": "Your name in the supporters list on the homepage",
-                "ranked": "Ranked play stays the same for everyone. Supporter extras are planned."
-            }
+                "homepage": "Your name in the supporters list on the homepage"
+            },
+            "ranked": "Ranked play stays the same for everyone. Supporter extras are planned."
         },
         "donate": {
-            "title": "Become a supporter",
-            "button": "Become a supporter on Hanami",
-            "description": "Pay on Patreon, GitHub Sponsors, or Buy Me a Coffee, then link that account on your Hanami profile. Your badge shows up here automatically.",
+            "button": "Continue on Hanami",
+            "description": "Payments are handled on Hanami, the same account you use to sign in to {osu_guessr}. Pick a platform there, and your badge shows up here automatically.",
             "reminder": "Supported us before through Buy Me a Coffee? You keep your badge."
         }
     },
