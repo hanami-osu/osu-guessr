@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { GameMode, type DatabaseGameSession } from "@/actions/types";
+import type { MapsetData as MapsetRow } from "@/generated/prisma/client";
 import { NoGameContentError } from "@/lib/game/content-errors";
 import { MediaUnavailableError } from "@/lib/media/media-format";
 import { createGuestDailyAccessToken, getGuestDailyCookieName } from "@/lib/game/guest-daily-access";
@@ -36,7 +37,7 @@ const dailyGameAttemptUpsertMock = mock(async (args: { create: Record<string, un
 const dailyGameAttemptFindUniqueMock = mock(async () => null as { sessionId: string } | null);
 const gameCreateMock = mock(async (args: { data: { pp: number; [key: string]: unknown } }) => ({ id: 1n, endedAt: new Date(), ...args.data }));
 const gameFindManyMock = mock(async () => [{ pp: 50 }]);
-const gameRoundCreateManyMock = mock(async (args: { data: Array<{ difficultySnapshot: number | null; [key: string]: unknown }> }) => {
+const gameRoundCreateManyMock = mock(async (args: { data: Array<{ difficultySnapshot: number | null; answeredAt: Date | null; resultType: string; [key: string]: unknown }> }) => {
     void args;
     return { count: 1 };
 });
@@ -45,7 +46,7 @@ const userAchievementUpsertMock = mock(async (args: { create: { profilePp: numbe
     void args;
     return {};
 });
-const mapsetDataFindUniqueMock = mock(async () => ({
+const mapsetDataFindUniqueMock = mock(async (): Promise<MapsetRow | null> => ({
     mapsetId: 1,
     title: answer,
     artist: "Artist",
@@ -159,7 +160,7 @@ mock.module("@/lib/multiplayer/multiplayer", () => ({
 }));
 mock.module("server-only", () => ({}));
 
-const { beginDailyGameAction, claimGuestDailyResultAction, endGameAction, getGameStateAction, getGuestDailyResultAction, startGameAction, submitGuessAction } = await import("@/actions/game-server");
+const { beginDailyGameAction, claimGuestDailyResultAction, endGameAction, resumeGameAction, getGuestDailyResultAction, startGameAction, applyGameRoundAction } = await import("@/actions/game-server");
 
 function makeSession(overrides: Partial<DatabaseGameSession> = {}): DatabaseGameSession {
     return {
@@ -266,12 +267,12 @@ describe("game server lifecycle", () => {
     test("rejects regular game actions for Score PP sessions even when the pair ID matches a mapset", async () => {
         putSession(makeSession({ game_mode: GameMode.ScorePp }));
 
-        await expect(submitGuessAction(sessionId, answer)).rejects.toThrow("Game session not found or expired");
-        await expect(getGameStateAction(sessionId)).rejects.toThrow("Game session not found or expired");
+        await expect(applyGameRoundAction(sessionId, { type: "guess", guess: answer })).rejects.toThrow("Game session not found or expired");
+        await expect(resumeGameAction(sessionId)).rejects.toThrow("Game session not found or expired");
         await expect(endGameAction(sessionId)).rejects.toThrow("Game session not found or expired");
     });
 
-    test("penalizes skips and expired guesses for titles that normalize to empty", async () => {
+    test("penalizes skips, timeouts, and expired guesses even when the answer normalizes to empty", async () => {
         mapsetDataFindUniqueMock.mockResolvedValue({
             mapsetId: 1,
             title: "!!!",
@@ -282,14 +283,15 @@ describe("game server lifecycle", () => {
             starRatingMax: null,
         });
 
-        for (const [guess, elapsedMs] of [
-            [null, 1000],
-            ["wrong answer", 40_000],
+        for (const [action, elapsedMs, type] of [
+            [{ type: "skip" }, 1000, "skip"],
+            [{ type: "guess", guess: "wrong answer" }, 40_000, "skip"],
+            [{ type: "timeout" }, 40_000, "timeout"],
         ] as const) {
             putSession(makeSession({ total_points: 0, last_action_at: new Date(Date.now() - elapsedMs).toISOString() }));
 
-            const result = await submitGuessAction(sessionId, guess);
-            expect(result.lastGuess).toMatchObject({ correct: false, type: "skip" });
+            const result = await applyGameRoundAction(sessionId, action);
+            expect(result.lastGuess).toMatchObject({ correct: false, type });
             expect(result.score.total).toBe(-50);
             expect(result.rounds.correctGuesses).toBe(0);
         }
@@ -301,10 +303,10 @@ describe("game server lifecycle", () => {
 
         contentStatFindUniqueMock.mockResolvedValue({ appearances: 100n, correctCount: 95n, totalResponseTimeMs: 400_000n, fastestCorrectMs: null });
         contentStatFindManyMock.mockResolvedValue([{ itemId: 2, appearances: 100n, correctCount: 95n, totalResponseTimeMs: 400_000n }]);
-        await submitGuessAction(started.sessionId, answer);
-        await submitGuessAction(started.sessionId);
+        await applyGameRoundAction(started.sessionId, { type: "guess", guess: answer });
+        await applyGameRoundAction(started.sessionId, { type: "advance" });
         contentStatFindUniqueMock.mockResolvedValue({ appearances: 100n, correctCount: 20n, totalResponseTimeMs: 2_400_000n, fastestCorrectMs: null });
-        await submitGuessAction(started.sessionId, answer);
+        await applyGameRoundAction(started.sessionId, { type: "guess", guess: answer });
         await endGameAction(started.sessionId);
 
         expect(gameRoundCreateManyMock.mock.calls[0]?.[0].data.map((round) => round.difficultySnapshot)).toEqual([1.456, 0.75]);
@@ -408,14 +410,14 @@ describe("game server lifecycle", () => {
     test("rejects a game session from a previous multiplayer match", async () => {
         putSession(makeSession({ multiplayer_lobby_id: "ROOM123", multiplayer_match_id: "old-match" }));
 
-        await expect(getGameStateAction(sessionId)).rejects.toThrow("Game session belongs to a previous match");
-        await expect(submitGuessAction(sessionId, answer)).rejects.toThrow("Game session belongs to a previous match");
+        await expect(resumeGameAction(sessionId)).rejects.toThrow("Game session belongs to a previous match");
+        await expect(applyGameRoundAction(sessionId, { type: "guess", guess: answer })).rejects.toThrow("Game session belongs to a previous match");
     });
 
     test("keeps a survival result retryable on media failure and saves it on content exhaustion", async () => {
         putSession(makeSession({ variant: "survival" }));
 
-        const answered = await submitGuessAction(sessionId, answer);
+        const answered = await applyGameRoundAction(sessionId, { type: "guess", guess: answer });
         expect(answered.lastGuess?.correct).toBe(true);
         expect(getRandomActionMock).not.toHaveBeenCalled();
 
@@ -424,8 +426,8 @@ describe("game server lifecycle", () => {
         expect(afterGuess.has_guessed_current_round).toBe(true);
 
         getRandomActionMock.mockRejectedValueOnce(new MediaUnavailableError());
-        await expect(submitGuessAction(sessionId)).rejects.toBeInstanceOf(MediaUnavailableError);
-        const recovered = await getGameStateAction(sessionId);
+        await expect(applyGameRoundAction(sessionId, { type: "advance" })).rejects.toBeInstanceOf(MediaUnavailableError);
+        const recovered = await resumeGameAction(sessionId);
         expect(recovered.gameStatus).toBe("active");
         expect(recovered.rounds.current).toBe(1);
         expect(recovered.currentBeatmap.revealed).toBe(true);
@@ -433,7 +435,7 @@ describe("game server lifecycle", () => {
         expect(gameCreateMock).not.toHaveBeenCalled();
 
         getRandomActionMock.mockRejectedValueOnce(new NoGameContentError("No background found"));
-        const finished = await submitGuessAction(sessionId);
+        const finished = await applyGameRoundAction(sessionId, { type: "advance" });
 
         expect(finished.gameStatus).toBe("finished");
         expect(transactionMock).toHaveBeenCalledTimes(1);
@@ -452,13 +454,13 @@ describe("game server lifecycle", () => {
         putSession(makeSession({ variant: "survival" }));
 
         for (let mistakes = 1; mistakes <= 2; mistakes++) {
-            const failedGuess = await submitGuessAction(sessionId, "wrong answer");
+            const failedGuess = await applyGameRoundAction(sessionId, { type: "guess", guess: "wrong answer" });
             expect(failedGuess.gameStatus).toBe("active");
             expect(failedGuess.rounds.mistakes).toBe(mistakes);
-            await submitGuessAction(sessionId);
+            await applyGameRoundAction(sessionId, { type: "advance" });
         }
 
-        const thirdMistake = await submitGuessAction(sessionId, "wrong answer");
+        const thirdMistake = await applyGameRoundAction(sessionId, { type: "guess", guess: "wrong answer" });
         expect(thirdMistake.gameStatus).toBe("finished");
         expect(thirdMistake.rounds.mistakes).toBe(3);
         expect(redisClientMock.sRem).toHaveBeenCalledTimes(2);
@@ -470,7 +472,7 @@ describe("game server lifecycle", () => {
         contentStatContributionCreateManyMock.mockResolvedValueOnce({ count: 0 });
         putSession(makeSession({ variant: "survival" }));
 
-        await submitGuessAction(sessionId, answer);
+        await applyGameRoundAction(sessionId, { type: "guess", guess: answer });
         await endGameAction(sessionId);
 
         expect(contentStatContributionCreateManyMock).toHaveBeenCalledTimes(1);
@@ -495,12 +497,12 @@ describe("game server lifecycle", () => {
     test("keeps arcade score separate from pp in survival mode", async () => {
         putSession(makeSession({ variant: "survival", total_points: 0 }));
 
-        const correct = await submitGuessAction(sessionId, answer);
+        const correct = await applyGameRoundAction(sessionId, { type: "guess", guess: answer });
         expect(correct.score.total).toBe(160);
         expect(correct.pp).toBeUndefined();
 
-        await submitGuessAction(sessionId);
-        const afterMistake = await submitGuessAction(sessionId, "wrong answer");
+        await applyGameRoundAction(sessionId, { type: "advance" });
+        const afterMistake = await applyGameRoundAction(sessionId, { type: "guess", guess: "wrong answer" });
         const pp = await endGameAction(sessionId);
 
         expect(afterMistake.score.total).toBe(110);
@@ -508,30 +510,32 @@ describe("game server lifecycle", () => {
         expect(gameCreateMock.mock.calls[0]?.[0].data.points).toBe(110);
     });
 
-    test("allows advancing after a null guess skips the round", async () => {
+    test("advances after a skip even if the revealed mapset has been removed", async () => {
         putSession(makeSession());
 
-        const skipped = await submitGuessAction(sessionId, null);
+        const skipped = await applyGameRoundAction(sessionId, { type: "skip" });
 
         expect(skipped.currentBeatmap.revealed).toBe(true);
         expect(skipped.lastGuess?.type).toBe("skip");
         expect(JSON.parse(redisValues.get(`game_session:${sessionId}`)!).has_guessed_current_round).toBe(true);
 
-        const next = await submitGuessAction(sessionId);
+        mapsetDataFindUniqueMock.mockResolvedValue(null);
+        const next = await applyGameRoundAction(sessionId, { type: "advance" });
         expect(next.rounds.current).toBe(2);
         expect(next.currentBeatmap.revealed).toBe(false);
+        expect(next.currentBeatmap.imageUrl).toBe("next-media");
     });
 
     test("rejects advancing before a reveal and awards each round only once", async () => {
         putSession(makeSession({ total_points: 0 }));
-        await expect(submitGuessAction(sessionId)).rejects.toThrow("before advancing");
+        await expect(applyGameRoundAction(sessionId, { type: "advance" })).rejects.toThrow("before advancing");
 
-        const answered = await submitGuessAction(sessionId, answer);
+        const answered = await applyGameRoundAction(sessionId, { type: "guess", guess: answer });
         expect(answered.currentBeatmap.revealed).toBe(true);
         expect(answered.rounds.correctGuesses).toBe(1);
-        await expect(submitGuessAction(sessionId, answer)).rejects.toThrow("Already submitted");
+        await expect(applyGameRoundAction(sessionId, { type: "guess", guess: answer })).rejects.toThrow("Already submitted");
 
-        const next = await submitGuessAction(sessionId);
+        const next = await applyGameRoundAction(sessionId, { type: "advance" });
         expect(next.rounds.current).toBe(2);
         expect(next.rounds.correctGuesses).toBe(1);
         expect(next.score.total).toBe(answered.score.total);
@@ -547,10 +551,10 @@ describe("game server lifecycle", () => {
             }),
         );
 
-        const recovered = await getGameStateAction(sessionId);
+        const recovered = await resumeGameAction(sessionId);
         expect(recovered.timeLeft).toBe(25);
 
-        const answered = await submitGuessAction(sessionId, answer);
+        const answered = await applyGameRoundAction(sessionId, { type: "guess", guess: answer });
         expect(answered.rounds.totalTimeUsed).toBe(5);
 
         const persistedRound = JSON.parse(redisValues.get(`game_session:${sessionId}`)!).round_history[0];
@@ -559,7 +563,7 @@ describe("game server lifecycle", () => {
         expect(persistedRound.answer_snapshot).toBe(answer);
         expect(persistedRound.answered_at).toBe("2026-01-01T00:00:05.000Z");
 
-        const state = await getGameStateAction(sessionId);
+        const state = await resumeGameAction(sessionId);
         expect(state.timeLeft).toBe(25);
         expect(state.rounds.totalTimeUsed).toBe(5);
     });
@@ -567,7 +571,7 @@ describe("game server lifecycle", () => {
     test("does not rewrite a session while reading its current state", async () => {
         putSession(makeSession());
 
-        await getGameStateAction(sessionId);
+        await resumeGameAction(sessionId);
 
         expect(redisSetMock).not.toHaveBeenCalled();
     });
@@ -612,7 +616,7 @@ describe("game server lifecycle", () => {
         putSession(makeSession({ variant: "survival", current_round: 2, is_active: false, end_pending: true, highest_streak: 1 }));
         gameFindUniqueMock.mockResolvedValueOnce({ id: 1n });
 
-        const recovered = await getGameStateAction(sessionId);
+        const recovered = await resumeGameAction(sessionId);
 
         expect(recovered.gameStatus).toBe("finished");
         expect(transactionMock).toHaveBeenCalledTimes(1);
@@ -654,7 +658,7 @@ describe("game server lifecycle", () => {
         );
         contentStatFindManyMock.mockResolvedValueOnce([{ itemId: 1, appearances: 100n, correctCount: 0n, totalResponseTimeMs: 3_000_000n }]);
 
-        await getGameStateAction(sessionId);
+        await resumeGameAction(sessionId);
 
         expect(gameRoundCreateManyMock.mock.calls[0]?.[0].data[0]?.difficultySnapshot).toBe(1.234);
     });
@@ -670,10 +674,18 @@ describe("game server lifecycle", () => {
     test("expires the remaining daily rounds after time offline", async () => {
         putSession(makeSession({ run_type: "daily", ranked: false, daily_day: 1 }));
         setSystemTime(new Date("2026-01-01T00:10:00Z"));
-        const resumed = await getGameStateAction(sessionId);
+        const resumed = await resumeGameAction(sessionId);
         expect(resumed.gameStatus).toBe("finished");
         expect(resumed.rounds.current).toBe(5);
-        expect(gameRoundCreateManyMock.mock.calls.at(-1)?.[0].data).toHaveLength(5);
+        const rounds = gameRoundCreateManyMock.mock.calls.at(-1)?.[0].data;
+        expect(rounds).toHaveLength(5);
+        expect(rounds?.map(({ answeredAt, resultType }) => [answeredAt?.toISOString(), resultType])).toEqual([
+            ["2026-01-01T00:00:15.000Z", "timeout"],
+            ["2026-01-01T00:00:38.000Z", "timeout"],
+            ["2026-01-01T00:01:01.000Z", "timeout"],
+            ["2026-01-01T00:01:24.000Z", "timeout"],
+            ["2026-01-01T00:01:47.000Z", "timeout"],
+        ]);
     });
 
     test("starts daily time after preloading and never resets an acknowledged timer", async () => {

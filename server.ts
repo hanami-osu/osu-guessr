@@ -3,10 +3,10 @@ import next from "next";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import redisClient from "./src/lib/infra/redis";
 import { GameMode, type GameVariant } from "@/actions/types";
-import { endGameForUser, getGameStateForUser, getSuggestions, startGameForUser, submitGuessForUser } from "@/lib/game/server";
+import { applyGameRoundForUser, endGameForUser, getSuggestions, resumeGameForUser, startGameForUser } from "@/lib/game/server";
 import { readOwnedGameSession } from "@/lib/game/session-storage";
-import { endScorePpRunForUser, getScorePpRoundForUser, getScorePpRunStateForUser, startScorePpRunForUser, submitScorePpGuessForUser } from "@/lib/score-pp/server";
-import { parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcRequest } from "./src/lib/multiplayer/multiplayer-protocol";
+import { endScorePpRunForUser, getScorePpRoundForUser, resumeScorePpRunForUser, startScorePpRunForUser, submitScorePpGuessForUser } from "@/lib/score-pp/server";
+import { decodeRoundAction, parseMultiplayerMessage, stringifyMultiplayerMessage, type MultiplayerRpcRequest } from "./src/lib/multiplayer/multiplayer-protocol";
 import {
     addMultiplayerMessage,
     cleanupDisconnectedMultiplayerPlayer,
@@ -171,11 +171,11 @@ async function handleRpc(context: SocketContext, message: MultiplayerRpcRequest)
             return startGameForUser(context.userId, payload.gameMode as GameMode, payload.variant as GameVariant, context.code);
         case "game.state": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);
-            return getGameStateForUser(context.userId, sessionId);
+            return resumeGameForUser(context.userId, sessionId);
         }
         case "game.submit": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);
-            return submitGuessForUser(context.userId, sessionId, payload.guess as string | null | undefined);
+            return applyGameRoundForUser(context.userId, sessionId, decodeRoundAction(payload.guess));
         }
         case "game.end": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);
@@ -187,7 +187,7 @@ async function handleRpc(context: SocketContext, message: MultiplayerRpcRequest)
             return startScorePpRunForUser(context.userId, payload.variant as GameVariant, context.code);
         case "score_pp.state": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);
-            return getScorePpRunStateForUser(context.userId, sessionId);
+            return resumeScorePpRunForUser(context.userId, sessionId);
         }
         case "score_pp.round": {
             const sessionId = await requireMultiplayerSession(context, payload.sessionId);

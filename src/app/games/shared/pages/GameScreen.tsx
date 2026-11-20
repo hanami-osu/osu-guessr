@@ -24,6 +24,7 @@ import GameShortcuts from "@/app/games/shared/components/GameShortcuts";
 import GameStartError from "@/app/games/shared/components/GameStartError";
 import MultiplayerStandings from "@/app/games/shared/components/MultiplayerStandings";
 import MultiplayerChat from "@/app/games/shared/components/MultiplayerChat";
+import { useRoundAdvanceCountdown } from "@/app/games/shared/hooks/useRoundAdvanceCountdown";
 import { useGameKeyboardShortcuts } from "@/app/games/shared/hooks/useGameKeyboardShortcuts";
 import { usePreventUnload } from "@/app/games/shared/hooks/usePreventUnload";
 import { useMultiplayerSocket } from "@/lib/multiplayer/multiplayer-socket";
@@ -58,7 +59,6 @@ export default function GameScreen({ onExit, gameVariant, gameRunType, gameMode,
     const gameClient = useRef<GameClient | null>(null);
     const advancePausedRef = useRef(false);
     const navigatingToResults = useRef(false);
-    const multiplayerAdvanceDeadline = useRef<{ key: string; at: number } | null>(null);
     const publicStatsRef = useRef<{ points: number; streak: number; highestStreak: number; mistakes: number } | null>(null);
     const scoreUrl = useCallback((sessionId: string) => (multiplayerLobbyCode ? `/multiplayer/${encodeURIComponent(multiplayerLobbyCode)}` : `/scores/${sessionId}`), [multiplayerLobbyCode]);
     const currentRound = gameState?.rounds.current;
@@ -325,55 +325,14 @@ export default function GameScreen({ onExit, gameVariant, gameRunType, gameMode,
         onNextRound: revealed && canAdvanceRound && !waitingForReady ? handleNextRound : undefined,
     });
 
-    useEffect(() => {
-        if (showAdvanceCountdown && !isReportDialogOpen && !isLoading && !actionError) {
-            if (multiplayerLobbyCode && gameState) {
-                const key = `${gameState.sessionId}:${gameState.rounds.current}`;
-                if (multiplayerAdvanceDeadline.current?.key !== key) {
-                    multiplayerAdvanceDeadline.current = { key, at: Date.now() + AUTO_ADVANCE_DELAY_MS };
-                }
-
-                const updateCountdown = () => {
-                    const deadline = multiplayerAdvanceDeadline.current?.at ?? Date.now();
-                    setCountdown(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
-                };
-                updateCountdown();
-
-                const countdownInterval = window.setInterval(updateCountdown, 250);
-                const advanceTimer = window.setTimeout(
-                    () => {
-                        void handleNextRound();
-                    },
-                    Math.max(0, multiplayerAdvanceDeadline.current.at - Date.now()),
-                );
-
-                return () => {
-                    window.clearInterval(countdownInterval);
-                    window.clearTimeout(advanceTimer);
-                };
-            }
-
-            let elapsed = 0;
-            let lastTick = performance.now();
-            setCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
-
-            const tick = window.setInterval(() => {
-                const now = performance.now();
-                const delta = now - lastTick;
-                lastTick = now;
-                if (gameRunType !== "daily" && advancePausedRef.current) return;
-
-                elapsed += delta;
-                setCountdown(Math.max(0, Math.ceil((AUTO_ADVANCE_DELAY_MS - elapsed) / 1000)));
-                if (elapsed >= AUTO_ADVANCE_DELAY_MS) {
-                    window.clearInterval(tick);
-                    void handleNextRound();
-                }
-            }, 250);
-
-            return () => window.clearInterval(tick);
-        }
-    }, [actionError, gameRunType, gameState, handleNextRound, isLoading, isReportDialogOpen, multiplayerLobbyCode, showAdvanceCountdown]);
+    useRoundAdvanceCountdown({
+        enabled: showAdvanceCountdown && !isReportDialogOpen && !isLoading && !actionError,
+        isDaily: gameRunType === "daily",
+        multiplayerRoundKey: multiplayerLobbyCode && gameState ? `${gameState.sessionId}:${gameState.rounds.current}` : undefined,
+        pausedRef: advancePausedRef,
+        onAdvance: handleNextRound,
+        setSeconds: setCountdown,
+    });
 
     if (!gameState && startupError) {
         return <GameStartError message={startupError} onRetry={handleStartGame} />;

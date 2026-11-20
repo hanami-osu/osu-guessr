@@ -246,7 +246,7 @@ export interface DatabaseGameSession {
     artist: string;
     mapper: string;
     image_filename: string;
-    audio_filename: string;
+    audio_filename: string | null;
     has_guessed_current_round: boolean;
     multiplayer_lobby_id?: string | null;
     multiplayer_match_id?: string | null;

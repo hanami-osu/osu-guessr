@@ -2,8 +2,9 @@
 
 import { getAuthSession } from "./server";
 import { GameMode, type GameRunType, type GameState } from "./types";
+import type { GameRoundAction } from "@/lib/game/types";
 import type { GameVariant } from "@/app/games/config";
-import { beginDailyGameForUser, claimGuestDailyResult, endGameForUser, getDailyChallengeInfo, getDailyStatusForUser, getGameStateForUser, getGuestDailyResult, getSuggestions, startGameForUser, submitGuessForUser } from "@/lib/game/server";
+import { beginDailyGameForUser, claimGuestDailyResult, endGameForUser, getDailyChallengeInfo, getDailyStatusForUser, resumeGameForUser, getGuestDailyResult, getSuggestions, startGameForUser, applyGameRoundForUser } from "@/lib/game/server";
 import { requireGuestDailySessionAccess, setGuestDailySessionAccess } from "@/lib/game/guest-daily-access";
 
 async function getActionUserId(allowGuestDaily = false): Promise<number> {
@@ -44,16 +45,16 @@ export async function claimGuestDailyResultAction(sessionId: string) {
     return claimGuestDailyResult(userId, sessionId);
 }
 
-export async function submitGuessAction(sessionId: string, guess?: string | null): Promise<GameState> {
+export async function applyGameRoundAction(sessionId: string, action: GameRoundAction): Promise<GameState> {
     const userId = await getActionUserId(true);
     if (userId === 0) await requireGuestDailySessionAccess(sessionId);
-    return submitGuessForUser(userId, sessionId, guess);
+    return applyGameRoundForUser(userId, sessionId, action);
 }
 
-export async function getGameStateAction(sessionId: string): Promise<GameState> {
+export async function resumeGameAction(sessionId: string): Promise<GameState> {
     const userId = await getActionUserId(true);
     if (userId === 0) await requireGuestDailySessionAccess(sessionId);
-    return getGameStateForUser(userId, sessionId);
+    return resumeGameForUser(userId, sessionId);
 }
 
 export async function endGameAction(sessionId: string) {

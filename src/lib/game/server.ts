@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/database/prisma";
 import redisClient from "@/lib/infra/redis";
 import { z } from "zod";
-import { AUTO_ADVANCE_DELAY_MS, GAME_VARIANTS, getRoundTime, getGameRoundLimit, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
+import { GAME_VARIANTS, getRoundTime, getGameRoundLimit, getVariantLives, isContinuousVariant, type GameVariant } from "@/app/games/config";
 import { getDailyAudio, getDailyBackground, getDailySkin, getRandomAudio, getRandomBackground, getRandomSkin } from "./mapsets";
 import { GameMode, type GameRunType, type MapsetDataWithTags, type GameState, type DatabaseGameSession, type GameEndReason, type PersistedGameRound, type SkinData } from "@/actions/types";
 import { getMediaData } from "@/actions/media";
-import { checkGuess, GuessDifficulty } from "./guess-checker";
+import { checkGuess } from "./guess-checker";
+import type { GameRoundAction } from "./types";
 import { calculateArcadeScore } from "./arcade-score";
+import { catchUpDailyRounds } from "./daily-timing";
 import { isNoGameContentError } from "./content-errors";
 import { canPersistGameResult } from "./completion";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "./versioning";
@@ -34,15 +36,12 @@ async function withTransactionRetry<T>(operation: () => Promise<T>, attempt = 0)
     }
 }
 
-const gameSchema = z.object({
-    sessionId: z.string().uuid(),
-    guess: z
-        .string()
-        .max(200)
-        .optional()
-        .nullable()
-        .transform((g) => (typeof g === "string" ? g.trim() : g)),
-});
+const roundActionSchema = z.discriminatedUnion("type", [
+    z.object({ type: z.literal("guess"), guess: z.string().max(200).trim() }),
+    z.object({ type: z.literal("skip") }),
+    z.object({ type: z.literal("timeout") }),
+    z.object({ type: z.literal("advance") }),
+]);
 const gameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin]);
 const dailyGameModeSchema = z.enum([GameMode.Background, GameMode.Audio, GameMode.Skin, GameMode.ScorePp]);
 const gameVariantSchema = z.enum(GAME_VARIANTS);
@@ -466,7 +465,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
     const lobbyPlayer = lobby?.players.find((player) => player.userId === userId);
     if (lobbyPlayer?.scoreSessionId) {
         try {
-            const existingState = await getGameStateForUser(userId, lobbyPlayer.scoreSessionId);
+            const existingState = await resumeGameForUser(userId, lobbyPlayer.scoreSessionId);
             if (existingState.gameStatus === "active") return existingState;
         } catch {}
     }
@@ -483,7 +482,7 @@ export async function startGameForUser(userId: number, gameMode: GameMode, varia
         });
         if (existingAttempt && !env.DEBUG_DAILY_UNLIMITED_ATTEMPTS) {
             try {
-                const existingState = await getGameStateForUser(userId, existingAttempt.sessionId);
+                const existingState = await resumeGameForUser(userId, existingAttempt.sessionId);
                 if (existingState.gameStatus === "active" && existingState.runType === "daily") return existingState;
             } catch {}
 
@@ -661,341 +660,254 @@ export async function claimGuestDailyResult(userId: number, sessionId: string): 
     return sessionId;
 }
 
-export async function submitGuessForUser(userId: number, sessionId: string, guess?: string | null): Promise<GameState> {
-    const validated = gameSchema.parse({ sessionId, guess });
-    const lock = await acquireGameSessionLock(validated.sessionId);
-
-    if (!lock) {
-        throw new Error("Action in progress, please wait");
-    }
+export async function applyGameRoundForUser(userId: number, sessionId: string, action: GameRoundAction): Promise<GameState> {
+    sessionId = z.string().uuid().parse(sessionId);
+    const roundAction = roundActionSchema.parse(action);
+    const lock = await acquireGameSessionLock(sessionId);
+    if (!lock) throw new Error("Action in progress, please wait");
 
     try {
-        const gameState = await expireDailyGame(await validateGameSession(validated.sessionId, userId));
-        if (!gameState.is_active) throw new Error("Daily challenge is complete");
-        if (gameState.daily_started_at === null) throw new Error("Daily media has not finished loading");
-
-        const roundTime = getRoundTime(gameState.run_type);
-        const submittedGuess = validated.guess;
-
-        if (submittedGuess !== undefined && gameState.has_guessed_current_round) {
-            throw new Error("Already submitted a guess for this round");
-        }
-
-        if (submittedGuess === undefined && !gameState.has_guessed_current_round) {
+        const game = await expireDailyGame(await validateGameSession(sessionId, userId));
+        if (!game.is_active) throw new Error("Daily challenge is complete");
+        if (game.daily_started_at === null) throw new Error("Daily media has not finished loading");
+        if (roundAction.type !== "advance" && game.has_guessed_current_round) throw new Error("Already submitted a guess for this round");
+        if (roundAction.type === "advance" && !game.has_guessed_current_round) {
             throw new Error("You must make a guess, skip, or let the timer run out before advancing to the next round");
         }
+        if (game.current_round > getGameRoundLimit(game.run_type, game.variant)) throw new Error("Game is complete");
 
-        const isContinuousMode = isContinuousVariant(gameState.variant);
-
-        const roundLimit = getGameRoundLimit(gameState.run_type ?? "standard", gameState.variant);
-        if (!isContinuousMode && gameState.current_round > roundLimit) {
-            throw new Error("Game is complete");
-        }
-
-        const actionTimeMs = Date.now();
-        const timeElapsedMs = gameState.has_guessed_current_round ? 0 : Math.max(0, actionTimeMs - new Date(gameState.last_action_at).getTime());
-        const timeElapsed = Math.floor(timeElapsedMs / 1000);
-        const rawTimeLeft = Math.min(gameState.time_left, roundTime) - timeElapsed;
-        const timeLeft = Math.max(0, rawTimeLeft);
-
-        const guessingDifficulty: GuessDifficulty = 0.5;
-        let isSkipped = submittedGuess === null;
-        const isNextRound = submittedGuess === undefined;
-        const isTimeout = submittedGuess === "";
-        let effectiveGuess = isSkipped ? "" : submittedGuess;
-        const isGuess = !isNextRound && !isTimeout;
-
-        if (rawTimeLeft <= -GRACE_PERIOD && !isSkipped) {
-            isSkipped = true;
-            effectiveGuess = "";
-        }
-
-        let currentItem: MapsetDataWithTags | SkinData;
-        if (gameState.game_mode === GameMode.Skin) {
-            const skin = await prisma.skin.findUnique({ where: { id: gameState.current_item_id } });
-            if (!skin) throw new Error("Current skin could not be resolved");
-            currentItem = {
-                id: skin.id,
-                name: skin.name,
-                image_filename: skin.imageFilename,
-                created_at: skin.createdAt,
-                updated_at: skin.updatedAt,
-            };
-        } else {
-            const beatmap = await prisma.mapsetData.findUnique({ where: { mapsetId: gameState.current_item_id } });
-            if (!beatmap) throw new Error("Current mapset could not be resolved");
-            currentItem = {
-                mapset_id: beatmap.mapsetId,
-                title: beatmap.title ?? "",
-                artist: beatmap.artist ?? "",
-                mapper: beatmap.mapper ?? "",
-                ranked_at: beatmap.rankedAt,
-                star_rating_min: beatmap.starRatingMin == null ? null : Number(beatmap.starRatingMin),
-                star_rating_max: beatmap.starRatingMax == null ? null : Number(beatmap.starRatingMax),
-                image_filename: gameState.image_filename,
-                audio_filename: gameState.audio_filename,
-            };
-        }
-
-        const currentMedia: { backgroundData?: string; audioData?: string; skinData?: string } = {};
-        if (gameState.game_mode === GameMode.Background) {
-            currentMedia.backgroundData = gameState.run_type === "daily" ? undefined : await getMediaData(GameMode.Background, gameState.image_filename);
-        } else if (gameState.game_mode === GameMode.Audio) {
-            currentMedia.audioData = gameState.run_type === "daily" ? undefined : await getMediaData(GameMode.Audio, gameState.audio_filename);
-        } else if (gameState.game_mode === GameMode.Skin) {
-            currentMedia.skinData = gameState.run_type === "daily" ? undefined : await getMediaData(GameMode.Skin, gameState.image_filename);
-        }
-
-        const currentAnswer = gameState.run_type === "daily" ? gameState.title : gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).name : (currentItem as MapsetDataWithTags).title;
-
-        const isCorrect = isGuess && !isSkipped ? checkGuess(effectiveGuess || "", currentAnswer, guessingDifficulty) : false;
-        const points = isNextRound ? 0 : calculateArcadeScore(isCorrect, timeLeft, gameState.current_streak);
-        const madeMistake = !isNextRound && (isSkipped || isTimeout || (!isCorrect && isGuess));
-        const existingMistakes = (gameState.round_history ?? []).filter((round) => !round.correct).length;
-        const mistakes = existingMistakes + (madeMistake ? 1 : 0);
-        const runFailed = isContinuousMode && mistakes >= getVariantLives(gameState.variant);
-
-        let nextBeatmap: GuessRoundItem | null = null;
-
-        if (isNextRound) {
-            if (gameState.multiplayer_lobby_id) {
-                const multiplayerState = await getMultiplayerRoundState(gameState.multiplayer_lobby_id, userId, gameState.current_round);
-                if (!multiplayerState.allReady) throw new Error("Waiting for other players");
-            }
-
-            try {
-                nextBeatmap = await getGuessRoundItem(
-                    gameState.game_mode,
-                    validated.sessionId,
-                    gameState.multiplayer_lobby_id ?? undefined,
-                    gameState.current_round + 1,
-                    gameState.multiplayer_match_id ?? undefined,
-                    gameState.run_type,
-                    gameState.daily_date ? getDailyChallengeDay(new Date(gameState.daily_date)) : gameState.daily_day,
-                );
-            } catch (error) {
-                if (!isContinuousMode || !isNoGameContentError(error)) throw error;
-                const pp = await finishGameSession(sessionId, userId, "content_exhausted");
-                return {
-                    sessionId,
-                    pp: pp ?? undefined,
-                    currentBeatmap: {
-                        imageUrl: gameState.game_mode === GameMode.Background ? currentMedia.backgroundData : gameState.game_mode === GameMode.Skin ? currentMedia.skinData : undefined,
-                        audioUrl: gameState.game_mode === GameMode.Audio ? currentMedia.audioData : undefined,
-                        revealed: true,
-                        title: gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).name : (currentItem as MapsetDataWithTags).title,
-                        artist: (currentItem as MapsetDataWithTags).artist,
-                        mapper: (currentItem as MapsetDataWithTags).mapper,
-                        mapsetId: gameState.current_item_id,
-                    },
-                    score: {
-                        total: gameState.total_points,
-                        current: 0,
-                        streak: gameState.current_streak,
-                        highestStreak: gameState.highest_streak,
-                    },
-                    rounds: {
-                        current: gameState.current_round,
-                        total: gameState.current_round,
-                        correctGuesses: gameState.correct_guesses,
-                        totalTimeUsed: gameState.total_time_used,
-                        mistakes: existingMistakes,
-                    },
-                    timeLeft: 0,
-                    gameStatus: "finished",
-                    variant: gameState.variant,
-                    runType: gameState.run_type ?? "standard",
-                };
-            }
-        }
-
-        const newStreak = isNextRound ? gameState.current_streak : isCorrect ? gameState.current_streak + 1 : 0;
-        const resultType = isTimeout ? "timeout" : isSkipped ? "skip" : "guess";
-        const currentMapset = gameState.game_mode === GameMode.Skin ? null : (currentItem as MapsetDataWithTags);
-        const responseTimeMs = Math.min(timeElapsedMs, (roundTime * 1000));
-        const roundRecord: PersistedGameRound | null = isNextRound
-            ? null
-            : {
-                  round_number: gameState.current_round,
-                  item_type: gameState.game_mode === GameMode.Skin ? "skin" : "mapset",
-                  item_id: gameState.current_item_id,
-                  submitted_guess: resultType === "guess" ? (effectiveGuess ?? "") : null,
-                  answer_snapshot: currentAnswer,
-                  result_type: resultType,
-                  correct: isCorrect,
-                  response_time_ms: responseTimeMs,
-                  time_limit_ms: (roundTime * 1000),
-                  answered_at: new Date(actionTimeMs).toISOString(),
-                  points_earned: points,
-                  streak_before: gameState.current_streak,
-                  streak_after: newStreak,
-                  difficulty_snapshot: gameState.current_difficulty_snapshot ?? 1,
-                  content_snapshot:
-                      gameState.game_mode === GameMode.Skin
-                          ? { name: (currentItem as SkinData).name }
-                          : {
-                                title: currentMapset?.title,
-                                artist: currentMapset?.artist,
-                                mapper: currentMapset?.mapper,
-                                rankedAt: currentMapset?.ranked_at ?? null,
-                                starRatingMin: currentMapset?.star_rating_min ?? null,
-                                starRatingMax: currentMapset?.star_rating_max ?? null,
-                            },
-              };
-
-        const nextDifficultySnapshot = nextBeatmap
-            ? (nextBeatmap.difficultySnapshot ??
-              (await getRoundDifficultySnapshot(
-                  gameState.game_mode,
-                  gameState.game_mode === GameMode.Skin ? "skin" : "mapset",
-                  "mapset_id" in nextBeatmap.data ? nextBeatmap.data.mapset_id : nextBeatmap.data.id,
-                  gameState.ruleset_version,
-                  gameState.pp_version,
-              )))
-            : (gameState.current_difficulty_snapshot ?? 1);
-        const updatedGameState = {
-            ...gameState,
-            total_points: gameState.total_points + points,
-            current_streak: newStreak,
-            highest_streak: Math.max(gameState.highest_streak, isCorrect ? gameState.current_streak + 1 : gameState.highest_streak),
-            current_item_id: nextBeatmap ? ("mapset_id" in nextBeatmap.data ? nextBeatmap.data.mapset_id : nextBeatmap.data.id) : gameState.current_item_id,
-            current_difficulty_snapshot: nextDifficultySnapshot,
-            time_left: nextBeatmap ? roundTime : timeLeft,
-            last_action_at: new Date().toISOString(),
-            last_guess: isTimeout ? "TIMEOUT" : isSkipped ? "SKIPPED" : effectiveGuess,
-            last_guess_correct: isCorrect ? 1 : 0,
-            last_points: points,
-            current_round: gameState.current_round + (isNextRound ? 1 : 0),
-            correct_guesses: gameState.correct_guesses + (isCorrect ? 1 : 0),
-            total_time_used: gameState.total_time_used + (!isNextRound ? roundTime - timeLeft : 0),
-            total_response_time_ms: (gameState.total_response_time_ms ?? 0) + (roundRecord?.response_time_ms ?? 0),
-            round_history: roundRecord ? [...(gameState.round_history ?? []), roundRecord] : (gameState.round_history ?? []),
-            has_guessed_current_round: isNextRound ? false : true,
-            ...(nextBeatmap && {
-                title: "mapset_id" in nextBeatmap.data ? nextBeatmap.data.title : nextBeatmap.data.name,
-                artist: (nextBeatmap.data as MapsetDataWithTags).artist,
-                mapper: (nextBeatmap.data as MapsetDataWithTags).mapper,
-                image_filename: "mapset_id" in nextBeatmap.data ? nextBeatmap.data.image_filename : nextBeatmap.data.image_filename,
-                audio_filename: "mapset_id" in nextBeatmap.data ? nextBeatmap.data.audio_filename : null,
-                has_guessed_current_round: false,
-            }),
-        };
-
-        await writeGameSession(updatedGameState, gameState.run_type === "daily" ? 24 * 60 * 60 : undefined);
-
-        if (gameState.multiplayer_lobby_id) {
-            await updateMultiplayerProgress(
-                gameState.multiplayer_lobby_id,
-                userId,
-                {
-                    points: updatedGameState.total_points,
-                    round: updatedGameState.current_round,
-                    ...(!isNextRound ? { submittedRound: gameState.current_round, resultRound: gameState.current_round, resultCorrect: isCorrect, resultSkipped: isSkipped, resultPoints: points } : {}),
-                    finished: runFailed,
-                },
-                gameState.multiplayer_match_id ?? undefined,
-            ).catch((error) => console.error("Failed to update multiplayer progress:", error));
-        }
-
-        if (isContinuousMode && madeMistake && !runFailed) {
-            const itemType = gameState.game_mode === GameMode.Skin ? "skin" : "mapset";
-            await redisClient.sRem(`session_items:${sessionId}:${itemType}`, gameState.current_item_id.toString());
-        }
-
-        if (isNextRound && nextBeatmap) {
-            const itemId = "mapset_id" in nextBeatmap.data ? nextBeatmap.data.mapset_id : nextBeatmap.data.id;
-            const itemType = "mapset_id" in nextBeatmap.data ? "mapset" : "skin";
-            const sessionItemsKey = `session_items:${sessionId}:${itemType}`;
-            await redisClient.sAdd(sessionItemsKey, itemId.toString());
-            await redisClient.expire(sessionItemsKey, 3600);
-        }
-
-        const pp = runFailed ? await finishGameSession(sessionId, userId, "failed") : null;
-
-        return {
-            sessionId,
-            pp: pp ?? undefined,
-            currentBeatmap: {
-                imageUrl:
-                    gameState.game_mode === GameMode.Background
-                        ? (gameState.run_type === "daily" ? undefined : nextBeatmap?.backgroundData ?? currentMedia.backgroundData)
-                        : gameState.game_mode === GameMode.Skin
-                          ? (gameState.run_type === "daily" ? undefined : nextBeatmap?.skinData ?? currentMedia.skinData)
-                          : undefined,
-                audioUrl: gameState.game_mode === GameMode.Audio ? (gameState.run_type === "daily" ? undefined : nextBeatmap?.audioData ?? currentMedia.audioData) : undefined,
-                revealed: !isNextRound,
-                title: !isNextRound ? currentAnswer : undefined,
-                artist: !isNextRound ? (currentItem as MapsetDataWithTags).artist : undefined,
-                mapper: !isNextRound ? (currentItem as MapsetDataWithTags).mapper : undefined,
-                mapsetId: !isNextRound ? (gameState.game_mode === GameMode.Skin ? (currentItem as SkinData).id : (currentItem as MapsetDataWithTags).mapset_id) : undefined,
-            },
-            score: {
-                total: gameState.total_points + points,
-                current: points,
-                streak: newStreak,
-                highestStreak: Math.max(gameState.highest_streak, isCorrect ? gameState.current_streak + 1 : gameState.highest_streak),
-            },
-            rounds: {
-                current: gameState.current_round + (isNextRound ? 1 : 0),
-                total: runFailed ? gameState.current_round : roundLimit,
-                correctGuesses: gameState.correct_guesses + (isCorrect ? 1 : 0),
-                totalTimeUsed: gameState.total_time_used + (!isNextRound ? roundTime - timeLeft : 0),
-                mistakes,
-            },
-            timeLeft: runFailed ? 0 : nextBeatmap ? roundTime : timeLeft,
-            gameStatus: runFailed ? "finished" : "active",
-            variant: gameState.variant as GameVariant,
-            runType: gameState.run_type ?? "standard",
-            dailyDay: gameState.daily_day,
-            lastGuess: !isNextRound
-                ? {
-                      correct: isCorrect,
-                      answer: currentAnswer,
-                      type: isTimeout ? "timeout" : isSkipped ? "skip" : "guess",
-                  }
-                : undefined,
-        };
+        if (roundAction.type === "advance") return await advanceRound(game);
+        return await resolveRound(game, roundAction);
     } finally {
         await releaseSessionLock(lock);
     }
 }
 
+async function getCurrentRoundContent(game: DatabaseGameSession) {
+    if (game.game_mode === GameMode.Skin) {
+        const skin = await prisma.skin.findUnique({ where: { id: game.current_item_id } });
+        if (!skin) throw new Error("Current skin could not be resolved");
+        return { title: skin.name, artist: undefined, mapper: undefined, itemType: "skin" as const, snapshot: { name: skin.name } };
+    }
+
+    const mapset = await prisma.mapsetData.findUnique({ where: { mapsetId: game.current_item_id } });
+    if (!mapset) throw new Error("Current mapset could not be resolved");
+    const title = mapset.title ?? "";
+    const artist = mapset.artist ?? "";
+    const mapper = mapset.mapper ?? "";
+    return {
+        title, artist, mapper, itemType: "mapset" as const,
+        snapshot: {
+            title, artist, mapper, rankedAt: mapset.rankedAt,
+            starRatingMin: mapset.starRatingMin == null ? null : Number(mapset.starRatingMin),
+            starRatingMax: mapset.starRatingMax == null ? null : Number(mapset.starRatingMax),
+        },
+    };
+}
+
+async function getRoundMedia(game: DatabaseGameSession): Promise<string | undefined> {
+    if (game.run_type === "daily") return undefined;
+    return getMediaData(game.game_mode, game.game_mode === GameMode.Audio ? game.audio_filename : game.image_filename);
+}
+
+async function resolveRound(game: DatabaseGameSession, action: Exclude<GameRoundAction, { type: "advance" }>): Promise<GameState> {
+    const actionTimeMs = Date.now();
+    const roundTime = getRoundTime(game.run_type);
+    const elapsedMs = Math.max(0, actionTimeMs - new Date(game.last_action_at).getTime());
+    const rawTimeLeft = Math.min(game.time_left, roundTime) - Math.floor(elapsedMs / 1000);
+    const timeLeft = Math.max(0, rawTimeLeft);
+    const guess = action.type === "guess" ? action.guess : "";
+    const timedOut = action.type === "timeout" || (action.type === "guess" && !guess);
+    const skipped = action.type === "skip" || rawTimeLeft <= -GRACE_PERIOD;
+    const resultType = timedOut ? "timeout" : skipped ? "skip" : "guess";
+    const item = await getCurrentRoundContent(game);
+    const media = await getRoundMedia(game);
+    const answer = game.run_type === "daily" ? game.title : item.title;
+    const correct = resultType === "guess" && checkGuess(guess, answer, 0.5);
+    const points = calculateArcadeScore(correct, timeLeft, game.current_streak);
+    const streak = correct ? game.current_streak + 1 : 0;
+    const responseTimeMs = Math.min(elapsedMs, roundTime * 1000);
+    const round: PersistedGameRound = {
+        round_number: game.current_round,
+        item_type: item.itemType,
+        item_id: game.current_item_id,
+        submitted_guess: resultType === "guess" ? guess : null,
+        answer_snapshot: answer,
+        result_type: resultType,
+        correct,
+        response_time_ms: responseTimeMs,
+        time_limit_ms: roundTime * 1000,
+        answered_at: new Date(actionTimeMs).toISOString(),
+        points_earned: points,
+        streak_before: game.current_streak,
+        streak_after: streak,
+        difficulty_snapshot: game.current_difficulty_snapshot ?? 1,
+        content_snapshot: item.snapshot,
+    };
+    const updated: DatabaseGameSession = {
+        ...game,
+        total_points: game.total_points + points,
+        current_streak: streak,
+        highest_streak: Math.max(game.highest_streak, streak),
+        current_difficulty_snapshot: round.difficulty_snapshot ?? 1,
+        time_left: timeLeft,
+        last_action_at: new Date().toISOString(),
+        last_guess: timedOut ? "TIMEOUT" : skipped ? "SKIPPED" : guess,
+        last_guess_correct: correct ? 1 : 0,
+        last_points: points,
+        correct_guesses: game.correct_guesses + Number(correct),
+        total_time_used: game.total_time_used + roundTime - timeLeft,
+        total_response_time_ms: (game.total_response_time_ms ?? 0) + responseTimeMs,
+        round_history: [...(game.round_history ?? []), round],
+        has_guessed_current_round: true,
+    };
+    const continuous = isContinuousVariant(game.variant);
+    const failed = continuous && updated.round_history.filter((entry) => !entry.correct).length >= getVariantLives(game.variant);
+    if (failed) {
+        updated.is_active = false;
+        updated.end_pending = true;
+        updated.end_reason = "failed";
+    }
+    await writeGameSession(updated, game.run_type === "daily" ? 24 * 60 * 60 : undefined);
+
+    if (game.multiplayer_lobby_id) {
+        await updateMultiplayerProgress(
+            game.multiplayer_lobby_id,
+            game.user_id,
+            {
+                points: updated.total_points,
+                round: game.current_round,
+                submittedRound: game.current_round,
+                resultRound: game.current_round,
+                resultCorrect: correct,
+                resultSkipped: skipped,
+                resultPoints: points,
+                finished: failed,
+            },
+            game.multiplayer_match_id ?? undefined,
+        ).catch((error) => console.error("Failed to update multiplayer progress:", error));
+    }
+    if (continuous && !correct && !failed) {
+        await redisClient.sRem(`session_items:${game.id}:${item.itemType}`, game.current_item_id.toString());
+    }
+
+    const pp = failed ? await finishGameSession(game.id, game.user_id, "failed") : null;
+    const state = presentGame(updated, media, failed ? 0 : timeLeft);
+    state.currentBeatmap = { ...state.currentBeatmap, title: answer, artist: item.artist, mapper: item.mapper };
+    state.lastGuess = { correct, answer, type: resultType };
+    state.pp = pp ?? undefined;
+    if (failed) {
+        state.rounds.total = game.current_round;
+    }
+    return state;
+}
+
+async function advanceRound(game: DatabaseGameSession): Promise<GameState> {
+    if (game.multiplayer_lobby_id) {
+        const state = await getMultiplayerRoundState(game.multiplayer_lobby_id, game.user_id, game.current_round);
+        if (!state.allReady) throw new Error("Waiting for other players");
+    }
+    if (isContinuousVariant(game.variant) && (game.round_history ?? []).filter((entry) => !entry.correct).length >= getVariantLives(game.variant)) {
+        const media = await getRoundMedia(game);
+        const pp = await finishGameSession(game.id, game.user_id, "failed");
+        const state = presentGame({ ...game, is_active: false, pp: pp ?? undefined }, media, 0);
+        state.rounds.total = game.current_round;
+        return state;
+    }
+
+    let next: GuessRoundItem;
+    try {
+        next = await getGuessRoundItem(
+            game.game_mode,
+            game.id,
+            game.multiplayer_lobby_id ?? undefined,
+            game.current_round + 1,
+            game.multiplayer_match_id ?? undefined,
+            game.run_type,
+            game.daily_date ? getDailyChallengeDay(new Date(game.daily_date)) : game.daily_day,
+        );
+    } catch (error) {
+        if (!isContinuousVariant(game.variant) || !isNoGameContentError(error)) throw error;
+        const item = await getCurrentRoundContent(game);
+        const media = await getRoundMedia(game);
+        const pp = await finishGameSession(game.id, game.user_id, "content_exhausted");
+        const state = presentGame({ ...game, is_active: false, last_points: 0, pp: pp ?? undefined }, media, 0);
+        state.currentBeatmap = { ...state.currentBeatmap, revealed: true, title: item.title, artist: item.artist, mapper: item.mapper, mapsetId: game.current_item_id };
+        state.rounds.total = game.current_round;
+        state.lastGuess = undefined;
+        return state;
+    }
+
+    const item = next.data;
+    const isMapset = "mapset_id" in item;
+    const itemId = isMapset ? item.mapset_id : item.id;
+    const itemType = isMapset ? "mapset" : "skin";
+    const updated: DatabaseGameSession = {
+        ...game,
+        current_round: game.current_round + 1,
+        current_item_id: itemId,
+        current_difficulty_snapshot: next.difficultySnapshot ?? (await getRoundDifficultySnapshot(game.game_mode, itemType, itemId, game.ruleset_version, game.pp_version)),
+        title: isMapset ? item.title : item.name,
+        artist: isMapset ? item.artist : "",
+        mapper: isMapset ? item.mapper : "",
+        image_filename: item.image_filename,
+        audio_filename: isMapset ? item.audio_filename : null,
+        time_left: getRoundTime(game.run_type),
+        last_action_at: new Date().toISOString(),
+        last_guess: null,
+        last_guess_correct: 0,
+        last_points: 0,
+        has_guessed_current_round: false,
+    };
+    await writeGameSession(updated, game.run_type === "daily" ? 24 * 60 * 60 : undefined);
+
+    if (game.multiplayer_lobby_id) {
+        await updateMultiplayerProgress(
+            game.multiplayer_lobby_id,
+            game.user_id,
+            { points: updated.total_points, round: updated.current_round, finished: false },
+            game.multiplayer_match_id ?? undefined,
+        ).catch((error) => console.error("Failed to update multiplayer progress:", error));
+    }
+    const sessionItemsKey = `session_items:${game.id}:${itemType}`;
+    await redisClient.sAdd(sessionItemsKey, itemId.toString());
+    await redisClient.expire(sessionItemsKey, 3600);
+
+    const media = game.run_type === "daily" ? undefined : next.audioData ?? next.backgroundData ?? next.skinData;
+    return presentGame(updated, media, updated.time_left);
+}
+
 async function expireDailyGame(game: DatabaseGameSession, force = false): Promise<DatabaseGameSession> {
     if (game.run_type !== "daily" || !game.is_active || game.daily_started_at === null) return game;
-    const now = Date.now();
-    let changed = false;
-    while (game.is_active) {
-        if (game.has_guessed_current_round) {
-            if (game.current_round >= DAILY_ROUNDS) break;
-            const nextAt = new Date(game.last_action_at).getTime() + AUTO_ADVANCE_DELAY_MS;
-            if (!force && now < nextAt) break;
-            const item = await getGuessRoundItem(game.game_mode, game.id, undefined, game.current_round + 1, undefined, "daily", game.daily_day);
-            game = { ...game, current_round: game.current_round + 1, current_item_id: "mapset_id" in item.data ? item.data.mapset_id : item.data.id,
-                title: "mapset_id" in item.data ? item.data.title : item.data.name, artist: (item.data as MapsetDataWithTags).artist, mapper: (item.data as MapsetDataWithTags).mapper,
-                image_filename: item.data.image_filename, audio_filename: "mapset_id" in item.data ? item.data.audio_filename : "",
-                last_action_at: new Date(force ? now : nextAt).toISOString(), has_guessed_current_round: false, last_guess: null, time_left: getRoundTime("daily"),
+    const updated = await catchUpDailyRounds(
+        game,
+        force,
+        async (round) => {
+            const { data } = await getGuessRoundItem(game.game_mode, game.id, undefined, round, undefined, "daily", game.daily_day);
+            const isMapset = "mapset_id" in data;
+            return {
+                current_item_id: isMapset ? data.mapset_id : data.id,
+                title: isMapset ? data.title : data.name,
+                artist: isMapset ? data.artist : undefined,
+                mapper: isMapset ? data.mapper : undefined,
+                image_filename: data.image_filename,
+                audio_filename: isMapset ? data.audio_filename : "",
             };
-            changed = true;
-        }
-        const deadline = new Date(game.last_action_at).getTime() + getRoundTime("daily") * 1000;
-        if (!force && now < deadline) break;
-        const points = calculateArcadeScore(false, 0, game.current_streak);
-        const round: PersistedGameRound = { round_number: game.current_round, item_type: game.game_mode === GameMode.Skin ? "skin" : "mapset", item_id: game.current_item_id,
-            submitted_guess: null, answer_snapshot: game.title, result_type: "timeout", correct: false, response_time_ms: getRoundTime("daily") * 1000, time_limit_ms: getRoundTime("daily") * 1000,
-            answered_at: new Date(force ? now : deadline).toISOString(), points_earned: points, streak_before: game.current_streak, streak_after: 0, difficulty_snapshot: game.current_difficulty_snapshot ?? 1,
-            content_snapshot: { title: game.title, artist: game.artist, mapper: game.mapper },
-        };
-        game = { ...game, total_points: game.total_points + points, current_streak: 0, total_time_used: game.total_time_used + getRoundTime("daily"),
-            total_response_time_ms: game.total_response_time_ms + round.response_time_ms, round_history: [...game.round_history, round], last_action_at: round.answered_at!,
-            has_guessed_current_round: true, last_guess: "TIMEOUT", last_guess_correct: 0, last_points: points, time_left: 0 };
-        changed = true;
-    }
-    if (changed) await writeGameSession(game, 24 * 60 * 60);
-    if (game.current_round === DAILY_ROUNDS && game.has_guessed_current_round) {
+        },
+        (state) => ({
+            item_type: state.game_mode === GameMode.Skin ? "skin" : "mapset",
+            item_id: state.current_item_id,
+            answer_snapshot: state.title,
+            difficulty_snapshot: state.current_difficulty_snapshot ?? 1,
+            content_snapshot: { title: state.title, artist: state.artist, mapper: state.mapper },
+        }),
+    );
+    if (updated !== game) await writeGameSession(updated, 24 * 60 * 60);
+    if (updated.current_round === DAILY_ROUNDS && updated.has_guessed_current_round) {
         await finishGameSession(game.id, game.user_id, "completed");
         return getGameSession(game.id, game.user_id);
     }
-    return game;
+    return updated;
 }
 
 export async function beginDailyGameForUser(userId: number, sessionId: string): Promise<GameState> {
@@ -1009,10 +921,10 @@ export async function beginDailyGameForUser(userId: number, sessionId: string): 
             await writeGameSession({ ...game, daily_started_at: started, started_at: started, last_action_at: started }, 24 * 60 * 60);
         }
     } finally { await releaseSessionLock(lock); }
-    return getGameStateForUser(userId, sessionId, false);
+    return resumeGameForUser(userId, sessionId, false);
 }
 
-export async function getGameStateForUser(userId: number, sessionId: string, includeDailyMedia = true): Promise<GameState> {
+export async function resumeGameForUser(userId: number, sessionId: string, includeDailyMedia = true): Promise<GameState> {
     sessionId = z.string().uuid().parse(sessionId);
 
     let gameState = await getGameSession(sessionId, userId);
@@ -1046,21 +958,17 @@ export async function getGameStateForUser(userId: number, sessionId: string, inc
             return item.audioData ?? item.backgroundData ?? item.skinData ?? "";
         }));
     }
-    let mediaData: string | undefined;
-    if (gameState.game_mode === GameMode.Background && gameState.run_type !== "daily") {
-        mediaData = await getMediaData(GameMode.Background, gameState.image_filename);
-    } else if (gameState.game_mode === GameMode.Audio && gameState.run_type !== "daily") {
-        mediaData = await getMediaData(GameMode.Audio, gameState.audio_filename);
-    } else if (gameState.game_mode === GameMode.Skin && gameState.run_type !== "daily") {
-        mediaData = await getMediaData(GameMode.Skin, gameState.image_filename);
-    }
+    const state = presentGame(gameState, await getRoundMedia(gameState), timeLeft);
+    return { ...state, dailyMedia };
+}
 
+function presentGame(gameState: DatabaseGameSession, media: string | undefined, timeLeft: number): GameState {
     return {
-        sessionId,
+        sessionId: gameState.id,
         pp: gameState.pp,
         currentBeatmap: {
-            imageUrl: gameState.game_mode === GameMode.Background ? mediaData : gameState.game_mode === GameMode.Skin ? mediaData : undefined,
-            audioUrl: gameState.game_mode === GameMode.Audio ? mediaData : undefined,
+            imageUrl: gameState.game_mode === GameMode.Audio ? undefined : media,
+            audioUrl: gameState.game_mode === GameMode.Audio ? media : undefined,
             revealed: Boolean(gameState.last_guess),
             title: gameState.last_guess ? gameState.title : undefined,
             artist: gameState.last_guess ? gameState.artist : undefined,
@@ -1085,7 +993,6 @@ export async function getGameStateForUser(userId: number, sessionId: string, inc
         variant: gameState.variant as GameVariant,
         runType: gameState.run_type ?? "standard",
         dailyDay: gameState.daily_day,
-        dailyMedia,
         lastGuess: gameState.last_guess
             ? {
                   correct: gameState.last_guess_correct === 1,

@@ -11,7 +11,7 @@ mock.module("@/actions/server", () => ({ authenticatedAction: async () => { thro
 mock.module("@/lib/game/server", () => ({ getGuestDailyResult: guestResult }));
 mock.module("@/lib/score-pp/server", () => ({
     startScorePpRunForUser: async () => sessionId,
-    getScorePpRoundForUser: async () => ({}), getScorePpRunStateForUser: async () => ({}),
+    getScorePpRoundForUser: async () => ({}), resumeScorePpRunForUser: async () => ({}),
     endScorePpRunForUser: async () => null, submitScorePpGuessForUser: async () => ({}),
 }));
 const actions = await import("@/actions/score-pp-server");
@@ -24,7 +24,7 @@ test("guest Score pp issues the same browser access needed for results", async (
 });
 
 test("guest Score pp actions require the issuing browser", async () => {
-    await expect(actions.getScorePpRunStateAction(sessionId)).rejects.toThrow("Game session not found or expired");
+    await expect(actions.resumeScorePpRunAction(sessionId)).rejects.toThrow("Game session not found or expired");
     await actions.startScorePpRunAction("classic", undefined, "daily");
-    await expect(actions.getScorePpRunStateAction(sessionId)).resolves.toBeDefined();
+    await expect(actions.resumeScorePpRunAction(sessionId)).resolves.toBeDefined();
 });

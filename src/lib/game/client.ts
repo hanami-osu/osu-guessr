@@ -1,9 +1,9 @@
-import { beginDailyGameAction, endGameAction, getGameStateAction, getSuggestionsAction, startGameAction, submitGuessAction } from "@/actions/game-server";
+import { beginDailyGameAction, endGameAction, resumeGameAction, getSuggestionsAction, startGameAction, applyGameRoundAction } from "@/actions/game-server";
 import { GameMode, type GameRunType, type GameState, type GameVariant } from "@/actions/types";
-import type { MultiplayerRpcAction } from "@/lib/multiplayer/multiplayer-protocol";
+import { encodeRoundAction, type MultiplayerRpcAction } from "@/lib/multiplayer/multiplayer-protocol";
 import { preloadDailyMedia } from "./daily-client";
 import { GameError, handleGameError } from "./errors";
-import type { GameClientConfig, GameClientEvents, GameSession } from "./types";
+import type { GameClientConfig, GameClientEvents, GameRoundAction, GameSession } from "./types";
 
 const DEFAULT_CONFIG: GameClientConfig = {
     maxRetries: 3,
@@ -133,7 +133,7 @@ export class GameClient {
         if (!sessionId) return false;
 
         try {
-            let state = await this.execute(() => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)), "resumeStoredGame");
+            let state = await this.execute(() => this.request("game.state", { sessionId }, () => resumeGameAction(sessionId)), "resumeStoredGame");
             state = await this.prepareDaily(state);
             if (this.disposed) return false;
             if (state.gameStatus !== "active" && this.gameRunType !== "daily") {
@@ -191,28 +191,29 @@ export class GameClient {
         this.session.timer = null;
     }
 
-    private runMutation(operationName: string, guess: string | null | undefined, restartTimer = false): Promise<void> {
+    private runMutation(action: GameRoundAction): Promise<void> {
         if (!this.session?.isActive) return Promise.resolve();
         if (this.mutationPromise) return this.mutationPromise;
 
+        const advancing = action.type === "advance";
         const mutationPromise = (async () => {
             this.stopTimer();
             const previousState = this.session!.state;
             try {
                 const sessionId = this.session!.id;
-                const state = await this.execute(() => this.request("game.submit", { sessionId, guess }, () => submitGuessAction(sessionId, guess)), operationName, false, false);
+                const state = await this.execute(() => this.request("game.submit", { sessionId, guess: encodeRoundAction(action) }, () => applyGameRoundAction(sessionId, action)), action.type, false, false);
                 this.updateState(state);
-                if (restartTimer && state.gameStatus === "active") this.startTimer();
+                if (advancing && state.gameStatus === "active") this.startTimer();
             } catch (error) {
                 const recovered = await this.recoverState();
                 const mutationCommitted = Boolean(
                     recovered &&
-                    (guess === undefined
+                    (advancing
                         ? recovered.rounds.current > previousState.rounds.current || recovered.gameStatus === "finished"
                         : recovered.rounds.current > previousState.rounds.current || recovered.currentBeatmap.revealed),
                 );
                 if (mutationCommitted) {
-                    if (restartTimer && recovered?.gameStatus === "active" && !recovered.currentBeatmap.revealed) this.startTimer();
+                    if (advancing && recovered?.gameStatus === "active" && !recovered.currentBeatmap.revealed) this.startTimer();
                     return;
                 }
                 if (this.session?.isActive && this.session.state.gameStatus === "active" && !this.session.state.currentBeatmap.revealed) {
@@ -230,22 +231,22 @@ export class GameClient {
 
     private async handleTimeout(): Promise<void> {
         try {
-            await this.runMutation("handleTimeout", "");
+            await this.runMutation({ type: "timeout" });
         } catch (error) {
             console.error("Failed to handle timeout:", error);
         }
     }
 
     async submitGuess(guess: string): Promise<void> {
-        await this.runMutation("submitGuess", guess);
+        await this.runMutation({ type: "guess", guess });
     }
 
     async skipAnswer(): Promise<void> {
-        await this.runMutation("skipAnswer", null);
+        await this.runMutation({ type: "skip" });
     }
 
     async goNextRound(): Promise<void> {
-        await this.runMutation("goNextRound", undefined, true);
+        await this.runMutation({ type: "advance" });
     }
 
     private async recoverState(): Promise<GameState | null> {
@@ -253,7 +254,7 @@ export class GameClient {
 
         try {
             const sessionId = this.session.id;
-            const state = await this.execute(() => this.request("game.state", { sessionId }, () => getGameStateAction(sessionId)), "recoverState", true, false);
+            const state = await this.execute(() => this.request("game.state", { sessionId }, () => resumeGameAction(sessionId)), "recoverState", true, false);
             this.updateState(state);
             return state;
         } catch (error) {

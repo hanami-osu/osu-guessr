@@ -1,5 +1,7 @@
 import type { GameState } from "@/actions/types";
 
+export type GameRoundAction = { type: "guess"; guess: string } | { type: "skip" } | { type: "timeout" } | { type: "advance" };
+
 export interface GameSession {
     id: string;
     state: GameState;

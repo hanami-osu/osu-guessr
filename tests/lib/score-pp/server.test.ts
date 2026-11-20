@@ -124,7 +124,7 @@ mock.module("@/lib/score-pp/store", () => ({
     selectStoredScorePpPair: selectStoredScorePpPairMock,
 }));
 
-const { createManualScorePpDailyChallenge, endScorePpRunForUser, getScorePpRoundForUser, getScorePpRunStateForUser, startScorePpRunForUser, submitScorePpGuessForUser } = await import("@/lib/score-pp/server");
+const { createManualScorePpDailyChallenge, endScorePpRunForUser, getScorePpRoundForUser, resumeScorePpRunForUser, startScorePpRunForUser, submitScorePpGuessForUser } = await import("@/lib/score-pp/server");
 
 function previousRound(round: number): PersistedGameRound {
     return {
@@ -332,7 +332,7 @@ describe("Score PP multiplayer reveal boundary", () => {
         expect(sessions.get(sessionId)?.round_history.at(-1)?.difficulty_snapshot).toBe(1.37);
         expect(finishGameSessionMock).not.toHaveBeenCalled();
 
-        const waiting = await getScorePpRunStateForUser(1, sessionId);
+        const waiting = await resumeScorePpRunForUser(1, sessionId);
         expect(waiting).toMatchObject({
             active: true,
             terminal: false,
@@ -350,7 +350,7 @@ describe("Score PP multiplayer reveal boundary", () => {
         expect(finishGameSessionMock).not.toHaveBeenCalled();
 
         allSubmitted = true;
-        const revealed = await getScorePpRunStateForUser(1, sessionId);
+        const revealed = await resumeScorePpRunForUser(1, sessionId);
         expect(finishGameSessionMock).toHaveBeenCalledTimes(1);
         expect(revealed).toMatchObject({ active: false, terminal: true, saved: true, runPp: 37 });
         expect(revealed.resolution).toMatchObject({
@@ -417,7 +417,7 @@ describe("Score PP multiplayer reveal boundary", () => {
             return state;
         });
 
-        const inFlightState = getScorePpRunStateForUser(1, sessionId);
+        const inFlightState = resumeScorePpRunForUser(1, sessionId);
         await stateRead;
         try {
             await submitScorePpGuessForUser(2, peerSessionId, pair.id, "score-left", "guess");

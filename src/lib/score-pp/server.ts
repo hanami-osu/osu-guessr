@@ -5,8 +5,9 @@ import type { ScorePpPairSnapshot, ScorePpPublicPair, ScorePpPublicScore, ScoreP
 import { getBeatmapMaxCombo } from "./beatmap-max-combo";
 import { getStoredScorePpPairsByIds, selectStoredScorePpPair } from "./store";
 import { calculateArcadeScore } from "@/lib/game/arcade-score";
+import { catchUpDailyRounds } from "@/lib/game/daily-timing";
 import { CURRENT_PP_VERSION, CURRENT_RULESET_VERSION } from "@/lib/game/versioning";
-import { AUTO_ADVANCE_DELAY_MS, DAILY_ROUNDS, GAME_VARIANTS, MAX_ROUNDS, getRoundTime, getVariantLives, isContinuousVariant } from "@/app/games/config";
+import { DAILY_ROUNDS, GAME_VARIANTS, MAX_ROUNDS, getRoundTime, getVariantLives, isContinuousVariant } from "@/app/games/config";
 import { acquireGameSessionLock, deleteGameSession, readOwnedGameSession, releaseGameSessionLock, writeGameSession } from "@/lib/game/session-storage";
 import { getMultiplayerRoundState, getOrCreateMultiplayerRound, normalizeLobbyCode, readMultiplayerLobby, requireActiveMultiplayerLobby, updateMultiplayerProgress } from "@/lib/multiplayer/multiplayer";
 import { prisma } from "@/lib/database/prisma";
@@ -106,38 +107,32 @@ async function getCurrentMultiplayerLobby(run: DatabaseGameSession) {
 
 async function expireDailyScorePpRun(run: DatabaseGameSession, force = false): Promise<DatabaseGameSession> {
     if (run.run_type !== "daily" || !run.is_active || !run.current_score_pp_pair) return run;
-    const now = Date.now();
-    let changed = false;
-    while (run.is_active) {
-        if (run.has_guessed_current_round) {
-            if (run.current_round >= DAILY_ROUNDS) break;
-            const nextAt = new Date(run.last_action_at).getTime() + AUTO_ADVANCE_DELAY_MS;
-            if (!force && now < nextAt) break;
+    const updated = await catchUpDailyRounds(
+        run,
+        force,
+        async (round) => {
             if (!run.challenge_id) throw new Error("Daily Score pp challenge is missing");
-            const pair = await getScheduledDailyScorePpPair(run.challenge_id, run.current_round + 1);
-            run = { ...run, current_round: run.current_round + 1, current_item_id: pair.id, current_score_pp_pair: pair, last_action_at: new Date(force ? now : nextAt).toISOString(), has_guessed_current_round: false, last_guess: null, time_left: DAILY_ROUND_TIME };
-            changed = true;
-        }
-        const deadline = getRoundDeadline(run);
-        if (!force && now < deadline) break;
-        const pair = run.current_score_pp_pair!;
-        const higher = pair.left.pp > pair.right.pp ? pair.left : pair.right;
-        const points = calculateArcadeScore(false, 0, run.current_streak);
-        const round: PersistedGameRound = { round_number: run.current_round, item_type: "score_pair", item_id: pair.id, submitted_guess: null, answer_snapshot: scoreLabel(higher), result_type: "timeout", correct: false,
-            response_time_ms: DAILY_ROUND_TIME * 1000, time_limit_ms: DAILY_ROUND_TIME * 1000, answered_at: new Date(force ? now : deadline).toISOString(), points_earned: points, streak_before: run.current_streak, streak_after: 0,
-            difficulty_snapshot: pair.difficultySnapshot ?? 1, content_snapshot: { left: pair.left, right: pair.right, higherScoreId: higher.sourceScoreId, selectedScoreId: null },
-        };
-        run = { ...run, total_points: run.total_points + points, current_streak: 0, total_time_used: run.total_time_used + DAILY_ROUND_TIME,
-            total_response_time_ms: run.total_response_time_ms + round.response_time_ms, round_history: [...run.round_history, round], last_action_at: round.answered_at!, has_guessed_current_round: true,
-            last_guess: "TIMEOUT", last_guess_correct: 0, last_points: points, time_left: 0 };
-        changed = true;
-    }
-    if (changed) await writeScorePpSession(run);
-    if (run.current_round === DAILY_ROUNDS && run.has_guessed_current_round) {
+            const pair = await getScheduledDailyScorePpPair(run.challenge_id, round);
+            return { current_item_id: pair.id, current_score_pp_pair: pair };
+        },
+        (state) => {
+            const pair = state.current_score_pp_pair!;
+            const higher = pair.left.pp > pair.right.pp ? pair.left : pair.right;
+            return {
+                item_type: "score_pair",
+                item_id: pair.id,
+                answer_snapshot: scoreLabel(higher),
+                difficulty_snapshot: pair.difficultySnapshot ?? 1,
+                content_snapshot: { left: pair.left, right: pair.right, higherScoreId: higher.sourceScoreId, selectedScoreId: null },
+            };
+        },
+    );
+    if (updated !== run) await writeScorePpSession(updated);
+    if (updated.current_round === DAILY_ROUNDS && updated.has_guessed_current_round) {
         await finishGameSession(run.id, run.user_id, "completed");
         return readOwnedRun(run.id, run.user_id);
     }
-    return run;
+    return updated;
 }
 
 async function readRun(sessionId: string, userId: number): Promise<DatabaseGameSession> {
@@ -276,7 +271,7 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
     const lobbyPlayer = lobby?.players.find((player) => player.userId === userId);
     if (lobbyPlayer?.scoreSessionId) {
         try {
-            const existingState = await getScorePpRunStateForUser(userId, lobbyPlayer.scoreSessionId);
+            const existingState = await resumeScorePpRunForUser(userId, lobbyPlayer.scoreSessionId);
             if (existingState.active) return lobbyPlayer.scoreSessionId;
         } catch {}
     }
@@ -289,7 +284,7 @@ export async function startScorePpRunForUser(userId: number, variant: GameVarian
             where: { userId_dailyDate_gameMode: { userId, dailyDate, gameMode: GameMode.ScorePp } },
         });
         if (existingAttempt && !env.DEBUG_DAILY_UNLIMITED_ATTEMPTS) {
-            const existingState = await getScorePpRunStateForUser(userId, existingAttempt.sessionId).catch(() => null);
+            const existingState = await resumeScorePpRunForUser(userId, existingAttempt.sessionId).catch(() => null);
             if (existingState?.active && existingState.runType === "daily") return existingAttempt.sessionId;
             throw new Error(DAILY_CHALLENGE_ALREADY_PLAYED);
         }
@@ -602,7 +597,7 @@ export async function getScorePpRoundForUser(userId: number, sessionId: string, 
     }
 }
 
-export async function getScorePpRunStateForUser(userId: number, sessionId: string): Promise<ScorePpRunState> {
+export async function resumeScorePpRunForUser(userId: number, sessionId: string): Promise<ScorePpRunState> {
     const parsedSessionId = sessionIdSchema.parse(sessionId);
 
     const lock = await acquireRunLock(parsedSessionId);

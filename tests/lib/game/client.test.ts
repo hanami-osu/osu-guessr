@@ -23,12 +23,12 @@ const startGameActionMock = mock(async (): Promise<GameState> => initialGameStat
 const beginDailyGameActionMock = mock(async (): Promise<GameState> => initialGameState);
 const preloadDailyMediaMock = mock(async (_urls: string[], _audio: boolean) => { void _urls; void _audio; });
 mock.module("@/lib/game/daily-client", () => ({ preloadDailyMedia: preloadDailyMediaMock }));
-const submitGuessActionMock = mock(async (): Promise<GameState> => ({
+const applyGameRoundActionMock = mock(async (): Promise<GameState> => ({
     ...initialGameState,
     score: { total: 100, current: 100, streak: 1, highestStreak: 1 },
     lastGuess: { correct: true, answer: "correct answer", type: "guess" as const },
 }));
-const getGameStateActionMock = mock(async () => initialGameState);
+const resumeGameActionMock = mock(async () => initialGameState);
 const endGameActionMock = mock(async () => {});
 const storageValues = new Map<string, string>();
 type WindowEvent = { type: string; persisted?: boolean };
@@ -36,9 +36,9 @@ type WindowEvent = { type: string; persisted?: boolean };
 mock.module("@/actions/game-server", () => ({
     beginDailyGameAction: beginDailyGameActionMock,
     startGameAction: startGameActionMock,
-    submitGuessAction: submitGuessActionMock,
+    applyGameRoundAction: applyGameRoundActionMock,
     endGameAction: endGameActionMock,
-    getGameStateAction: getGameStateActionMock,
+    resumeGameAction: resumeGameActionMock,
     getSuggestionsAction: mock(async () => []),
 }));
 
@@ -80,12 +80,12 @@ describe("GameClient", () => {
             },
         });
         startGameActionMock.mockReset().mockResolvedValue(initialGameState);
-        submitGuessActionMock.mockReset().mockResolvedValue({
+        applyGameRoundActionMock.mockReset().mockResolvedValue({
             ...initialGameState,
             score: { total: 100, current: 100, streak: 1, highestStreak: 1 },
             lastGuess: { correct: true, answer: "correct answer", type: "guess" as const },
         });
-        getGameStateActionMock.mockReset().mockResolvedValue(initialGameState);
+        resumeGameActionMock.mockReset().mockResolvedValue(initialGameState);
         endGameActionMock.mockReset().mockResolvedValue(undefined);
         events = { onStateUpdate: mock(), onError: mock() };
     });
@@ -104,9 +104,11 @@ describe("GameClient", () => {
             score: { total: 100, current: 100, streak: 1, highestStreak: 1 },
             lastGuess: { correct: true, answer: "correct answer", type: "guess" },
         };
-        const multiplayerRequest = mock(async (action: string) => {
+        const multiplayerRequest = mock(async (action: string, payload: Record<string, unknown>) => {
             if (action === "game.start") return initialGameState;
-            if (action === "game.submit") return submittedState;
+            if (action === "game.submit" && payload.guess === "correct answer") return submittedState;
+            if (action === "game.submit" && payload.guess === null) return submittedState;
+            if (action === "game.submit" && payload.guess === undefined) return { ...initialGameState, rounds: { ...initialGameState.rounds, current: 2 } };
             if (action === "game.end") return 50;
             throw new Error(`Unexpected multiplayer action: ${action}`);
         });
@@ -114,11 +116,13 @@ describe("GameClient", () => {
 
         await client.startGame();
         await client.submitGuess("correct answer");
+        await client.goNextRound();
+        await client.skipAnswer();
         await client.endGame();
 
-        expect(multiplayerRequest).toHaveBeenCalledTimes(3);
+        expect(multiplayerRequest).toHaveBeenCalledTimes(5);
         expect(startGameActionMock).not.toHaveBeenCalled();
-        expect(submitGuessActionMock).not.toHaveBeenCalled();
+        expect(applyGameRoundActionMock).not.toHaveBeenCalled();
         expect(endGameActionMock).not.toHaveBeenCalled();
         client.dispose();
     });
@@ -126,7 +130,7 @@ describe("GameClient", () => {
     test("preserves a stored game when resume fails transiently", async () => {
         const client = new GameClient(events, GameMode.Audio, "classic", { maxRetries: 1 });
         storageValues.set("osu-guessr:game-session:audio:classic", "stored-session");
-        getGameStateActionMock.mockRejectedValueOnce(new Error("network unavailable"));
+        resumeGameActionMock.mockRejectedValueOnce(new Error("network unavailable"));
         const consoleError = spyOn(console, "error").mockImplementation(() => {});
 
         try {
@@ -140,13 +144,13 @@ describe("GameClient", () => {
     test("does not retry a mutating guess after an unknown failure", async () => {
         const client = new GameClient(events, GameMode.Audio, "classic", { maxRetries: 3, retryDelay: 0 });
         await client.startGame();
-        submitGuessActionMock.mockRejectedValueOnce(new Error("temporary failure"));
+        applyGameRoundActionMock.mockRejectedValueOnce(new Error("temporary failure"));
         const consoleError = spyOn(console, "error").mockImplementation(() => {});
 
         try {
             await expect(client.submitGuess("guess")).rejects.toThrow("temporary failure");
-            expect(submitGuessActionMock).toHaveBeenCalledTimes(1);
-            expect(getGameStateActionMock).toHaveBeenCalledTimes(1);
+            expect(applyGameRoundActionMock).toHaveBeenCalledTimes(1);
+            expect(resumeGameActionMock).toHaveBeenCalledTimes(1);
         } finally {
             client.dispose();
             consoleError.mockRestore();
@@ -162,8 +166,8 @@ describe("GameClient", () => {
             lastGuess: { correct: true, answer: "correct answer", type: "guess" as const },
         } satisfies GameState;
         await client.startGame();
-        submitGuessActionMock.mockRejectedValueOnce(new Error("connection closed"));
-        getGameStateActionMock.mockResolvedValueOnce(recoveredState);
+        applyGameRoundActionMock.mockRejectedValueOnce(new Error("connection closed"));
+        resumeGameActionMock.mockResolvedValueOnce(recoveredState);
         const consoleError = spyOn(console, "error").mockImplementation(() => {});
 
         try {
@@ -180,8 +184,8 @@ describe("GameClient", () => {
         const activeState = { ...initialGameState, timeLeft: 1 };
         const client = new GameClient(events, GameMode.Audio, "classic", { maxRetries: 1 });
         startGameActionMock.mockResolvedValueOnce(activeState);
-        getGameStateActionMock.mockResolvedValueOnce(activeState);
-        submitGuessActionMock.mockRejectedValueOnce(new Error("temporary failure"));
+        resumeGameActionMock.mockResolvedValueOnce(activeState);
+        applyGameRoundActionMock.mockRejectedValueOnce(new Error("temporary failure"));
         const consoleError = spyOn(console, "error").mockImplementation(() => {});
 
         try {
@@ -189,7 +193,7 @@ describe("GameClient", () => {
             await expect(client.submitGuess("guess")).rejects.toThrow("temporary failure");
             await new Promise((resolve) => setTimeout(resolve, 1100));
 
-            expect(submitGuessActionMock).toHaveBeenCalledTimes(2);
+            expect(applyGameRoundActionMock).toHaveBeenCalledTimes(2);
         } finally {
             client.dispose();
             consoleError.mockRestore();
@@ -220,13 +224,13 @@ describe("GameClient", () => {
         const submitPromise = new Promise<GameState>((resolve) => {
             resolveSubmit = resolve;
         });
-        submitGuessActionMock.mockReturnValueOnce(submitPromise);
+        applyGameRoundActionMock.mockReturnValueOnce(submitPromise);
 
         const firstCall = client.goNextRound();
         const secondCall = client.goNextRound();
 
         await Promise.resolve();
-        expect(submitGuessActionMock).toHaveBeenCalledTimes(1);
+        expect(applyGameRoundActionMock).toHaveBeenCalledTimes(1);
 
         resolveSubmit(initialGameState);
         await Promise.all([firstCall, secondCall]);
@@ -243,7 +247,7 @@ describe("GameClient", () => {
         expect(storageValues.has("osu-guessr:game-session:audio:classic")).toBe(false);
         const resumedClient = new GameClient(events, GameMode.Audio, "classic");
         await expect(resumedClient.resumeStoredGame()).resolves.toBe(false);
-        expect(getGameStateActionMock).not.toHaveBeenCalled();
+        expect(resumeGameActionMock).not.toHaveBeenCalled();
         resumedClient.dispose();
     });
 
@@ -256,7 +260,7 @@ describe("GameClient", () => {
         expect(storageValues.has("osu-guessr:game-session:audio:classic")).toBe(false);
         const resumedClient = new GameClient(events, GameMode.Audio, "classic");
         await expect(resumedClient.resumeStoredGame()).resolves.toBe(false);
-        expect(getGameStateActionMock).not.toHaveBeenCalled();
+        expect(resumeGameActionMock).not.toHaveBeenCalled();
         resumedClient.dispose();
     });
 
@@ -268,7 +272,7 @@ describe("GameClient", () => {
         const submitPromise = new Promise<GameState>((resolve) => {
             resolveSubmit = resolve;
         });
-        submitGuessActionMock.mockReturnValueOnce(submitPromise);
+        applyGameRoundActionMock.mockReturnValueOnce(submitPromise);
 
         const mutationCall = client.goNextRound();
         await Promise.resolve();
@@ -348,7 +352,7 @@ describe("GameClient", () => {
         const mutationCall = client.goNextRound();
         await Promise.resolve();
 
-        expect(submitGuessActionMock).not.toHaveBeenCalled();
+        expect(applyGameRoundActionMock).not.toHaveBeenCalled();
         resolveEnd();
         await Promise.all([endCall, mutationCall]);
     });

@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { GameMode, type GameRunType, type GameVariant } from "@/actions/types";
-import { endScorePpRunAction, getScorePpRoundAction, getScorePpRunStateAction, startScorePpRunAction, submitScorePpGuessAction } from "@/actions/score-pp-server";
+import { endScorePpRunAction, getScorePpRoundAction, resumeScorePpRunAction, startScorePpRunAction, submitScorePpGuessAction } from "@/actions/score-pp-server";
 import type { ScorePpPublicPair, ScorePpPublicScore, ScorePpResolution, ScorePpRoundLoad, ScorePpRunEndResult, ScorePpRunState } from "@/lib/score-pp/types";
 import { ReportDialog } from "@/components/ReportDialog";
 import { LeaveGameDialog } from "@/components/LeaveGameDialog";
 import GameActionButton from "@/app/games/shared/components/GameActionButton";
 import GameShortcuts from "@/app/games/shared/components/GameShortcuts";
 import GameStartError from "@/app/games/shared/components/GameStartError";
+import { useRoundAdvanceCountdown } from "@/app/games/shared/hooks/useRoundAdvanceCountdown";
 import { useGameKeyboardShortcuts } from "@/app/games/shared/hooks/useGameKeyboardShortcuts";
 import { usePreventUnload } from "@/app/games/shared/hooks/usePreventUnload";
 import GameHeader from "@/app/games/shared/components/Header";
@@ -75,7 +76,6 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
     const exclusions = useRef<Exclusions>(EMPTY_EXCLUSIONS);
     const deadline = useRef(0);
     const advancePausedRef = useRef(false);
-    const multiplayerAdvanceDeadline = useRef<{ key: string; at: number } | null>(null);
     const publicStatsRef = useRef<{ points: number; streak: number; maxStreak: number; mistakes: number } | null>(null);
     const resolving = useRef(false);
     const starting = useRef(false);
@@ -147,7 +147,7 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
     const recoverRun = useCallback(
         async (runSessionId: string): Promise<ScorePpRunState | null> => {
             try {
-                const state = multiplayerLobbyCode ? await multiplayerRequest<ScorePpRunState>("score_pp.state", { sessionId: runSessionId }) : await getScorePpRunStateAction(runSessionId);
+                const state = multiplayerLobbyCode ? await multiplayerRequest<ScorePpRunState>("score_pp.state", { sessionId: runSessionId }) : await resumeScorePpRunAction(runSessionId);
                 applyRunState(state, runSessionId);
                 return state;
             } catch {
@@ -354,49 +354,14 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
         void nextRound();
     }, [isLoading, isSubmitting, multiplayerRoundState?.allReady, multiplayerRoundState?.ready, nextRound, resolution, terminalRound]);
 
-    useEffect(() => {
-        if (!showAdvanceCountdown || isLoading || isReportDialogOpen || error) return;
-
-        if (multiplayerLobbyCode && sessionId) {
-            const key = `${sessionId}:${round}`;
-            if (multiplayerAdvanceDeadline.current?.key !== key) {
-                multiplayerAdvanceDeadline.current = { key, at: Date.now() + AUTO_ADVANCE_DELAY_MS };
-            }
-
-            const updateCountdown = () => {
-                const deadlineAt = multiplayerAdvanceDeadline.current?.at ?? Date.now();
-                setRevealCountdown(Math.max(0, Math.ceil((deadlineAt - Date.now()) / 1000)));
-            };
-            updateCountdown();
-
-            const tick = window.setInterval(updateCountdown, 250);
-            const advance = window.setTimeout(() => void nextRound(), Math.max(0, multiplayerAdvanceDeadline.current.at - Date.now()));
-            return () => {
-                window.clearInterval(tick);
-                window.clearTimeout(advance);
-            };
-        }
-
-        let elapsed = 0;
-        let lastTick = performance.now();
-        setRevealCountdown(AUTO_ADVANCE_DELAY_MS / 1000);
-
-        const tick = window.setInterval(() => {
-            const now = performance.now();
-            const delta = now - lastTick;
-            lastTick = now;
-            if (gameRunType !== "daily" && advancePausedRef.current) return;
-
-            elapsed += delta;
-            setRevealCountdown(Math.max(0, Math.ceil((AUTO_ADVANCE_DELAY_MS - elapsed) / 1000)));
-            if (elapsed >= AUTO_ADVANCE_DELAY_MS) {
-                window.clearInterval(tick);
-                void nextRound();
-            }
-        }, 250);
-
-        return () => window.clearInterval(tick);
-    }, [error, gameRunType, isLoading, isReportDialogOpen, multiplayerLobbyCode, nextRound, round, sessionId, showAdvanceCountdown]);
+    useRoundAdvanceCountdown({
+        enabled: showAdvanceCountdown && !isLoading && !isReportDialogOpen && !error,
+        isDaily: gameRunType === "daily",
+        multiplayerRoundKey: multiplayerLobbyCode && sessionId ? `${sessionId}:${round}` : undefined,
+        pausedRef: advancePausedRef,
+        onAdvance: nextRound,
+        setSeconds: setRevealCountdown,
+    });
 
     const skipRound = useCallback(() => {
         void resolveGuess(null, "skip");

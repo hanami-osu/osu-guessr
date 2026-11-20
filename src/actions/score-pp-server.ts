@@ -4,7 +4,7 @@ import { requireGuestDailySessionAccess, setGuestDailySessionAccess } from "@/li
 import { authenticatedAction } from "./server";
 import type { GameRunType, GameVariant } from "./types";
 import type { ScorePpRoundLoad, ScorePpRunState } from "@/lib/score-pp/types";
-import { endScorePpRunForUser, getScorePpRoundForUser, getScorePpRunStateForUser, startScorePpRunForUser, submitScorePpGuessForUser } from "@/lib/score-pp/server";
+import { endScorePpRunForUser, getScorePpRoundForUser, resumeScorePpRunForUser, startScorePpRunForUser, submitScorePpGuessForUser } from "@/lib/score-pp/server";
 
 export async function startScorePpRunAction(variant: GameVariant, multiplayerLobbyCode?: string, runType: GameRunType = "standard"): Promise<string> {
     try {
@@ -31,13 +31,13 @@ export async function getScorePpRoundAction(sessionId: string, round: number, ex
     }
 }
 
-export async function getScorePpRunStateAction(sessionId: string): Promise<ScorePpRunState> {
+export async function resumeScorePpRunAction(sessionId: string): Promise<ScorePpRunState> {
     try {
-        return await authenticatedAction((session) => getScorePpRunStateForUser(session.user.banchoId, sessionId));
+        return await authenticatedAction((session) => resumeScorePpRunForUser(session.user.banchoId, sessionId));
     } catch (error) {
         if (error instanceof Error && error.message === "Unauthorized") {
             await requireGuestDailySessionAccess(sessionId);
-            return getScorePpRunStateForUser(0, sessionId);
+            return resumeScorePpRunForUser(0, sessionId);
         }
         throw error;
     }
