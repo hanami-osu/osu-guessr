@@ -480,6 +480,18 @@
         }
     },
     "leaderboard": {
+        "daily": {
+            "rankBy": "Řadit podle",
+            "streak": {
+                "label": "Nejdelší série",
+                "column": "Nejlepší série (dny)"
+            },
+            "played": {
+                "label": "Nejvíce dokončených",
+                "column": "Dokončené výzvy"
+            },
+            "empty": "Zatím nikdo nedokončil žádnou denní výzvu."
+        },
         "title": "Žebříček",
         "filters": {
             "mode": {
@@ -506,13 +518,13 @@
         },
         "empty": "Pro tento herní režim a variantu nebyl nalezen žádný hráč.",
         "loading": "Načítání...",
-        "description": "Pořadí podle pp zvoleného herního režimu a varianty.",
         "pagination": {
             "pageSize": "Velikost stránky",
             "previous": "Předchozí",
             "page": "Stránka {page}",
             "next": "Další"
-        }
+        },
+        "description": "Pořadí podle pp zvoleného herního režimu a varianty."
     },
     "user": {
         "profile": {

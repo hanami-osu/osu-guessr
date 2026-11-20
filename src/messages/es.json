@@ -480,6 +480,18 @@
         }
     },
     "leaderboard": {
+        "daily": {
+            "rankBy": "Ordenar por",
+            "streak": {
+                "label": "Racha más larga",
+                "column": "Mejor racha (días)"
+            },
+            "played": {
+                "label": "Más completados",
+                "column": "Desafíos completados"
+            },
+            "empty": "Todavía no se ha completado ningún desafío diario."
+        },
         "title": "Clasificaciones",
         "filters": {
             "mode": {
@@ -506,13 +518,13 @@
         },
         "empty": "No se han encontrado jugadores para este modo de juego y variante.",
         "loading": "Cargando...",
-        "description": "Clasificación por pp del modo de juego y variante seleccionados.",
         "pagination": {
             "pageSize": "Tamaño de página",
             "previous": "Anterior",
             "page": "Página {page}",
             "next": "Siguiente"
-        }
+        },
+        "description": "Clasificación por pp del modo de juego y variante seleccionados."
     },
     "user": {
         "profile": {

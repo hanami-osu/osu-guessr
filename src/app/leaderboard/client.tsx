@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ interface LeaderboardClientProps {
 }
 
 type LeaderboardVariant = GameVariant | "daily";
+const DAILY_SORTS = ["streak", "played"] as const;
 
 export default function LeaderboardClient({ initialData, initialMode, initialVariant, initialDailySort = "streak", initialError = null }: LeaderboardClientProps) {
     const { t, locale } = useTranslationsContext();
@@ -39,12 +41,13 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
     const isInitialRender = useRef(true);
 
     const errorMessage = t.notifications.error;
+    const isDaily = selectedVariant === "daily";
 
-    function syncFilters(mode: GameMode, variant: LeaderboardVariant) {
+    function syncFilters(mode: GameMode, variant: LeaderboardVariant, sort = dailySort) {
         const url = new URL(window.location.href);
         url.searchParams.set("mode", mode);
         url.searchParams.set("variant", variant);
-        if (variant === "daily") url.searchParams.set("dailySort", dailySort);
+        if (variant === "daily") url.searchParams.set("dailySort", sort);
         window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
 
@@ -91,61 +94,73 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
             <div>
                 <header className="py-5 sm:py-6">
                     <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t.leaderboard.title}</h1>
-                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{t.leaderboard.description}</p>
                 </header>
 
-                <div className="flex flex-col gap-3 rounded-t-lg bg-card/60 px-4 pt-4 sm:flex-row sm:items-end sm:gap-6 sm:px-5">
-                    {selectedVariant !== "daily" && <div>
-                        <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.modeLabel}</p>
-                        <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.modeLabel}>
-                            {gameModes.map((mode) => (
-                                <button
-                                    key={mode}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={selectedMode === mode}
-                                    onClick={() => {
-                                        setSelectedMode(mode);
-                                        setPage(1);
-                                        syncFilters(mode, selectedVariant);
-                                    }}
-                                    className={`border-b-2 px-2 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === mode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
-                                >
-                                    {t.leaderboard.filters.mode[mode]}
-                                </button>
-                            ))}
-                        </div>
-                    </div>}
-
-                    <div>
-                        <p className="mb-1 text-xs text-muted-foreground">{t.user.profile.variantLabel}</p>
-                        <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t.user.profile.variantLabel}>
-                            {(["daily", ...GAME_VARIANTS] as LeaderboardVariant[]).map((variant) => (
-                                <button
-                                    key={variant}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={selectedVariant === variant}
-                                    onClick={() => {
-                                        setSelectedVariant(variant);
-                                        setPage(1);
-                                        syncFilters(selectedMode, variant);
-                                    }}
-                                    className={`border-b-2 px-2 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedVariant === variant ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
-                                >
-                                    {variant === "daily" ? t.game.daily.title : t.leaderboard.filters.variant[variant]}
-                                </button>
-                            ))}
-                        </div>
+                <div className="rounded-t-lg bg-card/60 px-4 pt-2 sm:px-5">
+                    <div className="grid grid-cols-2 gap-x-3 border-b border-border/50 sm:flex sm:flex-wrap sm:gap-x-2" role="group" aria-label={t.user.profile.variantLabel}>
+                        {([...GAME_VARIANTS, "daily"] as const).map((variant) => (
+                            <button
+                                key={variant}
+                                type="button"
+                                aria-pressed={selectedVariant === variant}
+                                onClick={() => {
+                                    setSelectedVariant(variant);
+                                    setPage(1);
+                                    syncFilters(selectedMode, variant);
+                                }}
+                                className={`min-h-11 border-b-2 px-2 py-2 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${selectedVariant === variant ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                            >
+                                {variant === "daily" ? t.game.daily.title : t.leaderboard.filters.variant[variant]}
+                            </button>
+                        ))}
                     </div>
-                </div>
 
-                {selectedVariant === "daily" && <div className="flex gap-2 bg-card/60 px-4 pt-4 sm:px-5" role="group" aria-label={t.game.daily.title}>
-                    {(["streak", "played"] as const).map(sort => <Button key={sort} size="sm" variant={dailySort === sort ? "default" : "outline"} aria-pressed={dailySort === sort} onClick={() => {
-                        setDailySort(sort); setPage(1);
-                        const url = new URL(window.location.href); url.searchParams.set("dailySort", sort); window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-                    }}>{sort === "streak" ? t.leaderboard.table.bestDailyStreak : t.leaderboard.table.gamesPlayed}</Button>)}
-                </div>}
+                    {isDaily ? (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-3" role="group" aria-label={t.leaderboard.daily.rankBy}>
+                            <span className="text-xs font-medium text-muted-foreground">{t.leaderboard.daily.rankBy}</span>
+                            <div className="flex flex-wrap gap-2">
+                                {DAILY_SORTS.map((sort) => (
+                                    <Button
+                                        key={sort}
+                                        size="sm"
+                                        className="h-11 sm:h-8"
+                                        variant={dailySort === sort ? "default" : "outline"}
+                                        aria-pressed={dailySort === sort}
+                                        onClick={() => {
+                                            setDailySort(sort);
+                                            setPage(1);
+                                            syncFilters(selectedMode, selectedVariant, sort);
+                                        }}
+                                    >
+                                        {t.leaderboard.daily[sort].label}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-3" role="group" aria-label={t.user.profile.modeLabel}>
+                            <span className="text-xs font-medium text-muted-foreground">{t.user.profile.modeLabel}</span>
+                            <div className="flex flex-wrap gap-2">
+                                {gameModes.map((mode) => (
+                                    <Button
+                                        key={mode}
+                                        size="sm"
+                                        className="h-11 sm:h-8"
+                                        variant={selectedMode === mode ? "default" : "outline"}
+                                        aria-pressed={selectedMode === mode}
+                                        onClick={() => {
+                                            setSelectedMode(mode);
+                                            setPage(1);
+                                            syncFilters(mode, selectedVariant);
+                                        }}
+                                    >
+                                        {t.leaderboard.filters.mode[mode]}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 <div className="bg-card/60 pt-4">
                     {isLoading ? (
@@ -158,7 +173,7 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                         </div>
                     ) : leaderboardData.length === 0 ? (
                         <div className="px-4 py-8 text-center text-sm text-muted-foreground" role="status">
-                            {t.leaderboard.empty}
+                            {isDaily ? t.leaderboard.daily.empty : t.leaderboard.empty}
                         </div>
                     ) : (
                         <div className="overflow-hidden">
@@ -173,11 +188,18 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                             <th scope="col" className="px-2 py-2.5 text-left sm:px-5">
                                                 {t.leaderboard.table.player}
                                             </th>
-                                            {selectedVariant === "daily" ? (
-                                                <>
-                                                    <th scope="col" className="px-3 py-2.5 text-right sm:px-5">{t.leaderboard.table.bestDailyStreak}</th>
-                                                    <th scope="col" className="hidden px-5 py-2.5 text-right md:table-cell">{t.leaderboard.table.gamesPlayed}</th>
-                                                </>
+                                            {isDaily ? (
+                                                DAILY_SORTS.map((sort) => (
+                                                    <th
+                                                        key={sort}
+                                                        scope="col"
+                                                        aria-sort={dailySort === sort ? "descending" : undefined}
+                                                        className={`w-32 px-3 py-2.5 text-right sm:w-auto sm:px-5 ${dailySort === sort ? "text-foreground" : "hidden md:table-cell"}`}
+                                                    >
+                                                        {t.leaderboard.daily[sort].column}
+                                                        {dailySort === sort && <ArrowDown aria-hidden="true" className="ml-1 hidden size-3 align-text-bottom text-primary sm:inline-block" />}
+                                                    </th>
+                                                ))
                                             ) : (
                                                 <>
                                                     <th scope="col" className="w-24 px-3 py-2.5 text-right sm:w-auto sm:px-5">{t.leaderboard.table.profilePp}</th>
@@ -234,11 +256,12 @@ export default function LeaderboardClient({ initialData, initialMode, initialVar
                                                         </div>
                                                     </Link>
                                                 </td>
-                                                {selectedVariant === "daily" ? (
-                                                    <>
-                                                        <td className="px-3 py-3 text-right font-mono text-sm font-bold tabular-nums text-primary sm:px-5 sm:py-3.5">{(player.best_daily_streak ?? 0).toLocaleString(locale)}</td>
-                                                        <td className="hidden px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground md:table-cell">{player.games_played.toLocaleString(locale)}</td>
-                                                    </>
+                                                {isDaily ? (
+                                                    DAILY_SORTS.map((sort) => (
+                                                        <td key={sort} className={`px-3 py-3 text-right text-sm tabular-nums sm:px-5 sm:py-3.5 ${dailySort === sort ? "font-mono font-bold text-primary" : "hidden text-muted-foreground md:table-cell"}`}>
+                                                            {(sort === "streak" ? (player.best_daily_streak ?? 0) : player.games_played).toLocaleString(locale)}
+                                                        </td>
+                                                    ))
                                                 ) : (
                                                     <>
                                                         <td className="px-3 py-3 text-right font-mono text-sm font-bold tabular-nums text-primary sm:px-5 sm:py-3.5">{Number(player.profile_pp).toLocaleString(locale, { maximumFractionDigits: 1 })}</td>

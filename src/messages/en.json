@@ -609,6 +609,18 @@
         }
     },
     "leaderboard": {
+        "daily": {
+            "rankBy": "Rank by",
+            "streak": {
+                "label": "Longest streak",
+                "column": "Best streak (days)"
+            },
+            "played": {
+                "label": "Most completions",
+                "column": "Dailies completed"
+            },
+            "empty": "No daily challenges have been completed yet."
+        },
         "title": "Leaderboard",
         "filters": {
             "mode": {
@@ -632,18 +644,17 @@
             "hiScore": "Hi-Score",
             "bestStreak": "Best Streak",
             "profilePp": "pp",
-                "bestRunPp": "Top pp Play",
-                "bestDailyStreak": "Best Daily Streak"
+            "bestRunPp": "Top pp Play"
         },
         "empty": "No players found for this game mode and variant.",
         "loading": "Loading...",
-        "description": "Ranked by pp for the selected game mode and variant.",
         "pagination": {
             "pageSize": "Page size",
             "previous": "Previous",
             "page": "Page {page}",
             "next": "Next"
-        }
+        },
+        "description": "Ranked by pp for the selected game mode and variant."
     },
     "user": {
         "profile": {

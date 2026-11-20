@@ -480,6 +480,18 @@
         }
     },
     "leaderboard": {
+        "daily": {
+            "rankBy": "Sıralama ölçütü",
+            "streak": {
+                "label": "En uzun seri",
+                "column": "En iyi seri (gün)"
+            },
+            "played": {
+                "label": "En çok tamamlanan",
+                "column": "Tamamlananlar"
+            },
+            "empty": "Henüz hiçbir günlük meydan okuma tamamlanmadı."
+        },
         "title": "Sıralama",
         "filters": {
             "mode": {
@@ -506,13 +518,13 @@
         },
         "empty": "Bu oyun modu ve varyant için oyuncu bulunamadı.",
         "loading": "Yükleniyor...",
-        "description": "Seçili oyun modu ve varyantın pp değerine göre sıralanır.",
         "pagination": {
             "pageSize": "Sayfa boyutu",
             "previous": "Önceki",
             "page": "Sayfa {page}",
             "next": "Sonraki"
-        }
+        },
+        "description": "Seçili oyun modu ve varyantın pp değerine göre sıralanır."
     },
     "user": {
         "profile": {

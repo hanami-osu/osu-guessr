@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = createPageMetadata({
     title: "Leaderboard",
-    description: "Top players ranked by pp for each game mode and variant.",
+    description: "Compare Daily Challenge streaks and completions, or see the top players by pp in each game mode.",
     path: "/leaderboard",
 });
 

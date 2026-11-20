@@ -546,6 +546,18 @@
         }
     },
     "leaderboard": {
+        "daily": {
+            "rankBy": "Sortuj według",
+            "streak": {
+                "label": "Najdłuższa seria",
+                "column": "Najlepsza seria (dni)"
+            },
+            "played": {
+                "label": "Najwięcej ukończonych",
+                "column": "Ukończone wyzwania"
+            },
+            "empty": "Nikt jeszcze nie ukończył żadnego wyzwania dnia."
+        },
         "title": "Ranking",
         "filters": {
             "mode": {
@@ -572,13 +584,13 @@
         },
         "empty": "Nie znaleziono graczy dla tego trybu gry i wariantu.",
         "loading": "Ładowanie...",
-        "description": "Ranking według pp wybranego trybu gry i wariantu.",
         "pagination": {
             "pageSize": "Rozmiar strony",
             "previous": "Poprzednia",
             "page": "Strona {page}",
             "next": "Następna"
-        }
+        },
+        "description": "Ranking według pp wybranego trybu gry i wariantu."
     },
     "user": {
         "profile": {

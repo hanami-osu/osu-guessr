@@ -69,7 +69,7 @@ export default function PreGameMenu({ onStart, onCancel, gameMode, dailyModePick
     const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(gameMode);
     const activeGameMode = dailyModePicker ? selectedGameMode : gameMode;
     const supportsDaily = true;
-    const [selectedMode, setSelectedMode] = useState<GameVariant | "daily">(supportsDaily ? "daily" : "classic");
+    const [selectedMode, setSelectedMode] = useState<GameVariant | "daily">(dailyModePicker ? "daily" : "classic");
     const [dailyStatus, setDailyStatus] = useState<DailyStatus | null>(null);
 
     useEffect(() => {
@@ -197,20 +197,6 @@ export default function PreGameMenu({ onStart, onCancel, gameMode, dailyModePick
                                 <span className="flex min-h-10 items-center text-sm font-semibold">{t.gameModes.modes[mode.id].title}</span>
                             </button>
                         )) : <>
-                        {supportsDaily && (
-                            <button
-                                type="button"
-                                role="radio"
-                                onClick={() => setSelectedMode("daily")}
-                                className={`rounded-md px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === "daily" ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-                                aria-checked={selectedMode === "daily"}
-                            >
-                                <span className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                                    <span className="text-sm font-semibold">{t.game.preGame.modes.daily.title}</span>
-                                    <span className="text-xs text-muted-foreground">{t.game.preGame.modes.classic.description.replace("{count}", DAILY_ROUNDS.toString())}</span>
-                                </span>
-                            </button>
-                        )}
                         <button
                             type="button"
                             role="radio"
@@ -247,6 +233,20 @@ export default function PreGameMenu({ onStart, onCancel, gameMode, dailyModePick
                                 <span className="text-xs text-muted-foreground">{t.game.preGame.modes.oneLife.description}</span>
                             </span>
                         </button>
+                        {supportsDaily && (
+                            <button
+                                type="button"
+                                role="radio"
+                                onClick={() => setSelectedMode("daily")}
+                                className={`rounded-md px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${selectedMode === "daily" ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                                aria-checked={selectedMode === "daily"}
+                            >
+                                <span className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                                    <span className="text-sm font-semibold">{t.game.preGame.modes.daily.title}</span>
+                                    <span className="text-xs text-muted-foreground">{t.game.preGame.modes.classic.description.replace("{count}", DAILY_ROUNDS.toString())}</span>
+                                </span>
+                            </button>
+                        )}
                         </>}
                     </div>
                 </section>
