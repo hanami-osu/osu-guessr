@@ -332,7 +332,7 @@ async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, n
     let trackedSince: Date | null = null;
 
     let cursor: bigint | undefined;
-    while (true) {
+    do {
         const page = await prisma.game.findMany({
             select: gameSelect,
             orderBy: [{ endedAt: "asc" }, { id: "asc" }],
@@ -411,15 +411,14 @@ async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, n
                 match.quits += Number(endReason === "quit");
             }
         }
-        if (page.length < PAGE_SIZE) break;
-        cursor = page[page.length - 1].id;
-    }
+        cursor = page.length === PAGE_SIZE ? page[page.length - 1].id : undefined;
+    } while (cursor !== undefined);
 
     const cohorts = new Map<string, CohortRow>();
     let newUsers = 0;
     let previousNewUsers = 0;
     let userCursor: number | undefined;
-    while (true) {
+    do {
         const page = await prisma.user.findMany({
             where: { createdAt: { gte: previousSince ?? since }, ...(userCursor === undefined ? {} : { banchoId: { gt: userCursor } }) },
             select: { banchoId: true, createdAt: true },
@@ -448,9 +447,8 @@ async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, n
                 if (player && player.last.getTime() >= returnAt) retention.returned++;
             }
         }
-        if (page.length < PAGE_SIZE) break;
-        userCursor = page[page.length - 1].banchoId;
-    }
+        userCursor = page.length === PAGE_SIZE ? page[page.length - 1].banchoId : undefined;
+    } while (userCursor !== undefined);
 
     const firstModes = new Map<AnalyticsGameMode, FirstModeRow>();
     for (const { first, last, games } of history.values()) {
@@ -620,7 +618,7 @@ async function summarizeRounds(since: Date) {
     const byPair = new Map<number, { rounds: number; correct: number; response: number }>();
 
     let after: bigint | undefined;
-    while (true) {
+    do {
         const page = await prisma.gameRound.findMany({
             where: { game: { endedAt: { gte: since } }, ...(after === undefined ? {} : { id: { gt: after } }) },
             select: {
@@ -671,9 +669,8 @@ async function summarizeRounds(since: Date) {
                 }
             }
         }
-        if (page.length < PAGE_SIZE) break;
-        after = page[page.length - 1].id;
-    }
+        after = page.length === PAGE_SIZE ? page[page.length - 1].id : undefined;
+    } while (after !== undefined);
 
     const [mapsets, skins, pairs, scorePpSources] = await Promise.all([
         prisma.mapsetData.count(),

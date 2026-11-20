@@ -373,7 +373,7 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
 
     let after: bigint | undefined;
     const batchSize = 1000;
-    while (true) {
+    do {
         const baselineRuns = await prisma.game.findMany({
             where: {
                 userId: { notIn: hiddenUserIds },
@@ -391,9 +391,8 @@ export async function getUserRankHistoryAction(banchoId: number, gameMode: GameM
             take: batchSize,
         });
         for (const run of baselineRuns) addRankedRun(run.userId, Number(run.pp));
-        if (baselineRuns.length < batchSize) break;
-        after = baselineRuns[baselineRuns.length - 1].id;
-    }
+        after = baselineRuns.length === batchSize ? baselineRuns[baselineRuns.length - 1].id : undefined;
+    } while (after !== undefined);
 
     const profilePpByUser = new Map<number, number>();
     for (const [userId, runs] of topRunsByUser) {
