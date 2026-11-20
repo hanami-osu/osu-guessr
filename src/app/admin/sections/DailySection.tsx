@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useId, useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED, DAILY_ROUNDS, getNextDailyReset } from "@/lib/game/daily";
-import { searchManualDailyContent, setManualDailyChallenge } from "./actions/daily-challenge";
-import { AdminGroup, CollapsibleSection } from "./ui";
+import { useToast } from "@/hooks/use-toast";
+import { searchManualDailyContent, setManualDailyChallenge } from "../actions/daily-challenge";
+import { AdminGroup, AdminSection, errorMessage } from "../ui";
 
 type ManualDailyOption = { id: number; label: string };
 
-export default function DailyChallengePanel({ appendOutput }: { appendOutput: (message: string) => void }) {
+export default function DailySection() {
+    const { toast } = useToast();
     const dailyDatePickerRef = useRef<HTMLInputElement>(null);
     const dailySearchRequestIds = useRef(Array(DAILY_ROUNDS).fill(0));
     const skipDailySearchOnce = useRef(Array(DAILY_ROUNDS).fill(false));
@@ -35,15 +39,14 @@ export default function DailyChallengePanel({ appendOutput }: { appendOutput: (m
 
     const handleSetManualDaily = async (overwrite = false) => {
         setIsSaving(true);
-        appendOutput(`${overwrite ? "Overwriting" : "Setting"} ${manualDailyMode} daily challenge for ${manualDailyDate}...`);
         try {
-            appendOutput(await setManualDailyChallenge(manualDailyDate, manualDailyMode, ignoreDailyRepetition, manualDailySelections.map(Number), overwrite));
+            toast({ title: await setManualDailyChallenge(manualDailyDate, manualDailyMode, ignoreDailyRepetition, manualDailySelections.map(Number), overwrite) });
             setDailyOverwriteRequest(null);
         } catch (error) {
             if (error instanceof Error && error.message.includes(DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED)) {
                 setDailyOverwriteRequest(dailyChallengeRequest);
             } else {
-                appendOutput(`Error: ${error instanceof Error ? error.message : error}`);
+                toast({ variant: "destructive", title: "Could not set the daily challenge", description: errorMessage(error) });
             }
         } finally {
             setIsSaving(false);
@@ -75,7 +78,7 @@ export default function DailyChallengePanel({ appendOutput }: { appendOutput: (m
                     })
                     .catch((error: unknown) => {
                         if (dailySearchRequestIds.current[roundIndex] === requestId) {
-                            appendOutput(`Could not search daily content: ${error instanceof Error ? error.message : error}`);
+                            toast({ variant: "destructive", title: "Search failed", description: errorMessage(error) });
                         }
                     })
                     .finally(() => {
@@ -87,7 +90,7 @@ export default function DailyChallengePanel({ appendOutput }: { appendOutput: (m
         });
 
         return () => timers.forEach((timer) => timer && window.clearTimeout(timer));
-    }, [appendOutput, manualDailyMode, manualDailySearches]);
+    }, [toast, manualDailyMode, manualDailySearches]);
 
     const selectManualDailyOption = (roundIndex: number, option: ManualDailyOption) => {
         skipDailySearchOnce.current[roundIndex] = true;
@@ -131,7 +134,7 @@ export default function DailyChallengePanel({ appendOutput }: { appendOutput: (m
     const hasFiveUniqueDailyItems = manualDailySelections.every(Boolean) && new Set(manualDailySelections).size === DAILY_ROUNDS;
 
     return (
-        <CollapsibleSection id="daily-challenge" title="Daily Challenge" description="Set daily challenge manually" icon={<CalendarDays />}>
+        <AdminSection title="Daily challenge" description="Days without a scheduled challenge are picked automatically from the middle difficulty band. Schedule one here to choose the five rounds yourself.">
             <AdminGroup title="Schedule a challenge" description="Choose five exact rounds for a future date. Challenges cannot be set for today or an earlier UTC date.">
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
@@ -322,6 +325,6 @@ export default function DailyChallengePanel({ appendOutput }: { appendOutput: (m
                     {isSaving ? "Saving..." : "Set daily challenge"}
                 </Button>
             </AdminGroup>
-        </CollapsibleSection>
+        </AdminSection>
     );
 }
