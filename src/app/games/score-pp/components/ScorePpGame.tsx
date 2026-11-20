@@ -20,7 +20,7 @@ import { usePreventUnload } from "@/app/games/shared/hooks/usePreventUnload";
 import GameHeader from "@/app/games/shared/components/Header";
 import MultiplayerStandings from "@/app/games/shared/components/MultiplayerStandings";
 import MultiplayerChat from "@/app/games/shared/components/MultiplayerChat";
-import { AUTO_ADVANCE_DELAY_MS, DAILY_ROUNDS, MAX_ROUNDS, ROUND_TIME, isContinuousVariant, isOnLastLife } from "@/app/games/config";
+import { AUTO_ADVANCE_DELAY_MS, DAILY_ROUNDS, MAX_ROUNDS, getRoundTime, isContinuousVariant, isOnLastLife } from "@/app/games/config";
 import ScorePpCard from "./ScorePpCard";
 import { useMultiplayerSocket } from "@/lib/multiplayer/multiplayer-socket";
 import { useLeaveGameGuard } from "@/hooks/useLeaveGameGuard";
@@ -60,7 +60,7 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
     const [submittedRound, setSubmittedRound] = useState(false);
     const [round, setRound] = useState(1);
     const [requestedRound, setRequestedRound] = useState(1);
-    const [timeLeft, setTimeLeft] = useState(ROUND_TIME);
+    const [timeLeft, setTimeLeft] = useState(getRoundTime(gameRunType));
     const [revealCountdown, setRevealCountdown] = useState(AUTO_ADVANCE_DELAY_MS / 1000);
     const [points, setPoints] = useState(0);
     const [streak, setStreak] = useState(0);
@@ -442,7 +442,7 @@ export default function ScorePpGame({ gameVariant, gameRunType = "standard", isG
                 gameRunType={gameRunType}
                 maxStreak={publicStats?.maxStreak ?? maxStreak}
                 mistakes={publicStats?.mistakes ?? mistakes}
-                timerDuration={showAdvanceCountdown ? AUTO_ADVANCE_DELAY_MS / 1000 : ROUND_TIME}
+                timerDuration={showAdvanceCountdown ? AUTO_ADVANCE_DELAY_MS / 1000 : undefined}
                 gameOver={gameOver}
             />
             {multiplayerLobby && (

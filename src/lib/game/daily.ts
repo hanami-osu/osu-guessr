@@ -1,20 +1,20 @@
 export const DAILY_EPOCH_UTC = Date.UTC(2026, 10, 15); // The day of the first daily challenge
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const DAILY_ROUNDS = 5;
-export const DAILY_ROUND_TIME = 15;
+export const DAILY_ROUND_TIME = 30;
 export const DAILY_CHALLENGE_ALREADY_PLAYED = "DAILY_CHALLENGE_ALREADY_PLAYED";
 export const DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED = "DAILY_CHALLENGE_OVERWRITE_CONFIRMATION_REQUIRED";
 
 export type DailyOutcome = "correct" | "incorrect" | "skip" | "timeout";
 
-export function formatDailyShareResult(gameMode: string, day: number, correct: number, totalPoints: number, responseTimeMs: number, outcomes: DailyOutcome[], origin = "https://osuguessr.com"): string {
+export function formatDailyShareResult(gameMode: string, day: number, correct: number, totalPoints: number, responseTimeMs: number, outcomes: DailyOutcome[], link: string): string {
     const circles = Array.from({ length: DAILY_ROUNDS }, (_, index) => {
         const outcome = outcomes[index];
         return outcome === "correct" ? "🟢" : outcome === "incorrect" ? "🔴" : outcome === "skip" ? "🟠" : "⬛";
     }).join("");
     const normalizedMode = gameMode.replaceAll("_", " ");
     const seconds = Math.round(responseTimeMs / 1000);
-    return `osu!guessr daily ${normalizedMode} #${day}\n${circles}  ${correct}/${DAILY_ROUNDS} · ${totalPoints.toLocaleString("en-US")} pts · ${seconds}s\n${origin}${getDailySharePath(gameMode, day, totalPoints, responseTimeMs, outcomes)}`;
+    return `osu!guessr daily ${normalizedMode} #${day}\n${circles}  ${correct}/${DAILY_ROUNDS} · ${totalPoints.toLocaleString("en-US")} pts · ${seconds}s\n${link}`;
 }
 
 export function getDailyChallengeDay(now: Date = new Date(), dayOffset = 0): number {

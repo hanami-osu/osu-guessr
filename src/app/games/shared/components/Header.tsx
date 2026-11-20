@@ -1,4 +1,4 @@
-import { ROUND_TIME, getVariantLives } from "@/app/games/config";
+import { getRoundTime, getVariantLives } from "@/app/games/config";
 import { GameMode, type GameRunType, type GameVariant } from "@/actions/types";
 import { useTranslationsContext } from "@/context/translations-provider";
 import { Heart, HeartCrack } from "lucide-react";
@@ -31,7 +31,7 @@ export default function GameHeader({
     maxStreak = 0,
     mistakes = 0,
     lifeCount = getVariantLives(gameVariant),
-    timerDuration = ROUND_TIME,
+    timerDuration = getRoundTime(gameRunType),
     gameOver = false,
 }: GameHeaderProps) {
     const { t, locale } = useTranslationsContext();

@@ -680,11 +680,11 @@ describe("game server lifecycle", () => {
         const rounds = gameRoundCreateManyMock.mock.calls.at(-1)?.[0].data;
         expect(rounds).toHaveLength(5);
         expect(rounds?.map(({ answeredAt, resultType }) => [answeredAt?.toISOString(), resultType])).toEqual([
-            ["2026-01-01T00:00:15.000Z", "timeout"],
-            ["2026-01-01T00:00:38.000Z", "timeout"],
-            ["2026-01-01T00:01:01.000Z", "timeout"],
-            ["2026-01-01T00:01:24.000Z", "timeout"],
-            ["2026-01-01T00:01:47.000Z", "timeout"],
+            ["2026-01-01T00:00:30.000Z", "timeout"],
+            ["2026-01-01T00:01:08.000Z", "timeout"],
+            ["2026-01-01T00:01:46.000Z", "timeout"],
+            ["2026-01-01T00:02:24.000Z", "timeout"],
+            ["2026-01-01T00:03:02.000Z", "timeout"],
         ]);
     });
 
@@ -693,9 +693,9 @@ describe("game server lifecycle", () => {
         expect(state.dailyMedia).toHaveLength(5);
         setSystemTime(new Date("2026-01-01T00:01:00Z"));
         const ready = await beginDailyGameAction(state.sessionId);
-        expect(ready.timeLeft).toBe(15);
+        expect(ready.timeLeft).toBe(30);
         setSystemTime(new Date("2026-01-01T00:01:05Z"));
-        expect((await beginDailyGameAction(state.sessionId)).timeLeft).toBe(10);
+        expect((await beginDailyGameAction(state.sessionId)).timeLeft).toBe(25);
     });
 
 });
