@@ -84,9 +84,3 @@ export function getDailyStreaks(dates: string[], today: Date = getDailyDate()): 
     }
     return { current: previous < today.getTime() - DAY_MS ? 0 : current, best };
 }
-
-
-export function getDailySharePath(gameMode: string, day: number, points: number, responseTimeMs: number, outcomes: DailyOutcome[]): string {
-    const rounds = Array.from({ length: DAILY_ROUNDS }, (_, i) => outcomes[i] === "correct" ? "c" : outcomes[i] === "incorrect" ? "i" : outcomes[i] === "skip" ? "s" : "t").join("");
-    return `/daily/share?${new URLSearchParams({ mode: gameMode, day: String(day), points: String(points), time: String(responseTimeMs), rounds })}`;
-}

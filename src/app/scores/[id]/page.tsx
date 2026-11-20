@@ -332,6 +332,7 @@ export default async function ScorePage({ params, searchParams }: Props) {
                     points={game.points}
                     responseTimeMs={Number(game.totalResponseTimeMs)}
                     debugUnlimitedAttempts={dailyDebugUnlimited}
+                    scoreId={game.id.toString()}
                     outcomes={rounds.map((round) => ({ correct: round.correct, resultType: round.resultType }))}
                 />
             )}

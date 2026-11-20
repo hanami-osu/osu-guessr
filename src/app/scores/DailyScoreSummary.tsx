@@ -15,6 +15,7 @@ interface DailyScoreSummaryProps {
     debugUnlimitedAttempts: boolean;
     outcomes: Array<{ correct: boolean; resultType: string }>;
     responseTimeMs: number;
+    scoreId?: string;
 }
 
 function outcomeColor(outcome: DailyScoreSummaryProps["outcomes"][number]): string {
@@ -23,7 +24,7 @@ function outcomeColor(outcome: DailyScoreSummaryProps["outcomes"][number]): stri
     return outcome.resultType === "skip" ? "bg-orange-500" : "bg-zinc-600";
 }
 
-export default function DailyScoreSummary({ gameMode, day, points, responseTimeMs, outcomes, debugUnlimitedAttempts }: DailyScoreSummaryProps) {
+export default function DailyScoreSummary({ gameMode, day, points, responseTimeMs, outcomes, debugUnlimitedAttempts, scoreId }: DailyScoreSummaryProps) {
     const { t } = useTranslationsContext();
     const [copied, setCopied] = useState(false);
     const modeLabel = gameMode === "score_pp" ? "Score pp" : gameMode.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -37,7 +38,7 @@ export default function DailyScoreSummary({ gameMode, day, points, responseTimeM
             points,
             responseTimeMs,
             outcomes.map(({ correct, resultType }) => (correct ? "correct" : resultType === "guess" ? "incorrect" : resultType)) as DailyOutcome[],
-            window.location.origin,
+            `${window.location.origin}${scoreId ? `/scores/${scoreId}` : "/?daily=true"}`,
         );
 
         try {
