@@ -40,7 +40,7 @@ export function OverviewSection({ data }: { data: Analytics }) {
     const bucketWord = data.range.bucket === "week" ? "Week of" : "Day";
 
     return (
-        <Section id="overview" title="Overview" description="Volume, who is playing, and how each mode and variant behaves. Deltas compare against the previous period of the same length.">
+        <Section id="overview" title="Overview" description="Changes are relative to the previous period of the same length.">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-2 xl:grid-cols-7">
                 <StatTile label="Games" value={kpis.games} previous={previousKpis?.games} format="count" />
                 <StatTile label="Players" value={kpis.players} previous={previousKpis?.players} format="count" />
@@ -80,7 +80,7 @@ export function OverviewSection({ data }: { data: Analytics }) {
                 <Heatmap label="Games by weekday and hour (UTC)" rows={WEEKDAYS} columns={Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"))} values={heat} />
             </Panel>
 
-            <Panel title="Modes and variants" description="Quit rate is the clearest frustration signal. Exhausted means the content pool ran out mid-run." wide>
+            <Panel title="Modes and variants" description="“Exhausted” means the game ran out of items." wide>
                 <DataTable
                     rows={modeVariants}
                     columns={[
@@ -115,7 +115,7 @@ export function OverviewSection({ data }: { data: Analytics }) {
                 />
             </Panel>
 
-            <Panel title="Rule and pp versions" description="Compare behaviour before and after ruleset or pp changes.">
+            <Panel title="Rule and pp versions">
                 <DataTable
                     rows={versions}
                     columns={[
@@ -138,11 +138,11 @@ export function RunsSection({ data }: { data: Analytics }) {
     const runLengthLabels = runLengths[0]?.bins.map((bin) => bin.label) ?? [];
 
     return (
-        <Section id="runs" title="Runs" description="How far runs get and how they end. Only games recorded with round data have run lengths.">
+        <Section id="runs" title="Runs" description="Run lengths are available for games with round data.">
             {["survival", "death"].map((variant) => {
                 const distribution = streaks.find((group) => group.group === variant);
                 return (
-                    <Panel key={variant} title={`${titleCase(variant)} final streaks`} description="Where runs end, by final streak.">
+                    <Panel key={variant} title={`${titleCase(variant)} final streaks`}>
                         <ColumnChart
                             label={`${variant} final streak distribution`}
                             categories={distribution?.bins.map((bin) => bin.label) ?? []}
@@ -154,7 +154,7 @@ export function RunsSection({ data }: { data: Analytics }) {
                 );
             })}
 
-            <Panel title="Run length by end reason" description="Rounds played before the game ended. Early quits point at onboarding or frustration problems.">
+            <Panel title="Run length by end reason">
                 <ColumnChart
                     label="Run length by end reason"
                     categories={runLengthLabels}
@@ -184,7 +184,7 @@ export function RoundsSection({ data }: { data: Analytics }) {
     const sampleNotes = (points: typeof fatigue) => points.map((point) => `${formatValue(point.rounds, "count")} rounds`);
 
     return (
-        <Section id="rounds" title="Rounds" description="Round-level behaviour: fatigue, pressure, timer use and whether difficulty estimates match reality.">
+        <Section id="rounds" title="Rounds">
             <Panel title="Round outcomes by mode" wide>
                 <ul className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <li>
@@ -223,7 +223,7 @@ export function RoundsSection({ data }: { data: Analytics }) {
                 )}
             </Panel>
 
-            <Panel title="Fatigue: outcomes by round number" description="Do players get worse deeper into a run?">
+            <Panel title="Outcomes by round number">
                 <LineChart
                     label="Outcome rates by round number"
                     categories={fatigue.map((point) => point.label)}
@@ -246,7 +246,7 @@ export function RoundsSection({ data }: { data: Analytics }) {
                 />
             </Panel>
 
-            <Panel title="Pressure: outcomes by current streak" description="Do players choke as the streak grows?">
+            <Panel title="Outcomes by current streak">
                 <LineChart
                     label="Outcome rates by streak before the round"
                     categories={pressure.map((point) => point.label)}
@@ -259,7 +259,7 @@ export function RoundsSection({ data }: { data: Analytics }) {
 
             <Panel
                 title="Timer use"
-                description="How much of the timer was used before answering. Many correct answers near 100% means the timer is too tight; most answers in the first 30% means it could be shorter."
+                description="Percentage of the timer used before answering."
             >
                 <ColumnChart
                     label="Answers by share of timer used"
@@ -276,7 +276,7 @@ export function RoundsSection({ data }: { data: Analytics }) {
 
             <Panel
                 title="Difficulty calibration"
-                description="Rounds split into ten equal groups by difficulty snapshot. Accuracy should fall as difficulty rises; a flat or rising line means the estimates need work."
+                description="Rounds are grouped by their difficulty at the time of play."
                 wide
             >
                 <LineChart
@@ -328,9 +328,9 @@ export function ContentSection({ data }: { data: Analytics }) {
         <Section
             id="content"
             title="Content"
-            description="Which maps, skins and pairs work, which are broken or too obscure, and what players type when they get it wrong. Item tables only include items shown at least 3 times in the range."
+            description="Only items shown at least 3 times in this period are listed."
         >
-            <Panel title="Wrong guesses" description="Near misses are typos or partial titles the checker rejected, so they are candidates for a more lenient guess check or extra aliases." wide>
+            <Panel title="Wrong guesses" description="Near misses are rejected guesses that resemble the answer." wide>
                 <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <li>
                         <Swatch color={EXTRA_SERIES[0]} label={`Near miss (${formatValue(wrongGuesses.byKind.near_miss, "count")})`} />
@@ -352,7 +352,7 @@ export function ContentSection({ data }: { data: Analytics }) {
                 />
             </Panel>
 
-            <Panel title="Near misses" description="Rejected guesses that look like the answer.">
+            <Panel title="Near misses">
                 <DataTable rows={wrongGuesses.nearMisses} columns={guessColumns} empty="No near misses in this range" />
             </Panel>
 
@@ -360,15 +360,15 @@ export function ContentSection({ data }: { data: Analytics }) {
                 <DataTable rows={wrongGuesses.artistConfusions} columns={guessColumns} empty="Nobody typed the artist in this range" />
             </Panel>
 
-            <Panel title="Most common wrong guesses" description="Unrelated guesses; repeated ones reveal what players confuse this content with." wide>
+            <Panel title="Most common wrong guesses" description="Excludes near misses." wide>
                 <DataTable rows={wrongGuesses.common} columns={guessColumns} />
             </Panel>
 
-            <Panel title="Hardest content" description="Lowest accuracy. Check these for wrong titles, bad backgrounds or obscure picks." wide>
+            <Panel title="Hardest content" description="Sorted by lowest accuracy." wide>
                 <DataTable rows={hardest} columns={itemColumns} />
             </Panel>
 
-            <Panel title="Instant skips" description={`Skipped at least half the time, usually within ${QUICK_SKIP_MS / 1000}s. Likely broken, unrecognizable, or uninteresting.`} wide>
+            <Panel title="Instant skips" description={`Skipped at least half the time, usually within ${QUICK_SKIP_MS / 1000}s.`} wide>
                 <DataTable rows={quickSkips} columns={quickSkipColumns} empty="No items are being instantly skipped" />
             </Panel>
 
@@ -392,7 +392,7 @@ export function ContentSection({ data }: { data: Analytics }) {
                 />
             </Panel>
 
-            <Panel title="Accuracy by ranked year" description="Are older or newer maps easier to recognize?">
+            <Panel title="Accuracy by ranked year">
                 {eras.length === 0 ? (
                     <Note>No rounds with a ranked date in this range.</Note>
                 ) : (
@@ -419,7 +419,7 @@ export function ContentSection({ data }: { data: Analytics }) {
                 />
             </Panel>
 
-            <Panel title="Reports" description="Player reports filed in this range.">
+            <Panel title="Reports">
                 <DataTable
                     rows={reports.byType}
                     columns={[
@@ -463,7 +463,7 @@ export function PlayersSection({ data }: { data: Analytics }) {
         <Section
             id="players"
             title="Players"
-            description="Retention, engagement and how players move between modes. Retention counts a player as returned if they finished a game at least N days after signing up."
+            description="A player counts as returning if they finished a game at least the listed number of days after signup."
         >
             <Panel title="Retention by signup week" description="An asterisk means part of the cohort is too new to count yet." wide>
                 <DataTable
@@ -569,10 +569,10 @@ export function ChallengesSection({ data }: { data: Analytics }) {
     const shared = challenges.filter((challenge) => challenge.challengeType === "shared");
 
     return (
-        <Section id="challenges" title="Challenges" description="Daily and shared challenges. Shared challenges played by someone other than the creator are the best measure of word of mouth.">
+        <Section id="challenges" title="Challenges">
             {challenges.length === 0 ? (
                 <Panel title="No challenges yet" wide>
-                    <Note>No daily or shared challenges were created in this range. The tables fill in once challenge runs are being recorded.</Note>
+                    <Note>No daily or shared challenges in this period.</Note>
                 </Panel>
             ) : (
                 <>

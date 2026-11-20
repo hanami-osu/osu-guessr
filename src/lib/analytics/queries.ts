@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/database/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { classifyWrongGuess, type WrongGuessKind } from "./guesses";
-import { bucketKey, listBuckets, resolveRange, type AnalyticsRange, type ResolvedRange } from "./range";
+import { bucketKey, listBuckets, resolveRange, type AnalyticsSelection, type ResolvedRange } from "./range";
 
 export const GAME_MODES = ["background", "audio", "skin", "score_pp"] as const;
 export type AnalyticsGameMode = (typeof GAME_MODES)[number];
@@ -310,11 +310,11 @@ function toKpis(totals: ReturnType<typeof gameTotals>, newUsers: number): Kpis {
     };
 }
 
-async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, now: Date) {
-    const until = new Date(now.getTime() + DAY_MS);
+async function summarizeGames({ since, until, previousSince, bucket }: ResolvedRange, now: Date) {
     const current = gameTotals();
     const previous = gameTotals();
-    const days = new Map(listBuckets(since, now, bucket).map((day) => [day, {
+    const lastDay = new Date(Math.min(until.getTime() - 1, now.getTime()));
+    const days = new Map(listBuckets(since, lastDay, bucket).map((day) => [day, {
         bucket: day, games: { background: 0, audio: 0, skin: 0, score_pp: 0 }, players: new Set<number>(), signups: 0,
     }]));
     const modes = new Map<string, { gameMode: AnalyticsGameMode; variant: string; totals: ReturnType<typeof gameTotals> }>();
@@ -364,7 +364,9 @@ async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, n
                 continue;
             }
 
-            if (endedAt < until) addGame(current, game, duration);
+            // Later games still count toward each player's history above, which retention needs.
+            if (endedAt >= until) continue;
+            addGame(current, game, duration);
             const day = days.get(bucketKey(endedAt, bucket));
             if (day) {
                 day.games[gameMode]++;
@@ -420,7 +422,7 @@ async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, n
     let userCursor: number | undefined;
     do {
         const page = await prisma.user.findMany({
-            where: { createdAt: { gte: previousSince ?? since }, ...(userCursor === undefined ? {} : { banchoId: { gt: userCursor } }) },
+            where: { createdAt: { gte: previousSince ?? since, lt: until }, ...(userCursor === undefined ? {} : { banchoId: { gt: userCursor } }) },
             select: { banchoId: true, createdAt: true },
             orderBy: { banchoId: "asc" },
             take: PAGE_SIZE,
@@ -430,7 +432,7 @@ async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, n
                 previousNewUsers++;
                 continue;
             }
-            if (createdAt < until) newUsers++;
+            newUsers++;
             const day = days.get(bucketKey(createdAt, bucket));
             if (day) day.signups++;
             const cohort = bucketKey(createdAt, "week");
@@ -452,7 +454,7 @@ async function summarizeGames({ since, previousSince, bucket }: ResolvedRange, n
 
     const firstModes = new Map<AnalyticsGameMode, FirstModeRow>();
     for (const { first, last, games } of history.values()) {
-        if (first.endedAt < since) continue;
+        if (first.endedAt < since || first.endedAt >= until) continue;
         const group = getGroup(firstModes, first.gameMode, () => ({ gameMode: first.gameMode, players: 0, returned: 0, eligible: 0, avgGames: 0 }));
         group.players++;
         group.avgGames += games;
@@ -601,7 +603,7 @@ function difficultyCalibration(samples: Array<{ difficulty: number; correct: boo
 
 const textOrder = new Intl.Collator("und", { sensitivity: "base" });
 
-async function summarizeRounds(since: Date) {
+async function summarizeRounds(since: Date, until: Date) {
     const fatigueLabels = Array.from({ length: 31 }, (_, index) => index === 30 ? "31+" : String(index + 1));
     const fatigue = fatigueLabels.map(roundTotals);
     const pressure = STREAK_BIN_LABELS.map(roundTotals);
@@ -620,7 +622,7 @@ async function summarizeRounds(since: Date) {
     let after: bigint | undefined;
     do {
         const page = await prisma.gameRound.findMany({
-            where: { game: { endedAt: { gte: since } }, ...(after === undefined ? {} : { id: { gt: after } }) },
+            where: { game: { endedAt: { gte: since, lt: until } }, ...(after === undefined ? {} : { id: { gt: after } }) },
             select: {
                 id: true, roundNumber: true, streakBefore: true, resultType: true, itemType: true, itemId: true,
                 correct: true, responseTimeMs: true, timeLimitMs: true, difficultySnapshot: true,
@@ -732,8 +734,8 @@ async function summarizeScorePpSources(byPair: Map<number, { rounds: number; cor
     })).sort((a, b) => b.rounds - a.rounds);
 }
 
-async function getReports(since: Date): Promise<ReportSummary> {
-    const createdAt = { gte: since };
+async function getReports(since: Date, until: Date): Promise<ReportSummary> {
+    const createdAt = { gte: since, lt: until };
     const [types, leaders] = await Promise.all([
         prisma.report.groupBy({ by: ["reportType", "status"], where: { createdAt }, _count: { _all: true } }),
         prisma.report.groupBy({
@@ -765,9 +767,9 @@ async function getReports(since: Date): Promise<ReportSummary> {
     };
 }
 
-async function getChallenges(since: Date): Promise<ChallengeRow[]> {
+async function getChallenges(since: Date, until: Date): Promise<ChallengeRow[]> {
     const challenges = await prisma.gameChallenge.findMany({
-        where: { createdAt: { gte: since } }, orderBy: { createdAt: "desc" }, take: 40,
+        where: { createdAt: { gte: since, lt: until } }, orderBy: { createdAt: "desc" }, take: 40,
         select: { id: true, challengeType: true, dailyDate: true, gameMode: true, variant: true, createdAt: true, creatorUserId: true },
     });
     const games = await prisma.game.groupBy({
@@ -794,15 +796,15 @@ async function getChallenges(since: Date): Promise<ChallengeRow[]> {
     });
 }
 
-export async function getAnalytics(range: AnalyticsRange) {
+export async function getAnalytics(selection: AnalyticsSelection) {
     const now = new Date();
     const earliest = await prisma.game.findFirst({ orderBy: { endedAt: "asc" }, select: { endedAt: true } });
-    const resolved = resolveRange(range, now, earliest?.endedAt ?? null);
+    const resolved = resolveRange(selection, now, earliest?.endedAt ?? null);
     const [gameData, roundData, reports, challenges] = await Promise.all([
         summarizeGames(resolved, now),
-        summarizeRounds(resolved.since),
-        getReports(resolved.since),
-        getChallenges(resolved.since),
+        summarizeRounds(resolved.since, resolved.until),
+        getReports(resolved.since, resolved.until),
+        getChallenges(resolved.since, resolved.until),
     ]);
     return {
         range: resolved,

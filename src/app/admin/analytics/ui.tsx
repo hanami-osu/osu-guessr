@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 
 import { formatValue, type ValueFormat } from "./format";
 
-export function Section({ id, title, description, children }: { id: string; title: string; description: string; children: React.ReactNode }) {
+export function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
     return (
         <section id={id} className="scroll-mt-24 border-t border-border/60 pt-8">
             <h2 className="font-display text-2xl font-semibold tracking-tight">{title}</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>
+            {description && <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>}
             <div className="mt-6 grid gap-5 lg:grid-cols-2">{children}</div>
         </section>
     );
